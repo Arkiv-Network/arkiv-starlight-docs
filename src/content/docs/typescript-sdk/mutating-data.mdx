@@ -1,0 +1,248 @@
+---
+title: Mutating Data
+description: Create, update, delete, and extend entities using the Arkiv TypeScript SDK.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## WalletClient Setup
+
+All write operations require a wallet client:
+
+```ts
+import { createWalletClient, http } from "@arkiv-network/sdk"
+import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const walletClient = createWalletClient({
+  chain: kaolin,
+  transport: http(),
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
+})
+```
+
+<Aside type="caution">Keep private keys in environment variables. Never hardcode them.</Aside>
+
+## Payload Helpers
+
+Convert data to Arkiv payloads before storing:
+
+```ts
+import { jsonToPayload, stringToPayload, payloadToString } from "@arkiv-network/sdk/utils"
+
+// JSON data
+const jsonPayload = jsonToPayload({ title: "My Note", content: "Hello!" })
+
+// Plain text
+const textPayload = stringToPayload("Hello Arkiv!")
+
+// Reading back
+const text = payloadToString(entity.payload)
+const data = entity.toJson()
+```
+
+## Create Entity
+
+```ts
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils"
+
+const { entityKey, txHash } = await walletClient.createEntity({
+  payload: jsonToPayload({ title: "My Note", content: "Hello Arkiv!" }),
+  contentType: "application/json",
+  attributes: [
+    { key: "type", value: "note" },
+    { key: "id", value: crypto.randomUUID() },
+    { key: "created", value: Date.now() },
+  ],
+  expiresIn: ExpirationTime.fromHours(12),
+})
+
+console.log("Created:", entityKey)
+```
+
+### Parameters
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `payload` | `Uint8Array` | Entity data (use `jsonToPayload` or `stringToPayload`) |
+| `contentType` | `string` | MIME type (`application/json`, `text/plain`, etc.) |
+| `attributes` | `Array` | Key-value pairs for querying |
+| `expiresIn` | `number` | Lifetime in seconds (use `ExpirationTime` helpers) |
+
+### Returns
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `string` | Unique identifier for the entity |
+| `txHash` | `string` | Transaction hash on the chain |
+
+## Update Entity
+
+Replace an entity's payload, attributes, and expiration:
+
+```ts
+const { txHash } = await walletClient.updateEntity({
+  entityKey: entityKey,
+  payload: jsonToPayload({ title: "Updated Note", content: "New content" }),
+  contentType: "application/json",
+  attributes: [
+    { key: "type", value: "note" },
+    { key: "updated", value: Date.now() },
+  ],
+  expiresIn: ExpirationTime.fromHours(24),
+})
+```
+
+<Aside>Only the entity owner can update it. Updating replaces the entire payload and attributes.</Aside>
+
+## Delete Entity
+
+```ts
+const { txHash } = await walletClient.deleteEntity({
+  entityKey: entityKey,
+})
+```
+
+## Change Ownership
+
+Transfer an entity to a new owner:
+
+```ts
+const { entityKey, txHash } = await walletClient.changeOwnership({
+  entityKey: entityKey,
+  newOwner: "0x1234567890abcdef1234567890abcdef12345678",
+})
+```
+
+<Aside type="caution">Only the current owner can transfer ownership. After the transfer, you lose the ability to update, delete, or extend the entity.</Aside>
+
+### Parameters
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `Hex` | Key of the entity to transfer |
+| `newOwner` | `Hex` | Address of the new owner |
+
+### Returns
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `Hex` | Key of the transferred entity |
+| `txHash` | `string` | Transaction hash on the chain |
+
+## Extend Expiration
+
+Add more time to an entity before it expires:
+
+```ts
+const { txHash } = await walletClient.extendEntity({
+  entityKey: entityKey,
+  expiresIn: ExpirationTime.fromHours(1),
+})
+```
+
+<Aside type="tip">
+Start with a short expiration and extend when needed. Over-allocating wastes storage fees.
+</Aside>
+
+## Batch Operations
+
+Create multiple entities in a single transaction using `mutateEntities()`:
+
+```ts
+await walletClient.mutateEntities({
+  creates: [
+    {
+      payload: jsonToPayload({ content: "Item 1" }),
+      contentType: "application/json",
+      attributes: [{ key: "type", value: "item" }],
+      expiresIn: ExpirationTime.fromMinutes(30),
+    },
+    {
+      payload: jsonToPayload({ content: "Item 2" }),
+      contentType: "application/json",
+      attributes: [{ key: "type", value: "item" }],
+      expiresIn: ExpirationTime.fromMinutes(30),
+    },
+  ],
+})
+```
+
+<Aside type="caution">
+Don't use a loop with individual `createEntity()` calls — that's slow and expensive. Always use `mutateEntities()` for batch operations.
+</Aside>
+
+### Batch with Dynamic Data
+
+```ts
+const items = ["frontend", "backend", "devops"]
+
+await walletClient.mutateEntities({
+  creates: items.map((skill) => ({
+    payload: jsonToPayload({ profileId: "alice-123", skill }),
+    contentType: "application/json",
+    attributes: [
+      { key: "type", value: "skill" },
+      { key: "profileId", value: "alice-123" },
+      { key: "skill", value: skill },
+    ],
+    expiresIn: ExpirationTime.fromDays(30),
+  })),
+})
+```
+
+## ExpirationTime Reference
+
+Always use the helper instead of raw numbers:
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk/utils"
+
+ExpirationTime.fromMinutes(30)  // 1800 seconds
+ExpirationTime.fromHours(1)     // 3600 seconds
+ExpirationTime.fromHours(12)    // 43200 seconds
+ExpirationTime.fromHours(24)    // 86400 seconds
+ExpirationTime.fromDays(7)      // 604800 seconds
+```
+
+## Browser Usage with MetaMask
+
+In browser applications, use MetaMask as the transport instead of a private key:
+
+```ts
+import { createWalletClient, custom } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+// Request wallet connection
+await window.ethereum.request({ method: 'eth_requestAccounts' })
+
+// Use MetaMask as transport
+const walletClient = createWalletClient({
+  chain: kaolin,
+  transport: custom(window.ethereum),
+})
+```
+
+See the [MetaMask Sketch App tutorial](/learn/metamask-sketch-app/) for a complete browser example.
+
+## Error Handling
+
+The SDK does not retry on failure — all methods throw on error. Wrap write operations in try/catch:
+
+```ts
+try {
+  const { entityKey, txHash } = await walletClient.createEntity({
+    payload: jsonToPayload({ title: "My Post" }),
+    contentType: "application/json",
+    attributes: [{ key: "type", value: "post" }],
+    expiresIn: ExpirationTime.fromHours(12),
+  })
+} catch (error) {
+  // Common failures:
+  // - User rejected the transaction (MetaMask popup dismissed)
+  // - Insufficient funds / gas
+  // - Network error (RPC unreachable)
+  // - Entity already expired (for update/extend)
+  console.error("Transaction failed:", error)
+}
+```

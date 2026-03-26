@@ -1,0 +1,318 @@
+---
+title: Best Practices
+description: Essential patterns for building production Arkiv applications — project attributes, data modeling, security, and more.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## 1. Always Use a Project Attribute
+
+All entities in Arkiv are public and stored in a shared database. Every project **must** define a unique project attribute and include it on every entity. This is how you distinguish your app's data from everyone else's.
+
+Create a dedicated file that exports this attribute:
+
+```ts title="lib/arkiv.ts"
+export const PROJECT_ATTRIBUTE = {
+  key: "project",
+  value: "myapp-acme-7x9k", // use a globally unique string
+} as const;
+```
+
+Include it in **every** create/update call and **every** query:
+
+```ts
+import { PROJECT_ATTRIBUTE } from "./lib/arkiv"
+
+// Creating — always include PROJECT_ATTRIBUTE
+const { entityKey } = await walletClient.createEntity({
+  payload: jsonToPayload({ title, content }),
+  contentType: "application/json",
+  attributes: [PROJECT_ATTRIBUTE, { key: "entityType", value: "post" }],
+  expiresIn: ExpirationTime.fromDays(30),
+})
+
+// Querying — always filter by PROJECT_ATTRIBUTE
+const result = await publicClient
+  .buildQuery()
+  .where([
+    eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
+    eq("entityType", "post"),
+  ])
+  .withPayload(true)
+  .limit(50)
+  .fetch()
+```
+
+<Aside type="danger">
+Without a project attribute, your queries return data from other projects, and other projects see yours.
+</Aside>
+
+## 2. Separate Read and Write Clients
+
+Always use `createPublicClient` for queries. It prevents accidental writes, doesn't require a private key, and is safe for frontend use. Reserve `createWalletClient` for backend services that create, update, or delete entities.
+
+## 3. Design Attributes for Queryability
+
+Attributes are your indexes. Without the right ones, you'll fetch too much data and filter client-side.
+
+```ts
+// Good: attributes map to your query patterns
+attributes: [
+  { key: "type", value: "vote" },           // filter by entity type
+  { key: "proposalKey", value: proposalId }, // link related entities
+  { key: "voter", value: voterAddr },        // filter by user
+  { key: "choice", value: "yes" },           // filter by value
+  { key: "weight", value: 1 },              // numeric for aggregation
+]
+```
+
+## 4. Use Batch Operations
+
+Individual creates in a loop are slow and expensive. Use `mutateEntities()`:
+
+```ts
+// Bad — sequential, slow
+for (const item of items) {
+  await walletClient.createEntity(item)
+}
+
+// Good — single batch operation
+await walletClient.mutateEntities({
+  creates: items.map((item) => ({
+    payload: jsonToPayload(item.data),
+    contentType: "application/json",
+    attributes: item.attributes,
+    expiresIn: ExpirationTime.fromHours(1),
+  })),
+})
+```
+
+## 5. Write Specific Queries
+
+Broad queries return too much data. Always add multiple filter criteria:
+
+```ts
+// Bad — returns every note ever
+await query.where(eq("type", "note")).fetch()
+
+// Good — narrows to what you need
+await query
+  .where(eq("type", "note"))
+  .where(gt("created", Date.now() - 86400000))
+  .where(gt("priority", 3))
+  .fetch()
+```
+
+## 6. Right-Size Expiration
+
+Match `expiresIn` to actual data lifetime:
+
+| Use Case | Duration |
+|----------|----------|
+| Session data | `ExpirationTime.fromMinutes(30)` |
+| Cache | `ExpirationTime.fromHours(1)` |
+| Temp files | `ExpirationTime.fromHours(24)` |
+| Weekly data | `ExpirationTime.fromDays(7)` |
+
+Don't over-allocate — it costs more and pollutes queries with stale data.
+
+## 7. Never Expose Private Keys
+
+```ts
+// Always load from environment
+const privateKey = process.env.PRIVATE_KEY
+
+// Never hardcode
+const privateKey = "0x1234..." // DANGEROUS
+```
+
+## 8. Validate Input Before Storing
+
+Check length and content before creating entities:
+
+```ts
+function createNote(userInput: string) {
+  if (!userInput || userInput.length > 10000) {
+    throw new Error("Invalid input")
+  }
+  const sanitized = userInput.trim()
+  return walletClient.createEntity({
+    payload: stringToPayload(sanitized),
+    contentType: "text/plain",
+    attributes: [{ key: "type", value: "note" }],
+    expiresIn: ExpirationTime.fromHours(12),
+  })
+}
+```
+
+## 9. Use Numeric Types for Numeric Data
+
+If you'll filter or sort by a value, store it as a number attribute. String attributes only support equality and glob matching.
+
+```ts
+// Good: numeric — supports gt(), lt() operators
+{ key: 'priority', value: 5 }
+
+// Bad: string — only eq() works
+{ key: 'priority', value: '5' }
+```
+
+## 10. Model Related Data with Shared Attributes
+
+Link entities together using a shared attribute key. This is Arkiv's version of foreign keys:
+
+```ts
+// Proposal entity
+attributes: [{ key: "type", value: "proposal" }]
+
+// Vote entities reference the proposal
+attributes: [
+  { key: "type", value: "vote" },
+  { key: "proposalKey", value: proposalEntityKey },
+]
+
+// Query all votes for a proposal
+await query
+  .where(eq("type", "vote"))
+  .where(eq("proposalKey", proposalEntityKey))
+  .fetch()
+```
+
+## 11. Understand $owner vs $creator
+
+- **`$owner`** — The wallet that currently owns the entity. Can change via ownership transfer. Use `.ownedBy()` to check who can modify/delete.
+- **`$creator`** — The wallet that originally created the entity. Immutable. Use `.createdBy()` for tamper-proof source verification.
+
+## 12. Filter by Creator for Trusted Data
+
+When your backend publishes data that a frontend reads, filtering by `PROJECT_ATTRIBUTE` alone is **not enough**. A malicious actor can create entities with your project attribute.
+
+Combine project filtering with `.createdBy()`:
+
+```ts title="lib/arkiv.ts"
+export const PROJECT_ATTRIBUTE = {
+  key: "project",
+  value: "myapp-acme-7x9k",
+} as const;
+
+export const CREATOR_WALLET_ADDRESS = "0xYourBackendWalletAddress";
+```
+
+```ts
+import { PROJECT_ATTRIBUTE, CREATOR_WALLET_ADDRESS } from "./lib/arkiv"
+
+const trustedPosts = await publicClient
+  .buildQuery()
+  .where([
+    eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
+    eq("entityType", "post"),
+  ])
+  .createdBy(CREATOR_WALLET_ADDRESS)
+  .withPayload(true)
+  .fetch()
+```
+
+<Aside type="tip">
+`$creator` is immutable — no one can fake it. Even if someone creates an entity with your project attribute, it won't pass the `.createdBy()` filter.
+</Aside>
+
+## 13. Handle Errors Gracefully
+
+The SDK does not retry on failure. Wrap write operations in try/catch and handle each failure mode:
+
+```ts
+try {
+  const { entityKey } = await walletClient.createEntity({ ... })
+} catch (error) {
+  // - User rejected the transaction (MetaMask dismissed)
+  // - Insufficient funds / gas
+  // - Network error (RPC unreachable)
+  // - Entity already expired (for update/extend)
+  console.error("Transaction failed:", error)
+}
+```
+
+## 14. Validate Entity Data with Schemas
+
+`entity.toJson()` returns `any`. Validate with a schema library to protect against malformed payloads:
+
+```ts
+import { z } from "zod"
+
+const PostSchema = z.object({
+  title: z.string(),
+  content: z.string(),
+  author: z.string().optional(),
+})
+
+type Post = z.infer<typeof PostSchema>
+
+function parsePost(entity: any): Post {
+  const raw = entity.toJson()
+  const result = PostSchema.safeParse(raw)
+  if (!result.success) {
+    throw new Error("Entity data does not match expected schema")
+  }
+  return result.data
+}
+```
+
+## 15. Model Lists with Relationship Entities
+
+Arkiv attributes are flat key-value pairs — there is no array type. Don't try to encode lists into attributes:
+
+```ts
+// BAD — can't query "all profiles with skill frontend"
+attributes: [
+  { key: "skills_0", value: "frontend" },
+  { key: "skills_1", value: "backend" },
+]
+
+// BAD — can't query individual skills
+attributes: [
+  { key: "skills", value: "frontend, backend, devops" },
+]
+```
+
+Instead, create separate **relationship entities**:
+
+```ts
+// 1. Create the profile
+const { entityKey: profileKey } = await walletClient.createEntity({
+  payload: jsonToPayload({ name: "Alice", bio: "Full-stack dev" }),
+  contentType: "application/json",
+  attributes: [
+    PROJECT_ATTRIBUTE,
+    { key: "entityType", value: "profile" },
+    { key: "profileId", value: "alice-123" },
+  ],
+  expiresIn: ExpirationTime.fromDays(30),
+})
+
+// 2. One relationship entity per skill
+const skills = ["frontend", "backend", "devops"]
+await walletClient.mutateEntities({
+  creates: skills.map((skill) => ({
+    payload: jsonToPayload({ profileId: "alice-123", skill }),
+    contentType: "application/json",
+    attributes: [
+      PROJECT_ATTRIBUTE,
+      { key: "entityType", value: "profileSkill" },
+      { key: "profileId", value: "alice-123" },
+      { key: "skill", value: skill },
+    ],
+    expiresIn: ExpirationTime.fromDays(30),
+  })),
+})
+
+// 3. Query all profiles with "frontend" skill
+const frontendDevs = await publicClient
+  .buildQuery()
+  .where([
+    eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
+    eq("entityType", "profileSkill"),
+    eq("skill", "frontend"),
+  ])
+  .withPayload(true)
+  .fetch()
+```

@@ -1,0 +1,232 @@
+---
+title: Querying Data
+description: Query entities from Arkiv using the JSON-RPC API — syntax, operators, pagination, and utility methods.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Endpoint
+
+| Property  | Value                                         |
+| --------- | --------------------------------------------- |
+| Chain ID  | `60138453025`                                 |
+| HTTP RPC  | `https://kaolin.hoodi.arkiv.network/rpc`      |
+| Explorer  | `https://explorer.kaolin.hoodi.arkiv.network` |
+
+## Request Format
+
+All methods use standard JSON-RPC 2.0:
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"METHOD_NAME","params":[]}'
+```
+
+## arkiv_query
+
+Query entities from the bitmap-backed SQLite store.
+
+### Parameters
+
+| Index | Type        | Required | Description      |
+| ----- | ----------- | -------- | ---------------- |
+| 0     | string      | Yes      | Query expression |
+| 1     | object/null | No       | Query options    |
+
+### Query Syntax
+
+**Operators:**
+
+| Operator | Description |
+|----------|-------------|
+| `&&` | Logical AND |
+| `\|\|` | Logical OR |
+| `!` | Negation |
+| `=`, `!=` | Equality / inequality |
+| `<`, `>`, `<=`, `>=` | Numeric comparisons |
+| `~` | Glob match |
+| `!~` | Negated glob match |
+
+**Synthetic Attributes** (use with `$` prefix):
+
+| Attribute | Description |
+|-----------|-------------|
+| `$owner` | Entity owner address |
+| `$creator` | Entity creator address (immutable) |
+| `$key` | Entity key |
+| `$expiration` | Expiration block |
+| `$createdAtBlock` | Block at creation |
+| `$sequence`, `$txIndex`, `$opIndex` | Ordering attributes |
+| `$all` | Match all entities |
+
+### Options
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `atBlock` | hex string | Query at a specific block (e.g., `"0x1bc"`) |
+| `includeData` | object | Controls which fields are returned |
+| `resultsPerPage` | hex string | Page size, max 200 |
+| `cursor` | string | Pagination cursor from previous response |
+
+**`includeData` fields** (all default to `true` when omitted):
+
+`key`, `contentType`, `payload`, `creator`, `owner`, `attributes`, `expiration`
+
+### Response Structure
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "data": [
+      {
+        "key": "0x...",
+        "value": "0x...",
+        "contentType": "application/json",
+        "expiresAt": 1200000,
+        "creator": "0x...",
+        "owner": "0x...",
+        "createdAtBlock": 401,
+        "lastModifiedAtBlock": 443,
+        "stringAttributes": [{ "key": "status", "value": "active" }],
+        "numericAttributes": [{ "key": "rarity", "value": 5 }]
+      }
+    ],
+    "blockNumber": "0x1bc",
+    "cursor": "0x2a"
+  }
+}
+```
+
+<Aside>
+`value` is hex-encoded bytes — decode to get the payload. `cursor` is omitted when no more pages remain. `blockNumber` is a hex string.
+</Aside>
+
+### Query Examples
+
+**By attribute:**
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":1,
+    "method":"arkiv_query",
+    "params":[
+      "type = \"nft\" && status = \"active\"",
+      {"resultsPerPage":"0xa"}
+    ]
+  }'
+```
+
+**By owner:**
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":10,
+    "method":"arkiv_query",
+    "params":[
+      "$owner = \"0x2222222222222222222222222222222222222222\"",
+      null
+    ]
+  }'
+```
+
+**Numeric range:**
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":12,
+    "method":"arkiv_query",
+    "params":["price >= 100 && price <= 1000", null]
+  }'
+```
+
+**Glob match with negation:**
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":13,
+    "method":"arkiv_query",
+    "params":["name ~ \"test*\" && !(status = \"deleted\")", null]
+  }'
+```
+
+**Metadata only (omit payload):**
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":14,
+    "method":"arkiv_query",
+    "params":[
+      "$all",
+      {
+        "resultsPerPage":"0xa",
+        "includeData":{
+          "key":true,"attributes":true,"payload":false,
+          "contentType":true,"expiration":true,
+          "creator":true,"owner":true
+        }
+      }
+    ]
+  }'
+```
+
+### Pagination
+
+Use the returned `cursor` in the next request:
+
+```json
+{
+  "method": "arkiv_query",
+  "params": [
+    "type = \"nft\"",
+    { "cursor": "0x2a", "resultsPerPage": "0x2" }
+  ]
+}
+```
+
+When `cursor` is absent from the response, there are no more pages.
+
+## arkiv_getEntityCount
+
+Returns the total number of entities currently stored. No parameters.
+
+```bash
+curl https://kaolin.hoodi.arkiv.network/rpc \
+  -H "content-type: application/json" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"arkiv_getEntityCount","params":[]}'
+```
+
+Result: a plain JSON number (e.g., `18427`).
+
+## arkiv_getNumberOfUsedSlots
+
+Returns used storage-accounting slots. No parameters. Result is a hex string.
+
+## arkiv_getBlockTiming
+
+Returns timing for the current head block. No parameters.
+
+```json
+{
+  "result": {
+    "current_block": 582143,
+    "current_block_time": 1742721127,
+    "duration": 2
+  }
+}
+```
+
+- `current_block_time` — Unix timestamp in seconds
+- `duration` — seconds since previous block

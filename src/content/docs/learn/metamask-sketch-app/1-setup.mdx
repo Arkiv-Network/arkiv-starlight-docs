@@ -1,0 +1,176 @@
+---
+title: "Step 1: Project Setup & Wallet"
+description: Scaffold the Vite project and build the MetaMask wallet integration.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+## Project Setup
+
+<Steps>
+
+1. **Initialize the Vite project**
+
+   ```bash
+   npm create vite@latest arkiv-sketch-app -- --template vanilla-ts
+   cd arkiv-sketch-app
+   npm install
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install @arkiv-network/sdk p5 @types/p5
+   ```
+
+3. **Clean up and create project files**
+
+   ```bash
+   rm -rf public src/counter.ts src/typescript.svg src/vite-env.d.ts
+   touch src/wallet.ts src/sketch.ts
+   ```
+
+4. **Configure Vite for WASM**
+
+   ```ts title="vite.config.ts"
+   import { defineConfig } from "vite";
+
+   export default defineConfig({
+     optimizeDeps: {
+       exclude: ["brotli-wasm", "brotli-wasm/pkg.bundler/brotli_wasm_bg.wasm"],
+     },
+   });
+   ```
+
+</Steps>
+
+## HTML Structure
+
+```html title="index.html"
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arkiv Sketch App</title>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <h1>Arkiv Sketch App</h1>
+        <button id="connect-btn">Connect MetaMask</button>
+        <div id="account"></div>
+      </header>
+      <div class="container">
+        <div class="left-panel">
+          <h2>Recent Sketches</h2>
+          <div id="sketch-list">
+            <p>Connect your wallet to see sketches</p>
+          </div>
+        </div>
+        <div class="right-panel">
+          <h2>Draw Something</h2>
+          <div id="canvas-container"></div>
+          <div class="controls">
+            <button id="reset-btn">Reset</button>
+            <button id="save-btn">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
+```
+
+## MetaMask Wallet Integration
+
+This is the core of the browser wallet interaction. The SDK uses `custom(window.ethereum)` as a transport instead of a private key:
+
+```ts title="src/wallet.ts"
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+} from "@arkiv-network/sdk";
+import { kaolin } from "@arkiv-network/sdk/chains";
+import "viem/window";
+
+async function switchToKaolinChain() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  const chainIdHex = `0x${kaolin.id.toString(16)}`;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainIdHex }],
+    });
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === 4902
+    ) {
+      // Chain not added yet — add it
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: chainIdHex,
+            chainName: kaolin.name,
+            nativeCurrency: kaolin.nativeCurrency,
+            rpcUrls: kaolin.rpcUrls.default.http,
+            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+          },
+        ],
+      });
+    } else {
+      throw error;
+    }
+  }
+}
+
+export async function connectWallet() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  await switchToKaolinChain();
+
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+
+  return accounts[0];
+}
+
+export function createArkivClients(account?: `0x${string}`) {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  const publicClient = createPublicClient({
+    chain: kaolin,
+    transport: http(),
+  });
+
+  const walletClient = createWalletClient({
+    chain: kaolin,
+    transport: custom(window.ethereum),
+    account,
+  });
+
+  return { publicClient, walletClient };
+}
+```
+
+<Aside type="tip">
+The key difference from server-side usage: instead of `privateKeyToAccount()`, we use `custom(window.ethereum)` as the transport. MetaMask handles signing.
+</Aside>
+
+**Next:** [Step 2: Reading & Writing Data →](/learn/metamask-sketch-app/2-data/)

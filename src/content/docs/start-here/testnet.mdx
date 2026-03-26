@@ -1,0 +1,80 @@
+---
+title: Testnet
+description: Arkiv Kaolin testnet details — chain ID, RPC endpoints, faucet, explorer, and MetaMask configuration.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The Kaolin testnet is Arkiv's development environment. It mirrors the production chain with 2-second block times.
+
+## Network Details
+
+| Property      | Value                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------- |
+| Chain ID      | `60138453025`                                                                         |
+| HTTP RPC      | `https://kaolin.hoodi.arkiv.network/rpc`                                              |
+| Block Time    | 2 seconds                                                                             |
+| Faucet        | [kaolin.hoodi.arkiv.network/faucet](https://kaolin.hoodi.arkiv.network/faucet/)       |
+| Explorer      | [explorer.kaolin.hoodi.arkiv.network](https://explorer.kaolin.hoodi.arkiv.network/)   |
+| Bridge        | [kaolin.hoodi.arkiv.network/bridgette](https://kaolin.hoodi.arkiv.network/bridgette/) |
+| Status        | [kaolin.hoodi.arkiv.network](https://kaolin.hoodi.arkiv.network/)                     |
+
+## Adding Kaolin to MetaMask
+
+Click the button below to add the Kaolin testnet to your MetaMask wallet:
+
+<button id="add-kaolin-btn" style="background: var(--sl-color-accent); color: var(--sl-color-black); border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; cursor: pointer;">
+  Add Kaolin to MetaMask
+</button>
+<p id="add-kaolin-msg" style="margin-top: 0.5rem; font-size: 0.875rem;"></p>
+
+<script>{`
+  document.getElementById('add-kaolin-btn').addEventListener('click', async () => {
+    const msg = document.getElementById('add-kaolin-msg');
+    if (typeof window.ethereum === 'undefined') {
+      msg.textContent = 'MetaMask is not installed. Please install it first.';
+      msg.style.color = 'var(--sl-color-red)';
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0xe0087f821',
+          chainName: 'Arkiv Kaolin Testnet',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://kaolin.hoodi.arkiv.network/rpc'],
+          blockExplorerUrls: ['https://explorer.kaolin.hoodi.arkiv.network'],
+        }],
+      });
+      msg.textContent = 'Kaolin testnet added successfully!';
+      msg.style.color = 'var(--sl-color-green)';
+    } catch (err) {
+      msg.textContent = 'Failed to add network: ' + (err.message || err);
+      msg.style.color = 'var(--sl-color-red)';
+    }
+  });
+`}</script>
+
+Then get test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/).
+
+## Generating a Test Account
+
+```bash
+node -e "console.log('0x' + require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Save the output as your `PRIVATE_KEY` environment variable.
+
+<Aside type="danger">Never use testnet keys on mainnet. Never commit private keys to version control.</Aside>
+
+## SDK Chain Configuration
+
+The SDK exports the Kaolin chain config directly — no manual setup needed:
+
+```ts
+import { kaolin } from "@arkiv-network/sdk/chains";
+
+// kaolin.id === 60138453025
+// kaolin.rpcUrls.default.http === ['https://kaolin.hoodi.arkiv.network/rpc']
+```

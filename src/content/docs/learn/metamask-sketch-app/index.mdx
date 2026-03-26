@@ -1,0 +1,49 @@
+---
+title: MetaMask Sketch App
+description: Build a drawing app that connects to MetaMask and stores sketches on Arkiv.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Build a sketch application where users draw with p5.js, save sketches to Arkiv via MetaMask, and browse their gallery. This tutorial focuses on **interacting with a browser wallet**.
+
+[View the demo](https://arkiv-network.github.io/learn-arkiv/_demos/metamask-tutorial/) | [Source code](https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial)
+
+## What You'll Build
+
+<CardGrid>
+  <Card title="MetaMask Integration" icon="star">
+    Connect to the user's wallet and auto-switch to the Arkiv Kaolin testnet.
+  </Card>
+  <Card title="Drawing Canvas" icon="pencil">
+    A p5.js-powered canvas for creating sketches.
+  </Card>
+  <Card title="Blockchain Storage" icon="document">
+    Save drawings to Arkiv with automatic expiration.
+  </Card>
+  <Card title="Gallery View" icon="magnifier">
+    Display all sketches owned by the connected user.
+  </Card>
+</CardGrid>
+
+## What You'll Learn
+
+- How to connect a browser wallet (MetaMask) to Arkiv
+- How to switch/add the Kaolin testnet chain programmatically
+- How to create entities from the browser using `custom(window.ethereum)` transport
+- How to query entities by owner and display results
+
+## Prerequisites
+
+- Node.js installed
+- MetaMask browser extension
+- Basic TypeScript knowledge
+- Test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/)
+
+## Tutorial Steps
+
+<CardGrid>
+  <LinkCard title="Step 1: Project Setup & Wallet" href="/learn/metamask-sketch-app/1-setup/" description="Scaffold the Vite project and build the MetaMask wallet integration." />
+  <LinkCard title="Step 2: Reading & Writing Data" href="/learn/metamask-sketch-app/2-data/" description="Save sketches to Arkiv and query the user's gallery." />
+  <LinkCard title="Step 3: Main Application" href="/learn/metamask-sketch-app/3-app/" description="Wire up the p5.js canvas, gallery UI, and event handlers." />
+</CardGrid>

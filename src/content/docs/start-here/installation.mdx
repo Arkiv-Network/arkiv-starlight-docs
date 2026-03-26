@@ -1,0 +1,153 @@
+---
+title: Installation
+description: Install the Arkiv TypeScript SDK and create your first entity.
+---
+
+import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Arkiv provides an official TypeScript/JavaScript SDK — [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) — that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event subscriptions, and payload encoding.
+
+## Install the SDK
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @arkiv-network/sdk
+    ```
+  </TabItem>
+  <TabItem label="Bun">
+    ```bash
+    bun add @arkiv-network/sdk
+    ```
+  </TabItem>
+</Tabs>
+
+## Client Setup
+
+### WalletClient (read/write)
+
+Requires a private key. Use for creating, updating, and deleting entities:
+
+```ts
+import { createWalletClient, http } from "@arkiv-network/sdk"
+import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const walletClient = createWalletClient({
+  chain: kaolin,
+  transport: http(),
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
+})
+```
+
+<Aside type="caution">Keep your private key in environment variables. Never hardcode it.</Aside>
+
+### PublicClient (read-only)
+
+No private key needed. Use for queries — safe for frontend use:
+
+```ts
+import { createPublicClient, http } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const publicClient = createPublicClient({
+  chain: kaolin,
+  transport: http(),
+})
+```
+
+## Hello, World!
+
+<Steps>
+
+1. **Create your project**
+
+   <Tabs>
+     <TabItem label="npm">
+       ```bash
+       mkdir hello-arkiv && cd hello-arkiv
+       npm init -y
+       npm install @arkiv-network/sdk dotenv typescript
+       ```
+     </TabItem>
+     <TabItem label="Bun">
+       ```bash
+       mkdir hello-arkiv && cd hello-arkiv
+       bun init -y
+       bun add @arkiv-network/sdk dotenv
+       ```
+     </TabItem>
+   </Tabs>
+
+2. **Add your private key**
+
+   ```bash title=".env"
+   PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
+   ```
+
+   Get test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/).
+
+3. **Write your first entity**
+
+   ```ts title="hello.ts"
+   import { createWalletClient, createPublicClient, http } from '@arkiv-network/sdk';
+   import { stringToPayload } from '@arkiv-network/sdk/utils';
+   import { kaolin } from '@arkiv-network/sdk/chains';
+   import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+   import { config } from 'dotenv';
+
+   config({ path: '.env' });
+
+   const walletClient = createWalletClient({
+     chain: kaolin,
+     transport: http(),
+     account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
+   });
+
+   const publicClient = createPublicClient({
+     chain: kaolin,
+     transport: http(),
+   });
+
+   // Create an entity
+   const { entityKey, txHash } = await walletClient.createEntity({
+     payload: stringToPayload('Hello, Arkiv!'),
+     contentType: 'text/plain',
+     attributes: [{ key: 'type', value: 'greeting' }],
+     expiresIn: 3600,
+   });
+
+   console.log('Entity created:', entityKey);
+   console.log('Transaction:', txHash);
+
+   // Read it back
+   const entity = await publicClient.getEntity(entityKey);
+   console.log('Retrieved:', entity.toText());
+   ```
+
+4. **Run it**
+
+   <Tabs>
+     <TabItem label="npm">
+       ```bash
+       npx tsx hello.ts
+       ```
+     </TabItem>
+     <TabItem label="Bun">
+       ```bash
+       bun run hello.ts
+       ```
+     </TabItem>
+   </Tabs>
+
+</Steps>
+
+## Browser Usage (CDN)
+
+For static HTML/JS pages without a bundler:
+
+```js
+import { createPublicClient, http } from 'https://esm.sh/@arkiv-network/sdk@0.6.0?target=es2022&bundle-deps'
+import { eq } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/query?target=es2022&bundle-deps'
+import { kaolin } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/chains?target=es2022&bundle-deps'
+```

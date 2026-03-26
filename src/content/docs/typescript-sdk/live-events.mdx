@@ -1,0 +1,187 @@
+---
+title: Live Events
+description: Subscribe to real-time entity events using the Arkiv TypeScript SDK.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+The `subscribeEntityEvents` method on the public client lets you listen for entity changes in real time. It polls the chain for new events and fires callbacks when entities are created, updated, deleted, expired, or have their expiration extended.
+
+## Basic Usage
+
+```ts
+import { createPublicClient, http } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const client = createPublicClient({
+  chain: kaolin,
+  transport: http(),
+})
+
+const unsubscribe = await client.subscribeEntityEvents({
+  onEntityCreated: (event) => {
+    console.log("Entity created:", event.entityKey)
+  },
+  onEntityUpdated: (event) => {
+    console.log("Entity updated:", event.entityKey)
+  },
+  onEntityDeleted: (event) => {
+    console.log("Entity deleted:", event.entityKey)
+  },
+  onEntityExpired: (event) => {
+    console.log("Entity expired:", event.entityKey)
+  },
+  onEntityExpiresInExtended: (event) => {
+    console.log("Entity extended:", event.entityKey)
+  },
+  onError: (error) => {
+    console.error("Subscription error:", error)
+  },
+})
+
+// Later, stop listening:
+unsubscribe()
+```
+
+<Aside>All event handlers are optional. Subscribe only to the events you care about.</Aside>
+
+## Parameters
+
+`subscribeEntityEvents` takes the event handlers object, plus two optional arguments:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| Event handlers | `object` | Object with callback functions (see below) |
+| `pollingInterval` | `number` | Polling interval in milliseconds (optional) |
+| `fromBlock` | `bigint` | Block number to start listening from (optional) |
+
+### Event Handlers
+
+| Handler | Event Type | Fires When |
+|---------|-----------|------------|
+| `onEntityCreated` | `OnEntityCreatedEvent` | A new entity is created |
+| `onEntityUpdated` | `OnEntityUpdatedEvent` | An entity's payload or attributes change |
+| `onEntityDeleted` | `OnEntityDeletedEvent` | An entity is deleted by its owner |
+| `onEntityExpired` | `OnEntityExpiredEvent` | An entity's expiration time is reached |
+| `onEntityExpiresInExtended` | `OnEntityExpiresInExtendedEvent` | An entity's expiration is extended |
+| `onError` | `Error` | An error occurs during polling |
+
+## Event Types
+
+### OnEntityCreatedEvent
+
+```ts
+{
+  entityKey: Hex       // Key of the new entity
+  owner: Hex           // Address of the entity owner
+  expirationBlock: number  // Block when the entity expires
+  cost: bigint         // Storage cost of the operation
+}
+```
+
+### OnEntityUpdatedEvent
+
+```ts
+{
+  entityKey: Hex       // Key of the updated entity
+  owner: Hex           // Address of the entity owner
+  oldExpirationBlock: number  // Previous expiration block
+  newExpirationBlock: number  // New expiration block
+  cost: bigint         // Storage cost of the operation
+}
+```
+
+### OnEntityDeletedEvent
+
+```ts
+{
+  entityKey: Hex       // Key of the deleted entity
+  owner: Hex           // Address of the entity owner
+}
+```
+
+### OnEntityExpiredEvent
+
+```ts
+{
+  entityKey: Hex       // Key of the expired entity
+  owner: Hex           // Address of the entity owner
+}
+```
+
+### OnEntityExpiresInExtendedEvent
+
+```ts
+{
+  entityKey: Hex       // Key of the extended entity
+  owner: Hex           // Address of the entity owner
+  oldExpirationBlock: number  // Previous expiration block
+  newExpirationBlock: number  // New expiration block
+  cost: bigint         // Storage cost of the operation
+}
+```
+
+## Polling from a Specific Block
+
+Use `fromBlock` to replay events starting from a past block:
+
+```ts
+const unsubscribe = await client.subscribeEntityEvents(
+  {
+    onEntityCreated: (event) => {
+      console.log("Created:", event.entityKey, "at cost:", event.cost)
+    },
+  },
+  5000,  // poll every 5 seconds
+  100n,  // start from block 100
+)
+```
+
+## Practical Example
+
+Listen for changes to your own entities and log a summary:
+
+```ts
+import { createPublicClient, http } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const client = createPublicClient({
+  chain: kaolin,
+  transport: http(),
+})
+
+const MY_ADDRESS = "0xYourAddress..."
+
+const unsubscribe = await client.subscribeEntityEvents({
+  onEntityCreated: (event) => {
+    if (event.owner === MY_ADDRESS) {
+      console.log(`New entity ${event.entityKey} expires at block ${event.expirationBlock}`)
+    }
+  },
+  onEntityDeleted: (event) => {
+    if (event.owner === MY_ADDRESS) {
+      console.log(`Entity ${event.entityKey} was deleted`)
+    }
+  },
+  onEntityExpired: (event) => {
+    if (event.owner === MY_ADDRESS) {
+      console.log(`Entity ${event.entityKey} has expired`)
+    }
+  },
+  onError: (error) => {
+    console.error("Event stream error:", error)
+  },
+})
+
+// Clean up on exit
+process.on("SIGINT", () => {
+  unsubscribe()
+  process.exit()
+})
+```
+
+<Aside type="tip">
+Always call the returned `unsubscribe()` function when you no longer need events — this stops polling and frees resources.
+</Aside>

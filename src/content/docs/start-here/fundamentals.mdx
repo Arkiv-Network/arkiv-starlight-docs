@@ -1,0 +1,108 @@
+---
+title: Fundamentals
+description: What Arkiv is, how it works, and the core concepts you need to know.
+---
+
+import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
+
+Arkiv is a decentralized data layer that brings queryable, time-scoped storage to Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
+
+## Why Arkiv?
+
+<CardGrid>
+  <Card title="Instant Queries" icon="magnifier">
+    SQL-like queries with attributes, indexed data retrieval, no external indexing required.
+  </Card>
+  <Card title="Cost-Efficient" icon="approve-check-circle">
+    Pay only for storage duration. Automatic data pruning — no permanent storage fees.
+  </Card>
+  <Card title="Ethereum-Native" icon="star">
+    Built on Ethereum infrastructure. Fully transparent, verifiable, and compatible with existing Web3 tools.
+  </Card>
+  <Card title="Developer-Friendly" icon="pencil">
+    Simple CRUD operations and a TypeScript SDK with full type safety.
+  </Card>
+</CardGrid>
+
+## Architecture
+
+Arkiv uses a three-layer architecture:
+
+**Layer 1: Ethereum Mainnet**
+Final settlement and security. Proof verification, commitments, and ultimate source of truth.
+
+**Layer 2: Arkiv Coordination Layer**
+Data management and registry. DB-chain coordination, cross-chain synchronization, deterministic query resolution.
+
+**Layer 3: Specialized DB-Chains**
+High-performance data operations. CRUD via JSON-RPC, indexed queries with attributes, programmable expiration.
+
+## Core Concepts
+
+### Entities
+
+An entity is a data record on Arkiv. Every entity contains:
+
+- **Payload** — The actual data (JSON, text, binary)
+- **Attributes** — Key-value pairs for querying (string or numeric)
+- **ExpiresIn** — Automatic expiration measured in seconds
+- **Content Type** — MIME type of the payload
+
+### Attributes
+
+Attributes are the backbone of querying. The type you choose determines what query operators are available:
+
+```ts
+// String attributes — support eq(), glob matching (~)
+{ key: 'type', value: 'note' }
+{ key: 'status', value: 'active' }
+
+// Numeric attributes — support eq(), gt(), lt(), gte(), lte() range queries
+{ key: 'priority', value: 5 }
+{ key: 'created', value: Date.now() }
+```
+
+<Aside type="caution">
+If you store a number as a string (`{ key: 'priority', value: '5' }`), you lose the ability to do range queries with `gt()`, `lt()`, etc. Always use numeric values for attributes you plan to filter by range.
+</Aside>
+
+### ExpiresIn
+
+Every entity has a lifespan expressed in **seconds**. Use the `ExpirationTime` helper to convert human-readable durations:
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk/utils";
+
+ExpirationTime.fromMinutes(30)  // 1800 seconds
+ExpirationTime.fromHours(1)     // 3600 seconds
+ExpirationTime.fromHours(12)    // 43200 seconds
+ExpirationTime.fromDays(7)      // 604800 seconds
+```
+
+<Aside>
+Entities can be extended before they expire using `extendEntity()`. Over-allocating expiration wastes storage fees — start short and extend if needed.
+</Aside>
+
+### Query Language
+
+SQL-like syntax for filtering entities:
+
+```sql
+type = "note" && priority > 3 && created > 1672531200
+```
+
+Supported operators: `&&` (AND), `||` (OR), `!` (NOT), `=`, `!=`, `<`, `>`, `<=`, `>=`, `~` (glob match).
+
+### Clients
+
+Two client types exist:
+
+1. **WalletClient** (read/write) — Requires a private key or wallet connection. Use for creating, updating, deleting entities.
+2. **PublicClient** (read-only) — No private key needed. Use for queries. Safe for frontend use.
+
+## Use Cases
+
+- **Temporary Data Storage** — Session data with automatic expiration, cross-device clipboards, cached API responses.
+- **Event & Analytics** — Application logs with cleanup, user activity tracking, temporary metrics.
+- **File & Media** — Image metadata with expiration, document versioning, chunked file storage.
+- **Full-Stack Applications** — Dashboards, collaborative tools, browser-based dApps with wallet signing.

@@ -1,0 +1,48 @@
+---
+title: Fullstack Dashboard
+description: Build a full-stack cryptocurrency dashboard using Arkiv as the data layer.
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+Build a full-stack application that fetches cryptocurrency data, stores it on Arkiv, and visualizes it in a dashboard. This tutorial focuses on **reading and writing data to Arkiv** from both a Node.js backend and a browser frontend.
+
+[View the demo](https://arkiv-network.github.io/learn-arkiv/_demos/fullstack-tutorial/) | [Source code](https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/fullstack-tutorial)
+
+## What You'll Build
+
+<CardGrid>
+  <Card title="Node.js Backend" icon="setting">
+    Fetches BTC, ETH, and GLM prices from CoinGecko and pushes snapshots to Arkiv every minute.
+  </Card>
+  <Card title="Batch Entity Creation" icon="document">
+    Uses `mutateEntities()` to store multiple token snapshots in a single transaction.
+  </Card>
+  <Card title="Frontend Dashboard" icon="magnifier">
+    Queries Arkiv from the browser using CDN imports and renders live charts with Chart.js.
+  </Card>
+  <Card title="Polling Updates" icon="star">
+    Frontend refreshes data every 15 seconds to keep the dashboard current.
+  </Card>
+</CardGrid>
+
+## What You'll Learn
+
+- How to use `createWalletClient` with a private key on the server
+- How to batch-create entities with `mutateEntities()`
+- How to query Arkiv from the browser using CDN/ESM imports (no bundler)
+- How to filter entities by attribute and owner
+
+## Prerequisites
+
+- Node.js v20.6.0 or newer
+- An Arkiv Kaolin testnet wallet with test ETH from the [Faucet](https://kaolin.hoodi.arkiv.network/faucet/)
+- A text editor
+
+## Tutorial Steps
+
+<CardGrid>
+  <LinkCard title="Step 1: Backend Service" href="/learn/fullstack-dashboard/1-backend/" description="Set up the project and build the Node.js data publisher." />
+  <LinkCard title="Step 2: Frontend Dashboard" href="/learn/fullstack-dashboard/2-frontend/" description="Build the HTML/CSS/JS dashboard that queries Arkiv." />
+  <LinkCard title="Step 3: Running & Next Steps" href="/learn/fullstack-dashboard/3-running/" description="Run the full app and explore extensions." />
+</CardGrid>

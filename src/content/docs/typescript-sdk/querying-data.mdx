@@ -1,0 +1,192 @@
+---
+title: Querying Data
+description: Query entities from Arkiv using the TypeScript SDK — operators, pagination, filtering, and ordering.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## PublicClient Setup
+
+All queries use the read-only public client:
+
+```ts
+import { createPublicClient, http } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+
+const publicClient = createPublicClient({
+  chain: kaolin,
+  transport: http(),
+})
+```
+
+## Building Queries
+
+Use `buildQuery()` to construct queries with chainable methods:
+
+```ts
+import { eq, gt } from "@arkiv-network/sdk/query"
+
+const result = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .where(gt('created', Date.now() - 86400000))
+  .withPayload(true)
+  .withAttributes(true)
+  .limit(10)
+  .fetch()
+
+console.log('Found:', result.entities.length)
+```
+
+### Query Builder Methods
+
+| Method | Description |
+|--------|-------------|
+| `.where(condition)` | Add a filter condition (chainable) |
+| `.withPayload(true)` | Include entity payload in results |
+| `.withAttributes(true)` | Include attributes in results |
+| `.withMetadata(true)` | Include metadata (owner, creator, TTL) |
+| `.ownedBy(address)` | Filter by current owner |
+| `.createdBy(address)` | Filter by original creator (immutable) |
+| `.orderBy(desc('field', 'type'))` | Order results |
+| `.limit(n)` | Limit number of results |
+| `.fetch()` | Execute the query |
+
+### Passing Multiple Conditions
+
+You can chain `.where()` calls or pass an array:
+
+```ts
+// Chained — each .where() adds an AND condition
+const result = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .where(gt('priority', 3))
+  .fetch()
+
+// Array syntax — equivalent to above
+const result = await publicClient
+  .buildQuery()
+  .where([eq('type', 'note'), gt('priority', 3)])
+  .fetch()
+```
+
+## Query Operators
+
+```ts
+import { eq, gt, lt, gte, lte } from "@arkiv-network/sdk/query"
+
+eq('type', 'note')        // type = "note"
+gt('priority', 3)          // priority > 3
+lt('price', 1000)          // price < 1000
+gte('created', timestamp)  // created >= timestamp
+lte('expiration', limit)   // expiration <= limit
+```
+
+<Aside>
+String attributes only support `eq()`. Numeric attributes support all comparison operators. Always store numbers as numeric attributes if you need range queries.
+</Aside>
+
+## Filtering by Owner and Creator
+
+Every entity has two metadata fields:
+
+- **`$owner`** — The wallet that currently owns the entity. Can change via ownership transfer.
+- **`$creator`** — The wallet that originally created the entity. Immutable — can never change.
+
+```ts
+// Filter by current owner
+const owned = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .ownedBy('0xOwnerAddress')
+  .withPayload(true)
+  .withMetadata(true)
+  .fetch()
+
+// Filter by original creator (tamper-proof)
+const created = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .createdBy('0xCreatorAddress')
+  .withPayload(true)
+  .withMetadata(true)
+  .fetch()
+```
+
+<Aside type="tip">
+Use `.createdBy()` when you need a tamper-proof guarantee of who wrote the data (e.g., verifying data came from your trusted backend). Since `$creator` is immutable, it cannot be spoofed after creation.
+</Aside>
+
+## Getting a Single Entity
+
+Retrieve a specific entity by key:
+
+```ts
+const entity = await publicClient.getEntity(entityKey)
+
+// Parse the payload
+const data = entity.toJson()   // JSON payload
+const text = entity.toText()   // Text payload
+```
+
+## Reading Results
+
+```ts
+const result = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .withPayload(true)
+  .withAttributes(true)
+  .fetch()
+
+for (const entity of result.entities) {
+  // Access payload
+  const data = entity.toJson()
+  console.log(data.title, data.content)
+
+  // Access entity key
+  console.log('Key:', entity.key)
+
+  // Access attributes (when withAttributes is true)
+  for (const attr of entity.attributes) {
+    console.log(`${attr.key}: ${attr.value}`)
+  }
+}
+```
+
+## Pagination
+
+Arkiv uses cursor-based pagination. Results per page are capped at 200.
+
+```ts
+const result = await publicClient
+  .buildQuery()
+  .where(eq('type', 'note'))
+  .withPayload(true)
+  .limit(10)
+  .fetch()
+
+console.log('Page 1:', result.entities.length)
+
+// Check for more pages
+if (result.hasNextPage()) {
+  await result.next()
+  console.log('Page 2:', result.entities.length)
+}
+```
+
+## Ordering Results
+
+```ts
+import { desc } from "@arkiv-network/sdk/query"
+
+const result = await publicClient
+  .buildQuery()
+  .where(eq('type', 'sketch'))
+  .ownedBy(userAddress)
+  .orderBy(desc('timestamp', 'number'))
+  .withPayload(true)
+  .limit(9)
+  .fetch()
+```

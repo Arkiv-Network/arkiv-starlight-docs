@@ -1,50 +1,57 @@
 ---
-title: Welcome to Starlight
-description: Get started building your docs site with Starlight.
-template: splash # Remove or comment out this line to display the site sidebar on this page.
+title: Arkiv Documentation
+description: Everything you need to build with Arkiv — the decentralized data layer for Ethereum.
+template: splash
 hero:
-  title: |
-    Welcome to Starlight with
-    <span
-      class="font-black text-transparent
-        bg-clip-text bg-gradient-to-b
-        from-accent-700 to-accent-400
-        dark:from-accent-500 dark:to-accent-200"
-    >
-      Tailwind
-    </span>
-  tagline: Congrats on setting up a new Starlight project!
+  title: Build with Arkiv
+  tagline: Queryable, time-scoped storage for Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
   image:
     file: ../../assets/houston.webp
   actions:
-    - text: Example Guide
-      link: /guides/example/
+    - text: Get Started
+      link: /start-here/fundamentals/
       icon: right-arrow
-    - text: Read the Starlight docs
-      link: https://starlight.astro.build
+    - text: API Reference
+      link: /json-rpc/querying-data/
       icon: external
       variant: minimal
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
-## Next steps
+## Start building
 
 <CardGrid stagger>
-	<Card title="Update content" icon="pencil">
-		Edit `src/content/docs/index.mdx` to see this page change.
-	</Card>
-	<Card title="Change page layout" icon="document">
-		Delete `template: splash` in `src/content/docs/index.mdx` to display a
-		sidebar on this page.
-	</Card>
-	<Card title="Add new content" icon="add-document">
-		Add Markdown or MDX files to `src/content/docs` to create new pages.
-	</Card>
-	<Card title="Configure your site" icon="setting">
-		Edit your `sidebar` and other config in `astro.config.mjs`.
-	</Card>
-	<Card title="Read the docs" icon="open-book">
-		Learn more in [the Starlight Docs](https://starlight.astro.build/).
-	</Card>
+  <Card title="TypeScript SDK" icon="seti:typescript">
+    Full-featured SDK with type safety, CRUD operations, and batch operations.
+
+    [Get started →](/start-here/installation/)
+  </Card>
+
+  <Card title="JSON-RPC API" icon="setting">
+    Direct HTTP access to Arkiv's query and mutation endpoints.
+
+    [View API docs →](/json-rpc/querying-data/)
+  </Card>
+
+  <Card title="Learn by Doing" icon="open-book">
+    Step-by-step tutorials to build real applications with Arkiv.
+
+    [Browse tutorials →](/learn/metamask-sketch-app/)
+  </Card>
+
+  <Card title="Best Practices" icon="approve-check-circle">
+    Production patterns for data modeling, security, and performance.
+
+    [Read best practices →](/typescript-sdk/best-practices/)
+  </Card>
+</CardGrid>
+
+## Resources
+
+<CardGrid>
+  <LinkCard title="Playground" href="https://arkiv.network/playground" description="Interactive examples in your browser" />
+  <LinkCard title="GitHub" href="https://github.com/arkiv-network" description="Source code and SDK repositories" />
+  <LinkCard title="Testnet Faucet" href="https://kaolin.hoodi.arkiv.network/faucet/" description="Get test ETH for Kaolin testnet" />
+  <LinkCard title="Block Explorer" href="https://explorer.kaolin.hoodi.arkiv.network/" description="View transactions and entities" />
 </CardGrid>
