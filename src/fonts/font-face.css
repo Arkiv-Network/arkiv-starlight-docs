@@ -1,0 +1,15 @@
+@font-face {
+  font-family: "BrutalType";
+  src: url("/BrutalType-Medium.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "BrutalType";
+  src: url("/BrutalType-Black.otf") format("opentype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
