@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import tailwindcss from '@tailwindcss/vite';
+import starlightPageActions from 'starlight-page-actions';
 
 // https://astro.build/config
 export default defineConfig({
@@ -45,9 +46,11 @@ export default defineConfig({
 							label: 'Fullstack Dashboard',
 							items: [
 								{ label: 'Overview', slug: 'learn/fullstack-dashboard' },
-								{ label: '1. Backend Service', slug: 'learn/fullstack-dashboard/1-backend' },
-								{ label: '2. Frontend Dashboard', slug: 'learn/fullstack-dashboard/2-frontend' },
-								{ label: '3. Running & Next Steps', slug: 'learn/fullstack-dashboard/3-running' },
+								{ label: '1. Project Setup & Wallet', slug: 'learn/fullstack-dashboard/01-project-setup' },
+								{ label: '2. Storing Data on Arkiv', slug: 'learn/fullstack-dashboard/02-storing-data-on-arkiv' },
+								{ label: '3. Visualizing on the Frontend', slug: 'learn/fullstack-dashboard/03-visualizing-on-the-frontend' },
+								{ label: '4. Summary and Next Steps', slug: 'learn/fullstack-dashboard/04-summary-and-next-steps' },
+
 							],
 						},
 					],
@@ -69,7 +72,8 @@ export default defineConfig({
 			],
 			components: {
 				SiteTitle: './src/components/SiteTitle.astro',
-			}
+			},
+			plugins: [starlightPageActions()]
 		}),
 	],
 	vite: {
