@@ -1,57 +1,309 @@
 ---
-title: Arkiv Documentation
+title: Welcome to Arkiv
 description: Everything you need to build with Arkiv — the decentralized data layer for Ethereum.
 template: splash
 hero:
-  title: Build with Arkiv
-  tagline: Queryable, time-scoped storage for Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
-  image:
-    file: ../../assets/houston.webp
-  actions:
-    - text: Get Started
-      link: /start-here/fundamentals/
-      icon: right-arrow
-    - text: API Reference
-      link: /json-rpc/querying-data/
-      icon: external
-      variant: minimal
+  title: ''
+  tagline: ''
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/components';
 
-## Start building
+<div class="hero-landing">
+  <div class="hero-logo">[ ARKIV ]</div>
+  <p class="hero-tagline">
+    Build applications with queryable, time-scoped, and verifiable data on Ethereum.<br />
+    Get started with DB-chains in minutes.
+  </p>
+  <div class="hero-links">
+    <LinkButton variant="primary" icon='right-arrow' href="/start-here/fundamentals/">Get Started</LinkButton>
+    <LinkButton variant="minimal" icon='document' href="https://arkiv.network/pdf/ARKIV_Litepaper.pdf" target="_blank" rel="noopener">Read the Litepaper</LinkButton>
+  </div>
+</div>
 
-<CardGrid stagger>
-  <Card title="TypeScript SDK" icon="seti:typescript">
-    Full-featured SDK with type safety, CRUD operations, and batch operations.
+## [ Quick Start ]
 
-    [Get started →](/start-here/installation/)
-  </Card>
+<div class="quickstart-layout">
+  <div class="testnet-card">
+    <div class="testnet-header">
+      <span class="testnet-name">KAOLIN DB-CHAIN</span>
+      <a href="https://kaolin.hoodi.arkiv.network/" class="testnet-status" target="_blank" rel="noopener">Status Page</a>
+    </div>
+    <div class="testnet-grid">
+      <div class="testnet-field">
+        <span class="testnet-label">NETWORK ID</span>
+        <code>60138453025</code>
+      </div>
+      <div class="testnet-field">
+        <span class="testnet-label">RPC URL</span>
+        <code>https://kaolin.hoodi.arkiv.network/rpc</code>
+      </div>
+      <div class="testnet-field">
+        <span class="testnet-label">WEBSOCKET</span>
+        <code>wss://kaolin.hoodi.arkiv.network/rpc/ws</code>
+      </div>
+      <div class="testnet-field">
+        <span class="testnet-label">BRIDGE CONTRACT</span>
+        <code>0x6db217C596Cd203256058dBbFcA37d5A62161b78</code>
+      </div>
+    </div>
+    <div class="testnet-actions">
+      <a href="https://explorer.kaolin.hoodi.arkiv.network/" target="_blank" rel="noopener">Explorer</a>
+      <button id="add-kaolin-btn" type="button">Add Network to Wallet</button>
+      <a href="https://kaolin.hoodi.arkiv.network/faucet/" target="_blank" rel="noopener">Get Test Tokens</a>
+    </div>
+  </div>
+  <div class="quickstart-cards">
+    <div class="qs-card">
+      <div class="qs-card-title">JavaScript / TypeScript</div>
+      <p>Build web applications and backends with our comprehensive JS/TS SDK.</p>
+      <a href="/start-here/installation/">Get Started with JS/TS →</a>
+    </div>
+    <div class="qs-card">
+      <div class="qs-card-title">JSON-RPC API</div>
+      <p>Direct HTTP access to Arkiv's query and mutation endpoints.</p>
+      <a href="/json-rpc/querying-data/">View API Docs →</a>
+    </div>
+  </div>
+</div>
 
-  <Card title="JSON-RPC API" icon="setting">
-    Direct HTTP access to Arkiv's query and mutation endpoints.
-
-    [View API docs →](/json-rpc/querying-data/)
-  </Card>
-
-  <Card title="Learn by Doing" icon="open-book">
-    Step-by-step tutorials to build real applications with Arkiv.
-
-    [Browse tutorials →](/learn/metamask-sketch-app/)
-  </Card>
-
-  <Card title="Best Practices" icon="approve-check-circle">
-    Production patterns for data modeling, security, and performance.
-
-    [Read best practices →](/typescript-sdk/best-practices/)
-  </Card>
-</CardGrid>
-
-## Resources
+## [ Explore & Learn ]
 
 <CardGrid>
-  <LinkCard title="Playground" href="https://arkiv.network/playground" description="Interactive examples in your browser" />
-  <LinkCard title="GitHub" href="https://github.com/arkiv-network" description="Source code and SDK repositories" />
-  <LinkCard title="Testnet Faucet" href="https://kaolin.hoodi.arkiv.network/faucet/" description="Get test ETH for Kaolin testnet" />
-  <LinkCard title="Block Explorer" href="https://explorer.kaolin.hoodi.arkiv.network/" description="View transactions and entities" />
+  <Card title="Full Documentation" icon="open-book">
+    Comprehensive guides, API references, and tutorials. Everything you need to build with Arkiv.
+
+    [View Documentation →](/start-here/fundamentals/)
+  </Card>
+
+  <Card title="Tutorials" icon="rocket">
+    Step-by-step guides to build real applications with Arkiv.
+
+    [Browse Tutorials →](/learn/metamask-sketch-app/)
+  </Card>
+
+  <LinkCard title="Playground" href="https://arkiv.network/playground" description="Interactive code examples — edit and run in browser." />
+  <LinkCard title="Best Practices" href="/typescript-sdk/best-practices/" description="Production patterns for data modeling, security, and performance." />
 </CardGrid>
+
+<style>{`
+  /* Hide the default starlight hero & collapse its space */
+  .hero {
+    display: none !important;
+  }
+  .content-panel {
+    padding-top: 0 !important;
+  }
+  .sl-markdown-content {
+    margin-top: 0 !important;
+  }
+  .hero-landing {
+    text-align: center;
+    padding: 1rem 0 1rem;
+  }
+  .hero-logo {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 900;
+    font-size: clamp(6rem, 15vw, 12rem);
+    line-height: 1;
+    color: var(--color-arkiv-orange);
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+  .hero-tagline {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: clamp(0.85rem, 1.5vw, 1.05rem);
+    color: var(--sl-color-gray-3);
+    max-width: 42rem;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+  .hero-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  /* Quick Start layout */
+  .quickstart-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  @media (min-width: 860px) {
+    .quickstart-layout {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1rem;
+    }
+    .testnet-card {
+      margin-bottom: 0;
+    }
+  }
+  .quickstart-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 0;
+  }
+  .qs-card {
+    border: 1px solid var(--sl-color-gray-5);
+    padding: 1.25rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-top: 0;
+  }
+  .qs-card-title {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 0.5rem;
+  }
+  .qs-card p {
+    font-size: 0.85rem;
+    color: var(--sl-color-gray-3);
+    margin: 0 0 auto;
+    line-height: 1.5;
+  }
+  .qs-card a {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    margin-top: 0.75rem;
+    text-decoration: none;
+    color: var(--color-arkiv-orange);
+  }
+  .qs-card a:hover {
+    text-decoration: underline;
+  }
+
+  /* Testnet card */
+  .testnet-card {
+    border: 1px solid var(--sl-color-gray-5);
+    padding: 1.5rem;
+    
+  }
+  .testnet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .testnet-name {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--color-arkiv-orange);
+    letter-spacing: 0.03em;
+  }
+  .testnet-status {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-decoration: none;
+    color: var(--sl-color-gray-3);
+    border: 1px solid var(--sl-color-gray-5);
+    padding: 0.25rem 0.75rem;
+  }
+  .testnet-status:hover {
+    color: var(--color-arkiv-orange);
+    border-color: var(--color-arkiv-orange);
+  }
+  .testnet-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .testnet-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .testnet-label {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--sl-color-gray-3);
+  }
+  .testnet-field code {
+    font-size: 0.75rem;
+    word-break: break-all;
+    background: var(--sl-color-gray-6, rgba(0,0,0,0.2));
+    padding: 0.35rem 0.5rem;
+    border-radius: 2px;
+    display: block;
+  }
+  .testnet-field code a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: none;
+  }
+  .testnet-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--sl-color-gray-5);
+    padding-top: 1rem;
+  }
+  .testnet-actions a {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    text-decoration: none;
+    color: var(--sl-color-white);
+    transition: all 0.15s ease;
+  }
+  .testnet-actions a:hover,
+  .testnet-actions button:hover {
+    border-color: var(--color-arkiv-orange);
+    color: var(--color-arkiv-orange);
+  }
+  .testnet-actions button {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    color: var(--sl-color-white);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+`}</style>
+
+<script>
+{`
+  document.getElementById('add-kaolin-btn')?.addEventListener('click', async () => {
+    if (!window.ethereum) {
+      alert('Please install MetaMask or another Web3 wallet.');
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0xe0087f821',
+          chainName: 'Arkiv Kaolin Testnet',
+          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+          rpcUrls: ['https://kaolin.hoodi.arkiv.network/rpc'],
+          blockExplorerUrls: ['https://explorer.kaolin.hoodi.arkiv.network/']
+        }]
+      });
+    } catch (err) {
+      console.error('Failed to add network:', err);
+    }
+  });
+`}
+</script>
