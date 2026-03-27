@@ -6,6 +6,8 @@ import starlightPageActions from 'starlight-page-actions';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://arkiv-network.github.io/',
+	base: '/arkiv-starlight-docs/',
 	integrations: [
 		starlight({
 			title: 'Arkiv documentation',
@@ -73,7 +75,9 @@ export default defineConfig({
 			components: {
 				SiteTitle: './src/components/SiteTitle.astro',
 			},
-			plugins: [starlightPageActions()]
+			plugins: [starlightPageActions({
+				baseUrl: 'https://arkiv-network.github.io/arkiv-starlight-docs/'
+			})]
 		}),
 	],
 	vite: {
