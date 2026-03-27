@@ -11,7 +11,10 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Arkiv documentation',
-			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/arkiv-network' }],
+			social: [
+				{ icon: 'github', label: 'GitHub', href: 'https://github.com/arkiv-network' },
+				{ icon: 'discord', label: 'Discord', href: 'https://discord.gg/arkiv' }
+			],
 			sidebar: [
 				{
 					label: 'Start Here',
