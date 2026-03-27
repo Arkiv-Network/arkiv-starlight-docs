@@ -5,6 +5,8 @@ description: Essential patterns for building production Arkiv applications — p
 
 import { Aside } from '@astrojs/starlight/components';
 
+A collection of essential patterns and conventions for building reliable, production-ready applications with Arkiv — covering project attributes, data modeling, security, and error handling.
+
 ## 1. Always Use a Project Attribute
 
 All entities in Arkiv are public and stored in a shared database. Every project **must** define a unique project attribute and include it on every entity. This is how you distinguish your app's data from everyone else's.
