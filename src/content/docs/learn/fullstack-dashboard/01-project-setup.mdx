@@ -1,0 +1,140 @@
+---
+title: 'Prerequisites & Project Setup'
+description: 'Get your environment and project ready for the Arkiv tutorial.'
+---
+
+import { FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Before we start writing code, let's ensure you have the necessary tools and set up our project structure.
+
+## 1. Prerequisites
+
+Make sure you have the following installed on your system:
+
+- **Node.js**: A recent version, specifically **v20.6.0 or higher**. We will use new features like the `--env-file` flag for loading environment variables.
+- **A Text Editor**: A code editor like VS Code is highly recommended.
+- **An Arkiv Testnet Private Key**: To create entities (write data) on the Arkiv blockchain, you need a wallet. We'll be using the public **Kaolin testnet**, so no real funds are at risk.
+
+If you don't have a private key, you can easily generate a new one by running this command in your terminal:
+
+```bash
+node -e "console.log('0x' + require('crypto').randomBytes(32).toString('hex'))"
+```
+
+**Important**: Copy the output and save it somewhere safe. Never share your private keys with anyone.
+
+## 2. Project Setup
+
+Now, let's create our project directory and install the required libraries.
+
+<Tabs syncKey="user-os">
+
+<TabItem label="Linux / macOS" icon="terminal" >
+
+Open your terminal and run the following commands:
+
+<Steps>
+
+1. **Create and enter the project folder:**
+
+    ```bash
+    mkdir arkiv-dashboard
+    cd arkiv-dashboard
+    ```
+
+2. **Initialize a Node.js project:** This creates a `package.json` file.
+
+    ```bash
+    npm init --init-type=module -y
+    ```
+
+3. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `axios` to fetch data from the CoinGecko API.
+
+    ```bash
+    npm install @arkiv-network/sdk axios
+    ```
+
+4. **Create project files:** We will need a backend directory for our data-fetching script, and a frontend directory for the dashboard.
+
+    ```bash
+    mkdir backend frontend
+    touch backend/index.js backend/.env
+    touch frontend/index.html frontend/style.css frontend/script.js frontend/charts.js
+    ```
+
+5. **Add your private key:** Open the `backend/.env` file and add the private key you generated earlier.
+
+    ```bash
+    # backend/.env
+    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
+    ```
+
+</Steps>
+
+</TabItem>
+
+<TabItem label="Windows">
+
+Open PowerShell and run the following commands:
+
+<Steps>
+
+1. **Create and enter the project folder:**
+
+    ```sh
+    mkdir arkiv-dashboard
+    cd arkiv-dashboard
+    ```
+
+2. **Initialize a Node.js project:** This creates a `package.json` file.
+
+    ```sh
+    npm init --init-type=module -y
+    ```
+
+3. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `axios` to fetch data from the CoinGecko API.
+
+    ```sh
+    npm install @arkiv-network/sdk axios
+    ```
+
+4. **Create project files:** We will need a backend directory for our data-fetching script, and a frontend directory for the dashboard.
+
+    ```sh
+    mkdir backend, frontend
+    New-Item backend\index.js, backend\.env
+    New-Item frontend\index.html, frontend\style.css, frontend\script.js, frontend\charts.js
+    ```
+
+5. **Add your private key:** Open the `backend/.env` file and add the private key you generated earlier.
+
+    ```bash
+    # backend/.env
+    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
+    ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+Your project structure should now look like this:
+
+<FileTree>
+
+- arkiv-dashboard/
+  - backend/
+    - .env
+    - index.js
+  - frontend/
+    - index.html
+    - charts.js
+    - script.js
+    - style.css
+  - node_modules/
+  - package.json
+  - package-lock.json
+
+</FileTree>
+
+Your project is now set up and ready. In the next section, we'll build the backend service.

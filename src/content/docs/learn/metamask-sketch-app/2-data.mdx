@@ -1,16 +1,62 @@
 ---
-title: "Step 2: Reading & Writing Data"
-description: Save sketches to Arkiv and query the user's gallery.
+title: 'Reading & Writing Data'
+description: 'Create the data layer for saving sketches to Arkiv and querying the gallery.'
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Code, FileTree, Aside } from '@astrojs/starlight/components';
 
-## Sketch Operations
+In this part, we'll build the data module that handles saving sketches to Arkiv and loading the user's gallery. It demonstrates the two core SDK operations: **creating entities** and **querying entities by owner**.
 
-This module handles saving sketches to Arkiv and loading the user's gallery. It demonstrates the two core SDK operations: **creating entities** and **querying entities by owner**.
+Open `src/sketch.ts` and let's build it step by step.
 
-```ts title="src/sketch.ts"
-import { desc, eq } from "@arkiv-network/sdk/query";
+## Get Testnet ETH
+
+Before we can create entities on Arkiv, your MetaMask wallet needs some testnet ETH to pay for gas fees. Visit the Kaolin testnet faucet:
+
+**👉 [https://kaolin.hoodi.arkiv.network/faucet/](https://kaolin.hoodi.arkiv.network/faucet/)**
+
+Enter your MetaMask wallet address and request testnet ETH. This is completely free and only takes a moment.
+
+### Step 1: Imports and Types
+
+First, we import the query helpers, our wallet module from Step 1, and the SDK utilities. We also define a `Sketch` interface to type our data.
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+    - wallet.ts
+    - **sketch.ts**
+    - main.ts
+    - style.css
+  - index.html
+
+</FileTree>
+
+<Code
+  code={`import { desc, eq } from "@arkiv-network/sdk/query";
+import { createArkivClients } from "./wallet";
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
+
+export interface Sketch {
+  id: string;
+  timestamp: number;
+  imageData: string;
+}`}
+  lang="ts"
+  title="src/sketch.ts"
+/>
+
+### Step 2: Saving a Sketch
+
+When the user clicks "Save", we capture the canvas as a PNG data URL and store it as an Arkiv entity. This function creates a wallet client using `custom(window.ethereum)` — meaning MetaMask will pop up a confirmation dialog for the user to sign the transaction.
+
+- **Payload**: The sketch image data and a timestamp, stored as JSON.
+- **Attributes**: `type: "sketch"` and a `timestamp` value, which we'll use for querying and sorting later.
+- **ExpiresIn**: Sketches are set to expire after 365 days.
+
+<Code
+  code={`import { desc, eq } from "@arkiv-network/sdk/query";
 import { createArkivClients } from "./wallet";
 import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
 
@@ -19,18 +65,57 @@ export interface Sketch {
   timestamp: number;
   imageData: string;
 }
-```
 
-## Saving a Sketch
-
-When the user clicks "Save", we capture the canvas as a PNG data URL and store it as an Arkiv entity:
-
-```ts title="src/sketch.ts"
 export async function saveSketch(
   imageData: string,
   userAddress: string,
 ): Promise<string> {
-  const { walletClient } = createArkivClients(userAddress as `0x${string}`);
+  const { walletClient } = createArkivClients(userAddress as \`0x\${string}\`);
+
+  const { entityKey } = await walletClient.createEntity({
+    payload: jsonToPayload({
+      imageData,
+      timestamp: Date.now(),
+    }),
+    contentType: "application/json",
+    attributes: [
+      { key: "type", value: "sketch" },
+      { key: "timestamp", value: Date.now() },
+    ],
+    expiresIn: ExpirationTime.fromDays(365),
+  });
+
+  return entityKey;
+}`}
+  lang="ts"
+  title="src/sketch.ts"
+  ins={[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]}
+/>
+
+<Aside>
+Each save triggers a MetaMask confirmation popup. The entity is created on-chain only after the user confirms the transaction.
+</Aside>
+
+### Step 3: Loading the Gallery
+
+Now add the query function that fetches all sketches owned by the connected wallet, sorted by newest first. This uses a **public client** — no wallet signature is needed for read-only queries.
+
+<Code
+  code={`import { desc, eq } from "@arkiv-network/sdk/query";
+import { createArkivClients } from "./wallet";
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
+
+export interface Sketch {
+  id: string;
+  timestamp: number;
+  imageData: string;
+}
+
+export async function saveSketch(
+  imageData: string,
+  userAddress: string,
+): Promise<string> {
+  const { walletClient } = createArkivClients(userAddress as \`0x\${string}\`);
 
   const { entityKey } = await walletClient.createEntity({
     payload: jsonToPayload({
@@ -47,23 +132,7 @@ export async function saveSketch(
 
   return entityKey;
 }
-```
 
-<Aside>
-Each save triggers a MetaMask confirmation popup. The entity is created on-chain after the user confirms the transaction.
-</Aside>
-
-**What's happening:**
-- `createArkivClients()` creates a wallet client using `custom(window.ethereum)` — MetaMask signs the transaction
-- The sketch image data is stored as a JSON payload
-- `type: "sketch"` and `timestamp` attributes allow filtering and sorting later
-- 365-day expiration gives sketches a long lifetime
-
-## Loading the Gallery
-
-Query all sketches owned by the connected wallet, sorted by newest first:
-
-```ts title="src/sketch.ts"
 export async function loadSketches(userAddress: string): Promise<Sketch[]> {
   try {
     const { publicClient } = createArkivClients();
@@ -71,7 +140,7 @@ export async function loadSketches(userAddress: string): Promise<Sketch[]> {
     const result = await publicClient
       .buildQuery()
       .where(eq("type", "sketch"))
-      .ownedBy(userAddress as `0x${string}`)
+      .ownedBy(userAddress as \`0x\${string}\`)
       .orderBy(desc("timestamp", "number"))
       .withPayload(true)
       .limit(9)
@@ -101,14 +170,20 @@ export async function loadSketches(userAddress: string): Promise<Sketch[]> {
     console.error("Failed to load sketches:", error);
     return [];
   }
-}
-```
+}`}
+  lang="ts"
+  title="src/sketch.ts"
+  ins={[32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]}
+/>
 
-**What's happening:**
-- Uses `publicClient` (read-only) — no wallet signature needed for queries
-- `.ownedBy(userAddress)` filters to only this user's sketches
-- `.orderBy(desc("timestamp", "number"))` sorts newest first
-- `.limit(9)` caps the gallery at 9 items
-- Each entity is parsed from JSON and null-filtered for safety
+Let's break down the query:
 
-**Next:** [Step 3: Main Application →](/learn/metamask-sketch-app/3-app/)
+- `.where(eq("type", "sketch"))` — filters entities to only those with a `type` attribute equal to `"sketch"`
+- `.ownedBy(userAddress)` — restricts results to entities created by this wallet
+- `.orderBy(desc("timestamp", "number"))` — sorts newest first
+- `.withPayload(true)` — includes the full payload data (our image) in the response
+- `.limit(9)` — caps the gallery at 9 items
+
+Each entity is then parsed from JSON. We use `.filter()` to safely discard any entities that don't have a valid `imageData` field.
+
+Your data layer is complete! In the next section, we'll wire everything together with the drawing canvas and UI.

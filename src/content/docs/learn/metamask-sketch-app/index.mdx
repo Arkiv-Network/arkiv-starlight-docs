@@ -1,49 +1,31 @@
 ---
-title: MetaMask Sketch App
-description: Build a drawing app that connects to MetaMask and stores sketches on Arkiv.
+title: 'Introduction: What You Will Build'
+description: 'An overview of the MetaMask sketch app tutorial using Arkiv.'
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+Welcome to this step-by-step guide on building a browser-based drawing application that uses MetaMask for authentication and Arkiv as a decentralized storage layer.
 
-Build a sketch application where users draw with p5.js, save sketches to Arkiv via MetaMask, and browse their gallery. This tutorial focuses on **interacting with a browser wallet**.
+## The Goal
 
-[View the demo](https://arkiv-network.github.io/learn-arkiv/_demos/metamask-tutorial/) | [Source code](https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial)
+The goal of this tutorial is to demonstrate how to use Arkiv with a **browser wallet** like MetaMask. Unlike the fullstack dashboard tutorial (which uses a private key on the server), this project shows how a user can interact with Arkiv directly from their browser — signing transactions through MetaMask.
 
-## What You'll Build
+We will build a single-page application consisting of three main parts:
 
-<CardGrid>
-  <Card title="MetaMask Integration" icon="star">
-    Connect to the user's wallet and auto-switch to the Arkiv Kaolin testnet.
-  </Card>
-  <Card title="Drawing Canvas" icon="pencil">
-    A p5.js-powered canvas for creating sketches.
-  </Card>
-  <Card title="Blockchain Storage" icon="document">
-    Save drawings to Arkiv with automatic expiration.
-  </Card>
-  <Card title="Gallery View" icon="magnifier">
-    Display all sketches owned by the connected user.
-  </Card>
-</CardGrid>
+1. **MetaMask Wallet Integration:** Connect to the user's browser wallet, automatically switch to (or add) the Arkiv Kaolin testnet, and use MetaMask to sign on-chain transactions.
 
-## What You'll Learn
+2. **A p5.js Drawing Canvas:** A simple canvas where users can draw freehand sketches with their mouse.
 
-- How to connect a browser wallet (MetaMask) to Arkiv
-- How to switch/add the Kaolin testnet chain programmatically
-- How to create entities from the browser using `custom(window.ethereum)` transport
-- How to query entities by owner and display results
+3. **Blockchain-Backed Gallery:** Sketches are saved as entities on the Arkiv blockchain. The app queries Arkiv for the connected user's sketches and displays them in a gallery, complete with links to the on-chain explorer.
 
-## Prerequisites
+### The Final Product
 
-- Node.js installed
-- MetaMask browser extension
-- Basic TypeScript knowledge
-- Test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/)
+By the end of this tutorial, you will have an app that:
 
-## Tutorial Steps
+- Connects to MetaMask and switches to the Kaolin testnet
+- Lets users draw on a canvas and save their artwork to Arkiv
+- Displays a gallery of the user's previously saved sketches
+- Links each sketch to the Arkiv Kaolin Explorer for on-chain verification
 
-<CardGrid>
-  <LinkCard title="Step 1: Project Setup & Wallet" href="/learn/metamask-sketch-app/1-setup/" description="Scaffold the Vite project and build the MetaMask wallet integration." />
-  <LinkCard title="Step 2: Reading & Writing Data" href="/learn/metamask-sketch-app/2-data/" description="Save sketches to Arkiv and query the user's gallery." />
-  <LinkCard title="Step 3: Main Application" href="/learn/metamask-sketch-app/3-app/" description="Wire up the p5.js canvas, gallery UI, and event handlers." />
-</CardGrid>
+Check out a live demo of the final application [here](https://arkiv-network.github.io/learn-arkiv/_demos/metamask-tutorial/). You can also browse the [full source code on GitHub](https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial).
+
+This guide is designed to be a hands-on learning experience. We'll break down each step, explain the code, and show you how to connect all the pieces. Let's get started!

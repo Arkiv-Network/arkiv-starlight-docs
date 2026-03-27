@@ -1,0 +1,341 @@
+---
+title: 'Storing Data on Arkiv'
+description: 'Create a Node.js service to fetch crypto data and store it on Arkiv.'
+---
+
+import { Code, FileTree } from '@astrojs/starlight/components';
+
+In this part, we'll build the Node.js script that acts as our data publisher. It will fetch data from CoinGecko and use the Arkiv SDK to write it to the blockchain.
+
+Open `backend/index.js` and let's build it step by step.
+
+### Step 1: Imports and Client Setup
+
+First, we need to import the necessary functions from the Arkiv SDK and set up our wallet client. This client will authenticate us with our private key, allowing us to write data.
+
+<FileTree>
+
+- backend/
+  - **index.js**
+  - .env
+- frontend/
+- package.json
+
+</FileTree>
+
+<Code
+  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+import { kaolin } from '@arkiv-network/sdk/chains';
+import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+
+// Load the private key from the environment file.
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error("PRIVATE_KEY is not set in the .env file.");
+}
+
+// Create an account object from the private key.
+const account = privateKeyToAccount(privateKey);
+
+// Create a wallet client to interact with Arkiv.
+const client = createWalletClient({
+    chain: kaolin, // We are using the Kaolin testnet.
+    transport: http(),
+    account: account,
+});
+
+console.log(\`Backend service connected as: \${client.account.address}\`);`}
+  lang="js"
+  title="backend/index.js"
+/>
+
+Run your script to see your wallet address:
+
+```bash
+node --env-file backend/.env backend/index.js
+```
+
+You should see output like: `Backend service connected as: 0x1234...`
+
+### Step 2: Get Testnet ETH
+
+Before we can create entities on Arkiv, we need some testnet ETH to pay for gas fees. Visit the Kaolin testnet faucet:
+
+**👉 [https://kaolin.hoodi.arkiv.network/faucet/](https://kaolin.hoodi.arkiv.network/faucet/)**
+
+Enter your wallet address (the one displayed in the previous step) and request testnet ETH. This is completely free and only takes a moment.
+
+You may need to wait a few minutes for the transaction to be processed. You can check your balance using a Kaolin block explorer: **👉 [https://explorer.kaolin.hoodi.arkiv.network/](https://explorer.kaolin.hoodi.arkiv.network/)**
+
+### Step 3: Fetching Data from CoinGecko
+
+Next, let's add a function to call the CoinGecko API and fetch our cryptocurrency data.
+
+<Code
+  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+import { kaolin } from '@arkiv-network/sdk/chains';
+import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+import axios from 'axios';
+
+// Load the private key from the environment file.
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error("PRIVATE_KEY is not set in the .env file.");
+}
+
+// Create an account object from the private key.
+const account = privateKeyToAccount(privateKey);
+
+// Create a wallet client to interact with Arkiv.
+const client = createWalletClient({
+    chain: kaolin, // We are using the Kaolin testnet.
+    transport: http(),
+    account: account,
+});
+
+console.log(\`Backend service connected as: \${client.account.address}\`);
+
+// Construct the CoinGecko API URL
+const params = new URLSearchParams({
+    vs_currency: 'usd',
+    ids: 'bitcoin,ethereum,golem',
+    sparkline: 'false'
+});
+const COINGECKO_URL = \`https://api.coingecko.com/api/v3/coins/markets?\${params}\`;
+
+async function fetchCryptoData() {
+    try {
+        const response = await axios.get(COINGECKO_URL);
+        console.log('Successfully fetched data from CoinGecko.');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching data from CoinGecko:', error.message);
+        return []; // Return an empty array on failure.
+    }
+}`}
+  lang="js"
+  title="backend/index.js"
+  ins={[4, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]}
+/>
+
+### Step 4: Uploading Data to Arkiv
+
+This is the core of our backend. This function takes all the crypto data and creates entities on Arkiv in a single batch operation using `mutateEntities`.
+
+- **Payload**: This is the main data you want to store, structured as JSON.
+- **Attributes**: These are key-value pairs that act like tags or metadata. They are crucial for making your data queryable later.
+- **ExpiresIn**: Entities can be set to automatically expire after a certain time.
+
+<Code
+  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+import { kaolin } from '@arkiv-network/sdk/chains';
+import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import axios from 'axios';
+
+// Load the private key from the environment file.
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error("PRIVATE_KEY is not set in the .env file.");
+}
+
+// Create an account object from the private key.
+const account = privateKeyToAccount(privateKey);
+
+// Create a wallet client to interact with Arkiv.
+const client = createWalletClient({
+    chain: kaolin, // We are using the Kaolin testnet.
+    transport: http(),
+    account: account,
+});
+
+console.log(\`Backend service connected as: \${client.account.address}\`);
+
+// Construct the CoinGecko API URL
+const params = new URLSearchParams({
+    vs_currency: 'usd',
+    ids: 'bitcoin,ethereum,golem',
+    sparkline: 'false'
+});
+const COINGECKO_URL = \`https://api.coingecko.com/api/v3/coins/markets?\${params}\`;
+
+async function fetchCryptoData() {
+    try {
+        const response = await axios.get(COINGECKO_URL);
+        console.log('Successfully fetched data from CoinGecko.');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching data from CoinGecko:', error.message);
+        return []; // Return an empty array on failure.
+    }
+}
+
+async function uploadDataToArkiv(cryptoData) {
+    if (cryptoData.length === 0) {
+        console.log("No crypto data to upload.");
+        return;
+    }
+
+    try {
+        // Create payload objects for all tokens
+        const createPayloads = cryptoData.map(tokenData => {
+            const {
+                id,
+                current_price,
+                market_cap,
+                price_change_percentage_24h
+            } = tokenData;
+            return {
+                payload: jsonToPayload({
+                    price: current_price,
+                    marketCap: market_cap,
+                    change24h: price_change_percentage_24h,
+                    timestamp: Date.now(),
+                }),
+                contentType: 'application/json',
+                attributes: [
+                    { key: 'token', value: id }, // 'bitcoin', 'ethereum', or 'golem'
+                ],
+                expiresIn: ExpirationTime.fromHours(3), // Data expires after 3 hours.
+            };
+        });
+
+        const result = await client.mutateEntities({
+            creates: createPayloads
+        });
+
+        // Log success for each created entity
+        result.createdEntities.forEach((entityKey, index) => {
+            const tokenId = cryptoData[index].id;
+            console.log(\`Created entity for \${tokenId}. Key: \${entityKey}\`);
+        });
+
+    } catch (error) {
+        console.error('Failed to create entities:', error.message);
+    }
+}`}
+  lang="js"
+  title="backend/index.js"
+  ins={[4, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87]}
+/>
+
+### Step 5: The Main Loop
+
+Finally, let's create a main loop to tie everything together. This function will fetch the data and upload all tokens in a single batch operation.
+
+<Code
+  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+import { kaolin } from '@arkiv-network/sdk/chains';
+import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import axios from 'axios';
+
+// Load the private key from the environment file.
+const privateKey = process.env.PRIVATE_KEY;
+if (!privateKey) {
+    throw new Error("PRIVATE_KEY is not set in the .env file.");
+}
+
+// Create an account object from the private key.
+const account = privateKeyToAccount(privateKey);
+
+// Create a wallet client to interact with Arkiv.
+const client = createWalletClient({
+    chain: kaolin, // We are using the Kaolin testnet.
+    transport: http(),
+    account: account,
+});
+
+console.log(\`Backend service connected as: \${client.account.address}\`);
+
+// Construct the CoinGecko API URL
+const params = new URLSearchParams({
+    vs_currency: 'usd',
+    ids: 'bitcoin,ethereum,golem',
+    sparkline: 'false'
+});
+const COINGECKO_URL = \`https://api.coingecko.com/api/v3/coins/markets?\${params}\`;
+
+async function fetchCryptoData() {
+    try {
+        const response = await axios.get(COINGECKO_URL);
+        console.log('Successfully fetched data from CoinGecko.');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching data from CoinGecko:', error.message);
+        return []; // Return an empty array on failure.
+    }
+}
+
+async function uploadDataToArkiv(cryptoData) {
+    if (cryptoData.length === 0) {
+        console.log("No crypto data to upload.");
+        return;
+    }
+
+    try {
+        // Create payload objects for all tokens
+        const createPayloads = cryptoData.map(tokenData => {
+            const {
+                id,
+                current_price,
+                market_cap,
+                price_change_percentage_24h
+            } = tokenData;
+            return {
+                payload: jsonToPayload({
+                    price: current_price,
+                    marketCap: market_cap,
+                    change24h: price_change_percentage_24h,
+                    timestamp: Date.now(),
+                }),
+                contentType: 'application/json',
+                attributes: [
+                    { key: 'token', value: id }, // 'bitcoin', 'ethereum', or 'golem'
+                ],
+                expiresIn: ExpirationTime.fromHours(3), // Data expires after 3 hours.
+            };
+        });
+
+        const result = await client.mutateEntities({
+            creates: createPayloads
+        });
+
+        // Log success for each created entity
+        result.createdEntities.forEach((entityKey, index) => {
+            const tokenId = cryptoData[index].id;
+            console.log(\`Created entity for \${tokenId}. Key: \${entityKey}\`);
+        });
+
+    } catch (error) {
+        console.error('Failed to create entities:', error.message);
+    }
+}
+
+async function runUpdateCycle() {
+    console.log("\\n--- Starting new update cycle ---");
+    const cryptoData = await fetchCryptoData();
+
+    if (cryptoData.length > 0) {
+        // Upload all tokens in a single mutateEntities call
+        await uploadDataToArkiv(cryptoData);
+    }
+}
+
+// Run the cycle on start, and then every 60 seconds.
+runUpdateCycle();
+setInterval(runUpdateCycle, 60000); // 60000 ms = 60 seconds`}
+  lang="js"
+  title="backend/index.js"
+  ins={[89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107]}
+/>
+
+### Step 6: Run the Backend
+
+Your backend is complete! Run it from your terminal:
+
+```bash
+node --env-file backend/.env backend/index.js
+```
+
+You should see logs confirming your address and the creation of entities. Leave this running. In the next section, we'll build a frontend to see our data.

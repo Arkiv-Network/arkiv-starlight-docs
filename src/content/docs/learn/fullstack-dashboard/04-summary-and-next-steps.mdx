@@ -1,0 +1,53 @@
+---
+title: 'Running the App & Next Steps'
+description: 'Launch the full-stack application and see what you can do next.'
+---
+
+You've built both the backend and frontend. Now it's time to see them work together.
+
+## 1. Run the Backend
+
+If it's not already running, start your backend script in your terminal. This service must be running to continuously publish new data.
+
+```bash
+node --env-file .env index.js
+```
+
+## 2. Serve the Frontend
+
+You can't open `index.html` directly from your file system due to browser security policies (CORS). You must serve it using a local web server. The easiest way is with `npx`.
+
+In the `arkiv-dashboard/frontend` directory, run:
+
+```bash
+npx serve
+```
+
+This will start a local server and give you a URL, usually `http://localhost:3000`.
+
+## 3. View Your Dashboard
+
+Open the URL from the previous step in your web browser.
+
+You should see the dashboard! It might take up to 60 seconds for the first data points to appear as your backend fetches and publishes them. After that, the dashboard will update automatically with new data from the Arkiv blockchain.
+
+## Summary
+
+Congratulations! You have successfully built a full-stack, decentralized application.
+
+- You created a **Node.js backend** that acts as a data publisher, writing real-time information as entities to the Arkiv blockchain.
+- You built a **vanilla JS frontend** that acts as a data consumer, querying the Arkiv blockchain with a public client and visualizing the results.
+- You learned the fundamentals of the Arkiv SDK, including `createWalletClient` for writing, `createPublicClient` for reading, and the query builder for filtering data.
+
+## Full Source Code
+
+You can find the complete source code for this tutorial on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/fullstack-tutorial 
+
+## Next Steps
+
+This project is a great starting point. Here are some ideas to expand on what you've learned:
+
+- **Add more tokens:** Modify the backend and frontend to support more cryptocurrencies.
+- **Display more data:** The CoinGecko API provides a wealth of data. Try adding trading volume or 7-day price changes.
+- **More complex queries:** Experiment with Arkiv's query builder to filter data by time ranges or other parameters.
+- **Deploy it:** Deploy the frontend to a static hosting service like Vercel or Netlify so anyone can view your dashboard.

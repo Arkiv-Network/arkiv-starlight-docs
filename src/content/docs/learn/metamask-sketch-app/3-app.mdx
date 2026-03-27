@@ -1,16 +1,60 @@
 ---
-title: "Step 3: Main Application"
-description: Wire up the p5.js canvas, gallery UI, and event handlers.
+title: 'Running the App & Next Steps'
+description: 'Wire up the p5.js canvas, gallery UI, event handlers, and launch the app.'
 ---
 
-import { Aside, Steps } from '@astrojs/starlight/components';
+import { Code, FileTree, Steps, Aside } from '@astrojs/starlight/components';
 
-## Main Application Logic
+In this final part, we'll build the main application file that ties everything together — wallet connection, the p5.js drawing canvas, saving sketches, and rendering the gallery. Then we'll add some styles and run it!
 
-This file ties everything together — wallet connection, the p5.js drawing canvas, saving sketches, and rendering the gallery.
+## 1. Main Application Logic
 
-```ts title="src/main.ts"
-import "./style.css";
+Open `src/main.ts` and let's build it step by step.
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+    - wallet.ts
+    - sketch.ts
+    - **main.ts**
+    - style.css
+  - index.html
+
+</FileTree>
+
+### Step 1: Imports and DOM References
+
+First, import our modules from the previous steps and grab references to all the HTML elements we'll be interacting with.
+
+<Code
+  code={`import "./style.css";
+import p5 from "p5";
+import { connectWallet } from "./wallet";
+import { loadSketches, saveSketch, type Sketch } from "./sketch";
+
+let userAddress: string | null = null;
+let sketches: Sketch[] = [];
+let p5Instance: p5 | null = null;
+
+const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
+const accountDiv = document.getElementById("account") as HTMLDivElement;
+const sketchList = document.getElementById("sketch-list") as HTMLDivElement;
+const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
+const canvasContainer = document.getElementById(
+  "canvas-container"
+) as HTMLDivElement;`}
+  lang="ts"
+  title="src/main.ts"
+/>
+
+### Step 2: Wallet Connection Handler
+
+When the user clicks "Connect MetaMask", we call `connectWallet()` from Step 1, display the abbreviated address, and load their existing sketches.
+
+<Code
+  code={`import "./style.css";
 import p5 from "p5";
 import { connectWallet } from "./wallet";
 import { loadSketches, saveSketch, type Sketch } from "./sketch";
@@ -27,35 +71,66 @@ const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
 const canvasContainer = document.getElementById(
   "canvas-container"
 ) as HTMLDivElement;
-```
 
-## Wallet Connection
-
-When the user clicks "Connect MetaMask", we call `connectWallet()` from Step 1, then load their existing sketches:
-
-```ts title="src/main.ts"
 connectBtn.addEventListener("click", async () => {
   try {
     connectBtn.disabled = true;
     connectBtn.textContent = "Connecting...";
     userAddress = await connectWallet();
-    accountDiv.textContent = `Connected: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+    accountDiv.textContent = \`Connected: \${userAddress.slice(0, 6)}...\${userAddress.slice(-4)}\`;
     connectBtn.style.display = "none";
     await refreshSketches();
   } catch (error) {
     console.error("Failed to connect:", error);
-    alert(`Failed to connect wallet: ${(error as Error).message}`);
+    alert(\`Failed to connect wallet: \${(error as Error).message}\`);
+    connectBtn.disabled = false;
+    connectBtn.textContent = "Connect MetaMask";
+  }
+});`}
+  lang="ts"
+  title="src/main.ts"
+  ins={[18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]}
+/>
+
+### Step 3: Gallery Rendering
+
+Add the functions that load sketches from Arkiv and render them as image thumbnails with explorer links. Each sketch in the gallery includes a link to verify it on the Arkiv Kaolin Explorer.
+
+<Code
+  code={`import "./style.css";
+import p5 from "p5";
+import { connectWallet } from "./wallet";
+import { loadSketches, saveSketch, type Sketch } from "./sketch";
+
+let userAddress: string | null = null;
+let sketches: Sketch[] = [];
+let p5Instance: p5 | null = null;
+
+const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
+const accountDiv = document.getElementById("account") as HTMLDivElement;
+const sketchList = document.getElementById("sketch-list") as HTMLDivElement;
+const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
+const canvasContainer = document.getElementById(
+  "canvas-container"
+) as HTMLDivElement;
+
+connectBtn.addEventListener("click", async () => {
+  try {
+    connectBtn.disabled = true;
+    connectBtn.textContent = "Connecting...";
+    userAddress = await connectWallet();
+    accountDiv.textContent = \`Connected: \${userAddress.slice(0, 6)}...\${userAddress.slice(-4)}\`;
+    connectBtn.style.display = "none";
+    await refreshSketches();
+  } catch (error) {
+    console.error("Failed to connect:", error);
+    alert(\`Failed to connect wallet: \${(error as Error).message}\`);
     connectBtn.disabled = false;
     connectBtn.textContent = "Connect MetaMask";
   }
 });
-```
 
-## Gallery Rendering
-
-Load sketches from Arkiv and render them as image thumbnails with explorer links:
-
-```ts title="src/main.ts"
 async function refreshSketches() {
   if (!userAddress) return;
   try {
@@ -77,25 +152,95 @@ function renderSketchList() {
   sketchList.innerHTML = sketches
     .map((sketch) => {
       const date = new Date(sketch.timestamp).toLocaleString();
-      return `
+      return \`
         <div class="sketch-item">
-          <img src="${sketch.imageData}" alt="Sketch" />
-          <div class="sketch-info"><small>${date}</small></div>
-          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/${sketch.id}" target="_blank" class="entity-link">
-            ${sketch.id.slice(0, 12)}...
+          <img src="\${sketch.imageData}" alt="Sketch" />
+          <div class="sketch-info"><small>\${date}</small></div>
+          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+            \${sketch.id.slice(0, 12)}...
           </a>
-        </div>`;
+        </div>\`;
+    })
+    .join("");
+}`}
+  lang="ts"
+  title="src/main.ts"
+  ins={[34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65]}
+/>
+
+### Step 4: Drawing Canvas
+
+Set up a p5.js canvas for mouse-based drawing. The canvas fills its container and draws black lines when the mouse is pressed.
+
+<Code
+  code={`import "./style.css";
+import p5 from "p5";
+import { connectWallet } from "./wallet";
+import { loadSketches, saveSketch, type Sketch } from "./sketch";
+
+let userAddress: string | null = null;
+let sketches: Sketch[] = [];
+let p5Instance: p5 | null = null;
+
+const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
+const accountDiv = document.getElementById("account") as HTMLDivElement;
+const sketchList = document.getElementById("sketch-list") as HTMLDivElement;
+const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
+const canvasContainer = document.getElementById(
+  "canvas-container"
+) as HTMLDivElement;
+
+connectBtn.addEventListener("click", async () => {
+  try {
+    connectBtn.disabled = true;
+    connectBtn.textContent = "Connecting...";
+    userAddress = await connectWallet();
+    accountDiv.textContent = \`Connected: \${userAddress.slice(0, 6)}...\${userAddress.slice(-4)}\`;
+    connectBtn.style.display = "none";
+    await refreshSketches();
+  } catch (error) {
+    console.error("Failed to connect:", error);
+    alert(\`Failed to connect wallet: \${(error as Error).message}\`);
+    connectBtn.disabled = false;
+    connectBtn.textContent = "Connect MetaMask";
+  }
+});
+
+async function refreshSketches() {
+  if (!userAddress) return;
+  try {
+    sketchList.innerHTML = "<p>Loading sketches...</p>";
+    sketches = await loadSketches(userAddress);
+    renderSketchList();
+  } catch (error) {
+    console.error("Failed to load sketches:", error);
+    sketchList.innerHTML = "<p>Failed to load sketches</p>";
+  }
+}
+
+function renderSketchList() {
+  if (sketches.length === 0) {
+    sketchList.innerHTML = "<p>No sketches yet. Draw something!</p>";
+    return;
+  }
+
+  sketchList.innerHTML = sketches
+    .map((sketch) => {
+      const date = new Date(sketch.timestamp).toLocaleString();
+      return \`
+        <div class="sketch-item">
+          <img src="\${sketch.imageData}" alt="Sketch" />
+          <div class="sketch-info"><small>\${date}</small></div>
+          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+            \${sketch.id.slice(0, 12)}...
+          </a>
+        </div>\`;
     })
     .join("");
 }
-```
 
-## Drawing Canvas
-
-Set up a p5.js canvas for mouse-based drawing:
-
-```ts title="src/main.ts"
-const sketch = (p: p5) => {
+const sketchFn = (p: p5) => {
   p.setup = () => {
     const containerWidth = canvasContainer.offsetWidth;
     p.createCanvas(containerWidth, containerWidth);
@@ -110,12 +255,101 @@ const sketch = (p: p5) => {
   };
 };
 
-p5Instance = new p5(sketch, canvasContainer);
-```
+p5Instance = new p5(sketchFn, canvasContainer);`}
+  lang="ts"
+  title="src/main.ts"
+  ins={[66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81]}
+/>
 
-## Save and Reset Handlers
+### Step 5: Save and Reset Handlers
 
-```ts title="src/main.ts"
+Finally, add the event handlers for the "Reset" and "Save" buttons. Resetting clears the canvas to white. Saving captures the canvas as an image, stores it on Arkiv via MetaMask, and refreshes the gallery.
+
+<Code
+  code={`import "./style.css";
+import p5 from "p5";
+import { connectWallet } from "./wallet";
+import { loadSketches, saveSketch, type Sketch } from "./sketch";
+
+let userAddress: string | null = null;
+let sketches: Sketch[] = [];
+let p5Instance: p5 | null = null;
+
+const connectBtn = document.getElementById("connect-btn") as HTMLButtonElement;
+const accountDiv = document.getElementById("account") as HTMLDivElement;
+const sketchList = document.getElementById("sketch-list") as HTMLDivElement;
+const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+const resetBtn = document.getElementById("reset-btn") as HTMLButtonElement;
+const canvasContainer = document.getElementById(
+  "canvas-container"
+) as HTMLDivElement;
+
+connectBtn.addEventListener("click", async () => {
+  try {
+    connectBtn.disabled = true;
+    connectBtn.textContent = "Connecting...";
+    userAddress = await connectWallet();
+    accountDiv.textContent = \`Connected: \${userAddress.slice(0, 6)}...\${userAddress.slice(-4)}\`;
+    connectBtn.style.display = "none";
+    await refreshSketches();
+  } catch (error) {
+    console.error("Failed to connect:", error);
+    alert(\`Failed to connect wallet: \${(error as Error).message}\`);
+    connectBtn.disabled = false;
+    connectBtn.textContent = "Connect MetaMask";
+  }
+});
+
+async function refreshSketches() {
+  if (!userAddress) return;
+  try {
+    sketchList.innerHTML = "<p>Loading sketches...</p>";
+    sketches = await loadSketches(userAddress);
+    renderSketchList();
+  } catch (error) {
+    console.error("Failed to load sketches:", error);
+    sketchList.innerHTML = "<p>Failed to load sketches</p>";
+  }
+}
+
+function renderSketchList() {
+  if (sketches.length === 0) {
+    sketchList.innerHTML = "<p>No sketches yet. Draw something!</p>";
+    return;
+  }
+
+  sketchList.innerHTML = sketches
+    .map((sketch) => {
+      const date = new Date(sketch.timestamp).toLocaleString();
+      return \`
+        <div class="sketch-item">
+          <img src="\${sketch.imageData}" alt="Sketch" />
+          <div class="sketch-info"><small>\${date}</small></div>
+          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+            \${sketch.id.slice(0, 12)}...
+          </a>
+        </div>\`;
+    })
+    .join("");
+}
+
+const sketchFn = (p: p5) => {
+  p.setup = () => {
+    const containerWidth = canvasContainer.offsetWidth;
+    p.createCanvas(containerWidth, containerWidth);
+    p.background(255);
+  };
+  p.draw = () => {
+    if (p.mouseIsPressed) {
+      p.stroke(0);
+      p.strokeWeight(2);
+      p.line(p.mouseX, p.mouseY, p.pmouseX, p.pmouseY);
+    }
+  };
+};
+
+p5Instance = new p5(sketchFn, canvasContainer);
+
 resetBtn.addEventListener("click", () => {
   if (p5Instance) p5Instance.background(255);
 });
@@ -136,34 +370,99 @@ saveBtn.addEventListener("click", async () => {
     saveBtn.textContent = "Save";
   } catch (error) {
     console.error("Failed to save sketch:", error);
-    alert(`Failed to save sketch: ${(error as Error).message}`);
+    alert(\`Failed to save sketch: \${(error as Error).message}\`);
     saveBtn.disabled = false;
     saveBtn.textContent = "Save";
   }
-});
+});`}
+  lang="ts"
+  title="src/main.ts"
+  ins={[82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105]}
+/>
+
+## 2. CSS Styling
+
+Add styles in `src/style.css` to make the app look clean and usable.
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+    - wallet.ts
+    - sketch.ts
+    - main.ts
+    - **style.css**
+  - index.html
+
+</FileTree>
+
+```css title="src/style.css"
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }
+header { text-align: center; margin-bottom: 30px; }
+h1 { color: #1a202c; margin-bottom: 15px; }
+h2 { font-size: 1.2rem; color: #4a5568; margin-bottom: 15px; }
+#connect-btn { padding: 10px 24px; font-size: 1rem; background: #4299e1; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+#connect-btn:hover { background: #3182ce; }
+#connect-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+#account { margin-top: 8px; font-size: 0.9rem; color: #718096; }
+.container { display: flex; gap: 30px; max-width: 1200px; margin: auto; }
+.left-panel { flex: 1; min-width: 300px; }
+.right-panel { flex: 1; min-width: 300px; }
+#canvas-container canvas { border: 2px solid #e2e8f0; border-radius: 8px; cursor: crosshair; }
+.controls { margin-top: 15px; display: flex; gap: 10px; }
+.controls button { flex: 1; padding: 10px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s; }
+#reset-btn { background: #e2e8f0; color: #4a5568; }
+#reset-btn:hover { background: #cbd5e0; }
+#save-btn { background: #48bb78; color: white; }
+#save-btn:hover { background: #38a169; }
+#save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.sketch-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.sketch-item img { width: 100%; border-radius: 4px; }
+.sketch-info { margin-top: 6px; color: #718096; }
+.entity-link { display: inline-block; margin-top: 4px; color: #4299e1; font-size: 0.85rem; text-decoration: none; }
+.entity-link:hover { text-decoration: underline; }
+@media (max-width: 768px) { .container { flex-direction: column; } }
 ```
 
-## Running the App
+## 3. Running the App
 
 <Steps>
 
-1. **Start the dev server**
+1. **Start the dev server:**
 
-   ```bash
-   npm run dev
-   ```
+    ```bash
+    npm run dev
+    ```
 
-2. **Connect MetaMask** — Click "Connect MetaMask", approve the network switch, and connect your account.
+    Vite will start a local server, usually at `http://localhost:5173`.
 
-3. **Draw and save** — Draw on the canvas, click "Save", and confirm the MetaMask transaction.
+2. **Connect MetaMask:** Click "Connect MetaMask" in the app. MetaMask will prompt you to switch to the Kaolin testnet (or add it if it's not configured yet), then connect your account.
 
-4. **View on Explorer** — Each sketch in the gallery links to the [Arkiv Kaolin Explorer](https://explorer.kaolin.hoodi.arkiv.network/).
+3. **Draw and save:** Draw on the canvas with your mouse, then click "Save". MetaMask will ask you to confirm the transaction to store your sketch on Arkiv.
+
+4. **View your gallery:** After the transaction confirms, your sketch will appear in the "Recent Sketches" panel on the left. Each sketch links to the [Arkiv Kaolin Explorer](https://explorer.kaolin.hoodi.arkiv.network/) so you can verify it on-chain.
 
 </Steps>
 
+## Summary
+
+Congratulations! You have successfully built a browser-based decentralized application.
+
+- You created a **MetaMask wallet integration** that connects users to Arkiv without requiring them to expose a private key.
+- You built a **p5.js drawing canvas** and stored user-generated artwork as entities on the Arkiv blockchain.
+- You learned how to use `custom(window.ethereum)` as a transport for browser wallet signing, as opposed to server-side `privateKeyToAccount()`.
+- You used the **query builder** to filter entities by owner and attributes, displaying them in a gallery.
+
+## Full Source Code
+
+You can find the complete source code for this tutorial on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial
+
 ## Next Steps
 
-- Add a color picker and brush size control
-- Implement pagination for loading more sketches
-- Add the ability to delete your own entities
-- Add date range filtering for queries
+This project is a great starting point. Here are some ideas to expand on what you've learned:
+
+- **Add a color picker and brush size control** to make the drawing tools more expressive.
+- **Implement pagination** for loading more sketches beyond the 9-item limit.
+- **Add the ability to delete your own entities** using `mutateEntities` with the `deletes` option.
+- **Add date range filtering** to browse sketches by time period using Arkiv's query builder.

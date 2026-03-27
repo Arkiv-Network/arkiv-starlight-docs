@@ -1,50 +1,144 @@
 ---
-title: "Step 1: Project Setup & Wallet"
-description: Scaffold the Vite project and build the MetaMask wallet integration.
+title: 'Prerequisites & Project Setup'
+description: 'Get your environment and project ready for the Arkiv sketch app tutorial.'
 ---
 
-import { Aside, Steps } from '@astrojs/starlight/components';
+import { Code, FileTree, Steps, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-## Project Setup
+Before we start writing code, let's ensure you have the necessary tools and set up our project structure.
+
+## 1. Prerequisites
+
+Make sure you have the following installed on your system:
+
+- **Node.js**: A recent version, specifically **v20.6.0 or higher**.
+- **A Text Editor**: A code editor like VS Code is highly recommended.
+- **MetaMask**: The [MetaMask browser extension](https://metamask.io/) installed in your browser. This is how users will sign transactions.
+- **Test ETH**: You'll need some testnet ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/). The app will prompt MetaMask to switch to the Kaolin testnet automatically.
+
+## 2. Project Setup
+
+We'll use Vite with a vanilla TypeScript template to scaffold the project quickly.
+
+<Tabs syncKey="user-os">
+
+<TabItem label="Linux / macOS" icon="terminal">
+
+Open your terminal and run the following commands:
 
 <Steps>
 
-1. **Initialize the Vite project**
+1. **Create and enter the project:**
 
-   ```bash
-   npm create vite@latest arkiv-sketch-app -- --template vanilla-ts
-   cd arkiv-sketch-app
-   npm install
-   ```
+    ```bash
+    npm create vite@latest arkiv-sketch-app -- --template vanilla-ts
+    cd arkiv-sketch-app
+    ```
 
-2. **Install dependencies**
+2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
 
-   ```bash
-   npm install @arkiv-network/sdk p5 @types/p5
-   ```
+    ```bash
+    npm install @arkiv-network/sdk p5 @types/p5
+    ```
 
-3. **Clean up and create project files**
+3. **Clean up default files and create our project files:**
 
-   ```bash
-   rm -rf public src/counter.ts src/typescript.svg src/vite-env.d.ts
-   touch src/wallet.ts src/sketch.ts
-   ```
-
-4. **Configure Vite for WASM**
-
-   ```ts title="vite.config.ts"
-   import { defineConfig } from "vite";
-
-   export default defineConfig({
-     optimizeDeps: {
-       exclude: ["brotli-wasm", "brotli-wasm/pkg.bundler/brotli_wasm_bg.wasm"],
-     },
-   });
-   ```
+    ```bash
+    rm -rf public src/counter.ts src/typescript.svg src/vite-env.d.ts
+    touch src/wallet.ts src/sketch.ts
+    ```
 
 </Steps>
 
-## HTML Structure
+</TabItem>
+
+<TabItem label="Windows">
+
+Open PowerShell and run the following commands:
+
+<Steps>
+
+1. **Create and enter the project:**
+
+    ```sh
+    npm create vite@latest arkiv-sketch-app -- --template vanilla-ts
+    cd arkiv-sketch-app
+    ```
+
+2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
+
+    ```sh
+    npm install @arkiv-network/sdk p5 @types/p5
+    ```
+
+3. **Clean up default files and create our project files:**
+
+    ```sh
+    Remove-Item -Recurse public, src\counter.ts, src\typescript.svg, src\vite-env.d.ts
+    New-Item src\wallet.ts, src\sketch.ts
+    ```
+
+</Steps>
+
+</TabItem>
+</Tabs>
+
+Your project structure should now look like this:
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+    - main.ts
+    - style.css
+    - wallet.ts
+    - sketch.ts
+  - index.html
+  - vite.config.ts
+  - package.json
+  - node_modules/
+
+</FileTree>
+
+## 3. Configure Vite for WASM
+
+The Arkiv SDK uses WASM internally, so we need to tell Vite to exclude it from dependency optimization. Create (or replace) `vite.config.ts`:
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+  - index.html
+  - **vite.config.ts**
+  - package.json
+
+</FileTree>
+
+<Code
+  code={`import { defineConfig } from "vite";
+
+export default defineConfig({
+  optimizeDeps: {
+    exclude: ["brotli-wasm", "brotli-wasm/pkg.bundler/brotli_wasm_bg.wasm"],
+  },
+});`}
+  lang="ts"
+  title="vite.config.ts"
+/>
+
+## 4. HTML Structure
+
+Replace the contents of `index.html` with our app's skeleton. We need a header with a connect button, a left panel for the gallery, and a right panel for the drawing canvas.
+
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+  - **index.html**
+  - vite.config.ts
+  - package.json
+
+</FileTree>
 
 ```html title="index.html"
 <!DOCTYPE html>
@@ -83,12 +177,28 @@ import { Aside, Steps } from '@astrojs/starlight/components';
 </html>
 ```
 
-## MetaMask Wallet Integration
+## 5. MetaMask Wallet Integration
 
-This is the core of the browser wallet interaction. The SDK uses `custom(window.ethereum)` as a transport instead of a private key:
+Now for the most important part of this tutorial: connecting to MetaMask. Open `src/wallet.ts` and let's build it step by step.
 
-```ts title="src/wallet.ts"
-import {
+<FileTree>
+
+- arkiv-sketch-app/
+  - src/
+    - **wallet.ts**
+    - sketch.ts
+    - main.ts
+    - style.css
+  - index.html
+
+</FileTree>
+
+### Step 1: Imports and Chain Switching
+
+First, we import the SDK and create a helper function to switch MetaMask to the Kaolin testnet. If the chain hasn't been added to MetaMask yet, we add it automatically.
+
+<Code
+  code={`import {
   createPublicClient,
   createWalletClient,
   custom,
@@ -102,7 +212,134 @@ async function switchToKaolinChain() {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = `0x${kaolin.id.toString(16)}`;
+  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainIdHex }],
+    });
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === 4902
+    ) {
+      // Chain not added yet — add it
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: chainIdHex,
+            chainName: kaolin.name,
+            nativeCurrency: kaolin.nativeCurrency,
+            rpcUrls: kaolin.rpcUrls.default.http,
+            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+          },
+        ],
+      });
+    } else {
+      throw error;
+    }
+  }
+}`}
+  lang="ts"
+  title="src/wallet.ts"
+/>
+
+The `switchToKaolinChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902` (chain not found), it falls back to `wallet_addEthereumChain`, using the chain details from the SDK's `kaolin` object.
+
+### Step 2: Connect Wallet
+
+Next, add the `connectWallet` function. This switches to the correct chain and then requests account access from MetaMask.
+
+<Code
+  code={`import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+} from "@arkiv-network/sdk";
+import { kaolin } from "@arkiv-network/sdk/chains";
+import "viem/window";
+
+async function switchToKaolinChain() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
+
+  try {
+    await window.ethereum.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: chainIdHex }],
+    });
+  } catch (error: unknown) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === 4902
+    ) {
+      // Chain not added yet — add it
+      await window.ethereum.request({
+        method: "wallet_addEthereumChain",
+        params: [
+          {
+            chainId: chainIdHex,
+            chainName: kaolin.name,
+            nativeCurrency: kaolin.nativeCurrency,
+            rpcUrls: kaolin.rpcUrls.default.http,
+            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+          },
+        ],
+      });
+    } else {
+      throw error;
+    }
+  }
+}
+
+export async function connectWallet() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  await switchToKaolinChain();
+
+  const accounts = await window.ethereum.request({
+    method: "eth_requestAccounts",
+  });
+
+  return accounts[0];
+}`}
+  lang="ts"
+  title="src/wallet.ts"
+  ins={[47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57]}
+/>
+
+### Step 3: Create Arkiv Clients
+
+Finally, add the factory function that creates both a **public client** (for reading data) and a **wallet client** (for writing data). This is exported so other modules can use it.
+
+<Code
+  code={`import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http,
+} from "@arkiv-network/sdk";
+import { kaolin } from "@arkiv-network/sdk/chains";
+import "viem/window";
+
+async function switchToKaolinChain() {
+  if (!window.ethereum) {
+    throw new Error("MetaMask not installed");
+  }
+
+  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -149,7 +386,7 @@ export async function connectWallet() {
   return accounts[0];
 }
 
-export function createArkivClients(account?: `0x${string}`) {
+export function createArkivClients(account?: \`0x\${string}\`) {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
@@ -166,11 +403,14 @@ export function createArkivClients(account?: `0x${string}`) {
   });
 
   return { publicClient, walletClient };
-}
-```
+}`}
+  lang="ts"
+  title="src/wallet.ts"
+  ins={[60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]}
+/>
 
 <Aside type="tip">
-The key difference from server-side usage: instead of `privateKeyToAccount()`, we use `custom(window.ethereum)` as the transport. MetaMask handles signing.
+The key difference from server-side usage: instead of `privateKeyToAccount()` with a private key, we use `custom(window.ethereum)` as the transport. MetaMask handles all the signing.
 </Aside>
 
-**Next:** [Step 2: Reading & Writing Data →](/learn/metamask-sketch-app/2-data/)
+Your wallet integration is complete! In the next section, we'll build the data layer for saving and loading sketches.

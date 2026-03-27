@@ -1,48 +1,28 @@
 ---
-title: Fullstack Dashboard
-description: Build a full-stack cryptocurrency dashboard using Arkiv as the data layer.
+title: 'Introduction: What You Will Build'
+description: 'An overview of the real-time crypto dashboard tutorial using Arkiv.'
 ---
 
-import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+Welcome to this step-by-step guide on building a full-stack, real-time cryptocurrency dashboard using Arkiv as a decentralized data layer.
 
-Build a full-stack application that fetches cryptocurrency data, stores it on Arkiv, and visualizes it in a dashboard. This tutorial focuses on **reading and writing data to Arkiv** from both a Node.js backend and a browser frontend.
+## The Goal
 
-[View the demo](https://arkiv-network.github.io/learn-arkiv/_demos/fullstack-tutorial/) | [Source code](https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/fullstack-tutorial)
+The goal of this tutorial is to demonstrate how to use Arkiv for a common real-world use case: periodically storing time-sensitive data on the blockchain and then reading that data to power a live frontend application.
 
-## What You'll Build
+We will build a complete application consisting of two main parts:
 
-<CardGrid>
-  <Card title="Node.js Backend" icon="setting">
-    Fetches BTC, ETH, and GLM prices from CoinGecko and pushes snapshots to Arkiv every minute.
-  </Card>
-  <Card title="Batch Entity Creation" icon="document">
-    Uses `mutateEntities()` to store multiple token snapshots in a single transaction.
-  </Card>
-  <Card title="Frontend Dashboard" icon="magnifier">
-    Queries Arkiv from the browser using CDN imports and renders live charts with Chart.js.
-  </Card>
-  <Card title="Polling Updates" icon="star">
-    Frontend refreshes data every 15 seconds to keep the dashboard current.
-  </Card>
-</CardGrid>
+1. **A Node.js Backend Service:** This script will run continuously, fetching the latest market data for Bitcoin (BTC), Ethereum (ETH), and Golem (GLM) from the CoinGecko API every 60 seconds. It will then use the Arkiv SDK to store this data on the Kaolin testnet.
 
-## What You'll Learn
+2. **A Frontend Dashboard:** A simple HTML, CSS, and JavaScript application that queries the Arkiv blockchain to get the data published by our backend. It will then visualize this data in a clean, user-friendly dashboard using the Chart.js library.
 
-- How to use `createWalletClient` with a private key on the server
-- How to batch-create entities with `mutateEntities()`
-- How to query Arkiv from the browser using CDN/ESM imports (no bundler)
-- How to filter entities by attribute and owner
+### The Final Product
 
-## Prerequisites
+By the end of this tutorial, you will have a dashboard that displays:
 
-- Node.js v20.6.0 or newer
-- An Arkiv Kaolin testnet wallet with test ETH from the [Faucet](https://kaolin.hoodi.arkiv.network/faucet/)
-- A text editor
+- The latest prices of BTC, ETH, and GLM
+- Price changes over time, updated every minute
+- Overview of the market capitalization for each cryptocurrency
 
-## Tutorial Steps
+Check out a live demo of the final application [here](https://arkiv-network.github.io/learn-arkiv/_demos/fullstack-tutorial/).
 
-<CardGrid>
-  <LinkCard title="Step 1: Backend Service" href="/learn/fullstack-dashboard/1-backend/" description="Set up the project and build the Node.js data publisher." />
-  <LinkCard title="Step 2: Frontend Dashboard" href="/learn/fullstack-dashboard/2-frontend/" description="Build the HTML/CSS/JS dashboard that queries Arkiv." />
-  <LinkCard title="Step 3: Running & Next Steps" href="/learn/fullstack-dashboard/3-running/" description="Run the full app and explore extensions." />
-</CardGrid>
+This guide is designed to be a hands-on learning experience. We'll break down each step, explain the code, and show you how to connect all the pieces. Let's get started!
