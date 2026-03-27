@@ -23,7 +23,7 @@ The Kaolin testnet is Arkiv's development environment. It mirrors the production
 
 Click the button below to add the Kaolin testnet to your MetaMask wallet:
 
-<button id="add-kaolin-btn" style="background: var(--sl-color-accent); color: var(--sl-color-black); border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; font-size: 1rem; cursor: pointer;">
+<button id="add-kaolin-btn" class="bg-arkiv-blue text-white hover:bg-arkiv-blue/95 cursor-pointer px-4 py-2 rounded">
   Add Kaolin to MetaMask
 </button>
 <p id="add-kaolin-msg" style="margin-top: 0.5rem; font-size: 0.875rem;"></p>
@@ -57,24 +57,3 @@ Click the button below to add the Kaolin testnet to your MetaMask wallet:
 `}</script>
 
 Then get test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/).
-
-## Generating a Test Account
-
-```bash
-node -e "console.log('0x' + require('crypto').randomBytes(32).toString('hex'))"
-```
-
-Save the output as your `PRIVATE_KEY` environment variable.
-
-<Aside type="danger">Never use testnet keys on mainnet. Never commit private keys to version control.</Aside>
-
-## SDK Chain Configuration
-
-The SDK exports the Kaolin chain config directly — no manual setup needed:
-
-```ts
-import { kaolin } from "@arkiv-network/sdk/chains";
-
-// kaolin.id === 60138453025
-// kaolin.rpcUrls.default.http === ['https://kaolin.hoodi.arkiv.network/rpc']
-```
