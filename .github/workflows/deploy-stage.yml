@@ -19,7 +19,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build
-        run: bun run build
+        run: bunx --bun astro build
         env:
           SITE_URL: https://stage.docs.arkiv.network
 
