@@ -192,3 +192,13 @@ const result = await publicClient
   .limit(9)
   .fetch()
 ```
+
+## Operator Limitations
+
+The query language supports exact matches and numeric comparisons. The following operations are **not available** at the protocol level:
+
+- **No full-text search** — no `contains()` or `startsWith()` operators
+- **No substring matching** on string attributes (only exact `eq()` and glob `~`)
+- **No cross-entity joins** — each query targets a single entity type
+
+If you need text search or substring matching, fetch a broader result set and filter client-side.
