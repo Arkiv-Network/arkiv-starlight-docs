@@ -5,7 +5,7 @@ description: What Arkiv is, how it works, and the core concepts you need to know
 
 import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
 
-Arkiv is a decentralized data layer that brings queryable, time-scoped storage to Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
+Arkiv is a universal data layer that brings queryable, time-scoped storage to Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
 
 ## Why Arkiv?
 
@@ -16,7 +16,7 @@ Arkiv is a decentralized data layer that brings queryable, time-scoped storage t
   Pay only for storage duration. Automatic data pruning — no permanent storage fees.
 </Card>
 <Card title="Ethereum-Native" icon="star">
-  Built on Ethereum infrastructure. Fully transparent, verifiable, and compatible with existing Web3 tools.
+  Built on Ethereum infrastructure. Fully transparent, tamper-proof, and compatible with existing Web3 tools.
 </Card>
 <Card title="Developer-Friendly" icon="pencil">
   Simple CRUD operations and a TypeScript SDK with full type safety.
@@ -26,14 +26,33 @@ Arkiv is a decentralized data layer that brings queryable, time-scoped storage t
 
 Arkiv uses a three-layer architecture:
 
-**Layer 1: Ethereum Mainnet**
-Final settlement and security. Proof verification, commitments, and ultimate source of truth.
-
-**Layer 2: Arkiv Coordination Layer**
-Data management and registry. DB-chain coordination, cross-chain synchronization, deterministic query resolution.
-
-**Layer 3: Specialized DB-Chains**
-High-performance data operations. CRUD via JSON-RPC, indexed queries with attributes, programmable expiration.
+```
+┌─────────────────────────────────────────────────────┐
+│  YOUR APP                                           │
+│  TypeScript SDK  ·  JSON-RPC                        │
+└────────────────────────┬────────────────────────────┘
+                         │  read / write
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│  LAYER 3 — DB-CHAINS                                │
+│  High-performance CRUD, indexed queries,            │
+│  programmable expiration                            │
+└────────────────────────┬────────────────────────────┘
+                         │  coordination
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│  LAYER 2 — ARKIV COORDINATION LAYER                 │
+│  DB-chain registry,                                 │
+│  deterministic query resolution                     │
+└────────────────────────┬────────────────────────────┘
+                         │  settlement
+                         ▼
+┌─────────────────────────────────────────────────────┐
+│  LAYER 1 — ETHEREUM MAINNET                         │
+│  Proof verification, commitments,                   │
+│  ultimate source of truth                           │
+└─────────────────────────────────────────────────────┘
+```
 
 ## Core Concepts
 
@@ -97,6 +116,17 @@ Two client types exist:
 
 1. **WalletClient** (read/write) — Requires a private key or wallet connection. Use for creating, updating, deleting entities.
 2. **PublicClient** (read-only) — No private key needed. Use for queries. Safe for frontend use.
+
+## What You Can Query
+
+The SDK's query builder supports more than basic filtering. Before you reach for client-side sorting or manual pagination, check what's built in:
+
+- **Ordering** — sort results by any numeric attribute with `orderBy(desc('field', 'number'))`
+- **Pagination** — cursor-based, up to 200 results per page with `hasNextPage()` / `next()`
+- **Entity count** — get a count without fetching entities via `getEntityCount()`
+- **Owner & creator filters** — `.ownedBy()` and `.createdBy()` for wallet-level filtering
+
+Full reference: [Querying Data](/typescript-sdk/querying-data/)
 
 ## Use Cases
 
