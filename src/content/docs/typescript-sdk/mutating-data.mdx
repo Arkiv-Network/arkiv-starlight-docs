@@ -95,7 +95,9 @@ const { txHash } = await walletClient.updateEntity({
 })
 ```
 
-<Aside>Only the entity owner can update it. Updating replaces the entire payload and attributes.</Aside>
+<Aside type="caution">
+`updateEntity` is a **full replace**, not a patch. It overwrites the entire payload and all attributes. If you omit an attribute from the update call, it will be silently removed from the entity. Always re-send every attribute you want to keep.
+</Aside>
 
 ## Delete Entity
 
