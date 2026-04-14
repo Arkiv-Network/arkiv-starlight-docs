@@ -1,0 +1,92 @@
+# Arkiv
+
+> The Web3 database. A universal data layer for Ethereum — queryable, time-scoped, tamper-proof, wallet-owned.
+
+## Documentation
+
+- Getting started: https://docs.arkiv.network/start-here/fundamentals/
+- Installation & Hello World: https://docs.arkiv.network/start-here/installation/
+- Testnet (Kaolin): https://docs.arkiv.network/start-here/testnet/
+- Best practices: https://docs.arkiv.network/typescript-sdk/best-practices/
+
+## TypeScript SDK
+
+Package: `@arkiv-network/sdk` (NOT `arkiv-sdk` — that package is deprecated)
+
+### Imports
+
+```ts
+import { createWalletClient, createPublicClient, http } from "@arkiv-network/sdk"
+import { kaolin } from "@arkiv-network/sdk/chains"
+import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
+import { eq, gt, lt, gte, lte, desc } from "@arkiv-network/sdk/query"
+import { jsonToPayload, stringToPayload, payloadToString, ExpirationTime } from "@arkiv-network/sdk/utils"
+```
+
+### Clients
+
+- `createWalletClient({ chain, transport, account })` — read/write, requires private key
+- `createPublicClient({ chain, transport })` — read-only, safe for frontend
+
+### Writing data
+
+- `walletClient.createEntity({ payload, contentType, attributes, expiresIn })` → `{ entityKey, txHash }`
+- `walletClient.updateEntity({ entityKey, payload, contentType, attributes, expiresIn })` — FULL REPLACE, not patch. Omitted attributes are silently removed.
+- `walletClient.deleteEntity({ entityKey })` → `{ txHash }`
+- `walletClient.extendEntity({ entityKey, expiresIn })` — extend expiration
+- `walletClient.changeOwnership({ entityKey, newOwner })` — transfer ownership
+- `walletClient.mutateEntities({ creates, updates, deletes, extensions })` — batch operations
+
+### Reading data
+
+- `publicClient.getEntity(entityKey)` — single entity by key
+- `publicClient.buildQuery()` — chainable query builder:
+  - `.where(condition)` — filter (eq, gt, lt, gte, lte)
+  - `.ownedBy(address)` / `.createdBy(address)` — wallet filters
+  - `.orderBy(desc('field', 'type'))` — ordering
+  - `.withPayload(true)` / `.withAttributes(true)` — include data
+  - `.limit(n)` — max results (cap: 200)
+  - `.fetch()` — execute
+
+### Live events
+
+- `publicClient.subscribeEntityEvents({ onEntityCreated, onEntityUpdated, onEntityDeleted, onEntityExpired, onEntityExpiresInExtended, onError }, pollingInterval?, fromBlock?)` — returns `unsubscribe()` function
+- NOTE: There is NO `watchEntities` method. Use `subscribeEntityEvents`.
+
+### Payload helpers
+
+- `jsonToPayload(object)` — JSON to payload
+- `stringToPayload(string)` — text to payload
+- `payloadToString(payload)` — payload to text
+
+### Expiration helpers
+
+- `ExpirationTime.fromMinutes(n)`
+- `ExpirationTime.fromHours(n)`
+- `ExpirationTime.fromDays(n)`
+
+### Query operators
+
+- `eq(key, value)` — exact match (strings and numbers)
+- `gt(key, value)`, `lt()`, `gte()`, `lte()` — numeric comparisons only
+- No `contains()`, `startsWith()`, or full-text search at protocol level
+
+## JSON-RPC API
+
+- Querying: https://docs.arkiv.network/json-rpc/querying-data/
+- Mutating: https://docs.arkiv.network/json-rpc/mutating-entities/
+
+## Important conventions
+
+- Always use a project attribute on every entity to namespace your app's data
+- `updateEntity` is full-replace — re-send ALL attributes you want to keep
+- String attributes support only `eq()`. Use numeric values for range queries.
+- All entities expire. Use `ExpirationTime` helpers for human-readable durations.
+
+## Testnet
+
+- Chain: Kaolin (ID: 60138453025)
+- RPC: https://kaolin.hoodi.arkiv.network/rpc
+- WebSocket: wss://kaolin.hoodi.arkiv.network/rpc/ws
+- Explorer: https://explorer.kaolin.hoodi.arkiv.network/
+- Faucet: https://kaolin.hoodi.arkiv.network/faucet/
