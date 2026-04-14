@@ -107,7 +107,7 @@ export default defineConfig({
 			},
 			plugins: [
 				starlightPageActions({
-					baseUrl: "https://arkiv-network.github.io/arkiv-starlight-docs/",
+					baseUrl: process.env.SITE_URL || "https://docs.arkiv.network",
 				}),
 			],
 		}),
