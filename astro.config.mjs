@@ -110,6 +110,14 @@ export default defineConfig({
 					baseUrl: process.env.SITE_URL || "https://docs.arkiv.network",
 				}),
 			],
+			head: [{
+				tag: "meta",
+				attrs: {
+					name: "google-site-verification",
+					content: "OrCFKDnc2YAzKX_OFJr-Qp4XZNKS7dOsGAbp4G63fgQ",
+
+				}
+			}]
 		}),
 	],
 	vite: {
