@@ -115,8 +115,25 @@ export default defineConfig({
 				attrs: {
 					name: "google-site-verification",
 					content: "OrCFKDnc2YAzKX_OFJr-Qp4XZNKS7dOsGAbp4G63fgQ",
-
 				}
+			}, {
+				tag: "script",
+				attrs: {
+					defer: true,
+					src: "https://umami.arkiv.network/script.js",
+					"data-website-id": "0d5aa092-333b-4d74-b670-3d919cc4f52e",
+				}
+			}, {
+				tag: "script",
+				content: `(() => {
+					const name = 'outbound-link-click';
+					document.querySelectorAll('a').forEach(a => {
+						if (a.host !== window.location.host && !a.getAttribute('data-umami-event')) {
+							a.setAttribute('data-umami-event', name);
+							a.setAttribute('data-umami-event-url', a.href);
+						}
+					});
+				})();`,
 			}]
 		}),
 	],
