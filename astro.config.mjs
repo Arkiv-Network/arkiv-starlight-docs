@@ -125,15 +125,15 @@ export default defineConfig({
 				}
 			}, {
 				tag: "script",
-				content: `(() => {
-					const name = 'outbound-link-click';
-					document.querySelectorAll('a').forEach(a => {
+				content: `document.addEventListener('DOMContentLoaded', () => {
+						const name = 'outbound-link-click';
+						document.querySelectorAll('a').forEach(a => {
 						if (a.host !== window.location.host && !a.getAttribute('data-umami-event')) {
 							a.setAttribute('data-umami-event', name);
 							a.setAttribute('data-umami-event-url', a.href);
 						}
-					});
-				})();`,
+						});
+					});`
 			}]
 		}),
 	],
