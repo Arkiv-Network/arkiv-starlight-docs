@@ -36,5 +36,16 @@ const { siteTitleHref } = Astro.locals.starlightRoute;
       object-fit: contain;
       object-position: 0 50%;
     }
+
+    @media (max-width: 767px) {
+      .site-title {
+        font-size: 1rem;
+      }
+    }
+    @media (max-width: 360px) {
+      .site-title {
+        font-size: 0.875rem;
+      }
+    }
   }
 </style>
