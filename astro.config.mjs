@@ -8,6 +8,9 @@ import starlightPageActions from "starlight-page-actions";
 // https://astro.build/config
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
+	redirects: {
+		"/start-here/testnet": "/networks/braga/",
+	},
 	integrations: [
 		starlight({
 			title: "Arkiv documentation",
@@ -24,9 +27,15 @@ export default defineConfig({
 					label: "Start Here",
 					items: [
 						{ label: "Fundamentals", slug: "start-here/fundamentals" },
-						{ label: "Testnet", slug: "start-here/testnet" },
 						{ label: "Installation", slug: "start-here/installation" },
 						{ label: "Agent Skill", slug: "start-here/agent-skill" },
+					],
+				},
+				{
+					label: "Networks",
+					items: [
+						{ label: "Braga", slug: "networks/braga" },
+						{ label: "Migrating from Kaolin", slug: "networks/migrate-from-kaolin" },
 					],
 				},
 				{
