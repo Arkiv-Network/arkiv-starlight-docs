@@ -14,10 +14,10 @@ All write operations require a wallet client:
 ```ts
 import { createWalletClient, http } from "@arkiv-network/sdk"
 import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 const walletClient = createWalletClient({
-  chain: kaolin,
+  chain: braga,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
 })
@@ -215,14 +215,14 @@ In browser applications, use MetaMask as the transport instead of a private key:
 
 ```ts
 import { createWalletClient, custom } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 // Request wallet connection
 await window.ethereum.request({ method: 'eth_requestAccounts' })
 
 // Use MetaMask as transport
 const walletClient = createWalletClient({
-  chain: kaolin,
+  chain: braga,
   transport: custom(window.ethereum),
 })
 ```

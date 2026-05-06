@@ -31,10 +31,10 @@ Requires a private key. Use for creating, updating, and deleting entities:
 ```ts
 import { createWalletClient, http } from "@arkiv-network/sdk"
 import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 const walletClient = createWalletClient({
-  chain: kaolin,
+  chain: braga,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
 })
@@ -48,10 +48,10 @@ No private key needed. Use for queries — safe for frontend use:
 
 ```ts
 import { createPublicClient, http } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 const publicClient = createPublicClient({
-  chain: kaolin,
+  chain: braga,
   transport: http(),
 })
 ```
@@ -85,27 +85,27 @@ const publicClient = createPublicClient({
    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
    ```
 
-   Get test ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/).
+   Get test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/) — Braga uses GLM as its native gas token.
 
 3. **Write your first entity**
 
    ```ts title="hello.ts"
    import { createWalletClient, createPublicClient, http } from '@arkiv-network/sdk';
    import { stringToPayload } from '@arkiv-network/sdk/utils';
-   import { kaolin } from '@arkiv-network/sdk/chains';
+   import { braga } from '@arkiv-network/sdk/chains';
    import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
    import { config } from 'dotenv';
 
    config({ path: '.env' });
 
    const walletClient = createWalletClient({
-     chain: kaolin,
+     chain: braga,
      transport: http(),
      account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
    });
 
    const publicClient = createPublicClient({
-     chain: kaolin,
+     chain: braga,
      transport: http(),
    });
 
@@ -157,5 +157,5 @@ For static HTML/JS pages without a bundler:
 ```js
 import { createPublicClient, http } from 'https://esm.sh/@arkiv-network/sdk@0.6.0?target=es2022&bundle-deps'
 import { eq } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/query?target=es2022&bundle-deps'
-import { kaolin } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/chains?target=es2022&bundle-deps'
+import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/chains?target=es2022&bundle-deps'
 ```

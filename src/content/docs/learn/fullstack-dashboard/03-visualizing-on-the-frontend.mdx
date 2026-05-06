@@ -303,7 +303,7 @@ export function updatePriceBoxes(btcData, ethData, glmData) {
         const priceChange = latest.change24h || 0;
         const changeClass = priceChange >= 0 ? 'positive' : 'negative';
         const changeSign = priceChange >= 0 ? '+' : '';
-        const explorerUrl = \`https://explorer.kaolin.hoodi.arkiv.network/entity/\${latest.entityKey}?tab=data\`;
+        const explorerUrl = \`https://explorer.braga.hoodi.arkiv.network/entity/\${latest.entityKey}?tab=data\`;
 
         const box = document.createElement('div');
         box.className = 'price-box';
@@ -355,11 +355,11 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { kaolin } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: kaolin,
+    chain: braga,
     transport: http(),
 });
 
@@ -384,11 +384,11 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { kaolin } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: kaolin,
+    chain: braga,
     transport: http(),
 });
 
@@ -440,7 +440,7 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { kaolin } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
 
 // Import chart management functions
 import {
@@ -453,7 +453,7 @@ import {
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: kaolin,
+    chain: braga,
     transport: http(),
 });
 
