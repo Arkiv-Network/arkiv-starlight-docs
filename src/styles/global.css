@@ -75,4 +75,15 @@
   .large {
     font-weight: 400;
   }
+
+  @media (max-width: 767px) {
+    .pagination-links a {
+      padding: 0.75rem 1rem;
+      min-height: 44px;
+    }
+    .pagination-links a .link-title {
+      font-size: var(--sl-text-body);
+      line-height: 1.5;
+    }
+  }
 }

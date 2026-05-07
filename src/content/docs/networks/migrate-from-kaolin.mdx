@@ -1,0 +1,144 @@
+---
+title: Migrating from Kaolin to Braga
+description: Move your Arkiv app from the Kaolin testnet to Braga — what changes, what stays the same, and a step-by-step checklist.
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Braga is Arkiv's current testnet db-chain, and it replaces Kaolin. Both are testnets; there is no Arkiv mainnet yet. If you've been building on Kaolin, here's how to move across.
+
+<Aside type="caution" title="Sunset date">
+  Kaolin runs alongside Braga until **15 May 2026**. After that, Kaolin endpoints stop responding. Plan to migrate before then.
+</Aside>
+
+## Why Braga?
+
+- **GLM is the native gas token.** Test GLM is dripped from the faucet. No more juggling test ETH for gas on a chain that's meant to showcase $GLM.
+- **Improved network resilience** — Braga is more tolerant of operator-side disruption.
+- **Cleaner faucet experience.** The spurious "connection error" message that appeared after a successful drip on Kaolin is gone.
+
+The SDK API is unchanged. The only thing you swap is the chain you point at.
+
+## What you'll need to redo
+
+Test tokens don't carry over. Request fresh test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/) once you've added the network to your wallet.
+
+Entities you wrote to Kaolin also stay on Kaolin — re-create them on Braga if your app depends on them.
+
+Your app code and wallet keep working. If you're using the JavaScript SDK, upgrade to **`@arkiv-network/sdk` 0.6.5 or higher** so the `braga` chain export is available.
+
+## Network parameters
+
+| Property              | Kaolin (legacy)                                  | **Braga (current)**                                  |
+| --------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| Chain ID              | `60138453025` / `0xe0087f821`                    | **`60138453102` / `0xe0087f86e`**                    |
+| HTTP RPC              | `https://kaolin.hoodi.arkiv.network/rpc`         | **`https://braga.hoodi.arkiv.network/rpc`**          |
+| WebSocket RPC         | `wss://kaolin.hoodi.arkiv.network/rpc/ws`        | **`wss://braga.hoodi.arkiv.network/rpc/ws`**         |
+| Native gas token      | ETH                                              | **GLM**                                              |
+| Standard Bridge       | `0x6db217C596Cd203256058dBbFcA37d5A62161b78`     | **`0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`**     |
+| Faucet                | kaolin.hoodi.arkiv.network/faucet                | **braga.hoodi.arkiv.network/faucet**                 |
+| Explorer              | explorer.kaolin.hoodi.arkiv.network              | **explorer.braga.hoodi.arkiv.network**               |
+
+## Automatic migration using AI
+
+If you're using an AI coding agent, the fastest path is to let it make the network changes for you.
+
+### 1. Install the latest Arkiv agent skill
+
+Follow the [Arkiv agent skill](/start-here/agent-skill/) setup guide and make sure you're using the latest version of the skill.
+
+### 2. Ask the agent to migrate your project
+
+Use this prompt:
+
+```text
+Migrate my project from kaolin to braga
+```
+
+The Arkiv skill can help update the SDK chain import, RPC URLs, and other Kaolin-specific configuration.
+
+### 3. Review the changes and finish the network setup
+
+After the agent updates your code, make sure your wallet is connected to Braga, request test GLM from the faucet, and re-create any entities your app needs on Braga. Your agent can assist with these steps too if you ask.
+
+## Manual migration step by step
+
+### 1. Add Braga to your wallet
+
+Easiest path: open the [Braga network page](/networks/braga/) and click **Add Braga to MetaMask**. Or add it manually with the values in the table above. Make sure `nativeCurrency.symbol` is set to `GLM`, not ETH.
+
+### 2. Update your SDK initialisation
+
+Braga is available in the JavaScript SDK starting in **`@arkiv-network/sdk` 0.6.5**. Once you're on that version or newer, swap `kaolin` for `braga`:
+
+<Tabs>
+  <TabItem label="Before (Kaolin)">
+    ```ts
+    import { createClient } from "@arkiv-network/sdk";
+    import { kaolin } from "@arkiv-network/sdk/chains";
+
+    const client = createClient({
+      chain: kaolin,
+      account,
+    });
+    ```
+  </TabItem>
+  <TabItem label="After (Braga)">
+    ```ts
+    import { createClient } from "@arkiv-network/sdk";
+    import { braga } from "@arkiv-network/sdk/chains";
+
+    const client = createClient({
+      chain: braga,
+      account,
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+If you're using wagmi or viem directly, update the chain object's `id`, `rpcUrls`, `blockExplorers`, and **`nativeCurrency` to GLM**.
+
+### 3. Update env vars and RPC URLs
+
+Anywhere you've hardcoded a Kaolin URL — env files, deployment configs, scripts — replace it with the Braga equivalent:
+
+```diff
+- KAOLIN_RPC_URL=https://kaolin.hoodi.arkiv.network/rpc
++ BRAGA_RPC_URL=https://braga.hoodi.arkiv.network/rpc
+```
+
+Rename the variable too. Mixed `KAOLIN_*` / `BRAGA_*` names in the same codebase get confusing fast.
+
+### 4. Get test GLM from the faucet
+
+Visit the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/), connect your wallet, and request a drip. The faucet pays out in GLM, which is what Braga uses for gas.
+
+### 5. Re-create your entities
+
+Entities written on Kaolin do not migrate. If your app reads entities at startup, run your seed / migration script against Braga before you flip traffic.
+
+## FAQ
+
+### Does the SDK API change?
+
+No. Only the chain import changes — same methods, same types, same return shapes.
+
+### Will my Kaolin entities migrate?
+
+No. Testnet state is not ported. Re-create entities on Braga.
+
+### Can I run Kaolin and Braga in parallel during migration?
+
+Yes, until 15 May 2026. Both networks accept traffic. After that date, Kaolin endpoints stop responding.
+
+### What about the bridge contract?
+
+The Standard Bridge address is different on Braga (`0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`). If you bridge programmatically, update the address. Funds bridged into Kaolin stay on Kaolin — withdraw before the sunset.
+
+### Why GLM and not ETH for gas?
+
+$GLM is the token powering Arkiv. Using it for gas on the testnet matches what production will look like.
+
+## Need help?
+
+If something doesn't work, ping the team in [Discord](https://discord.gg/arkiv).

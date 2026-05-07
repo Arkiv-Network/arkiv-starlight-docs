@@ -21,13 +21,13 @@ First, define fetcher functions separate from hooks so they're reusable and test
 ```ts
 // lib/arkiv-queries.ts
 import { createPublicClient, http } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 import { eq } from "@arkiv-network/sdk/query"
 
 const PROJECT_ATTRIBUTE = { key: "project", value: "my-app" }
 
 export const publicClient = createPublicClient({
-  chain: kaolin,
+  chain: braga,
   transport: http(),
 })
 
@@ -137,7 +137,7 @@ import {
   createWalletClient as createArkivWalletClient,
   custom,
 } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 function useArkivWalletClient() {
   const { address } = useAccount()
@@ -146,7 +146,7 @@ function useArkivWalletClient() {
   if (!wagmiWalletClient || !address) return null
 
   return createArkivWalletClient({
-    chain: kaolin,
+    chain: braga,
     transport: custom(wagmiWalletClient.transport),
     account: address,
   })
@@ -189,34 +189,34 @@ function CreatePostButton() {
 The `transport: custom(wagmiWalletClient.transport)` line is the key — it reuses the same wallet connection that wagmi already manages, so users don't see a second connect prompt.
 </Aside>
 
-### Add the Kaolin Network to wagmi Config
+### Add the Braga Network to wagmi Config
 
-Register the Arkiv Kaolin testnet in your wagmi config so wallet switching works:
+Register the Arkiv Braga testnet in your wagmi config so wallet switching works:
 
 ```ts
 // wagmi.ts
 import { http, createConfig } from "wagmi"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [kaolin],
+  chains: [braga],
   transports: {
-    [kaolin.id]: http(),
+    [braga.id]: http(),
   },
 })
 ```
 
-If your app supports multiple chains, add `kaolin` alongside them:
+If your app supports multiple chains, add `braga` alongside them:
 
 ```ts
 import { mainnet } from "wagmi/chains"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [mainnet, kaolin],
+  chains: [mainnet, braga],
   transports: {
     [mainnet.id]: http(),
-    [kaolin.id]: http(),
+    [braga.id]: http(),
   },
 })
 ```
@@ -227,17 +227,17 @@ If you're not using wagmi, you can connect MetaMask directly:
 
 ```ts
 import { createWalletClient, custom } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
+import { braga } from "@arkiv-network/sdk/chains"
 
 // Prompt MetaMask to add the network
 await window.ethereum.request({
   method: "wallet_addEthereumChain",
   params: [{
-    chainId: "0xe0087f821",
-    chainName: "Arkiv Kaolin Testnet",
-    nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-    rpcUrls: ["https://kaolin.hoodi.arkiv.network/rpc"],
-    blockExplorerUrls: ["https://explorer.kaolin.hoodi.arkiv.network"],
+    chainId: "0xe0087f86e",
+    chainName: "Arkiv Braga Testnet",
+    nativeCurrency: { name: "Golem", symbol: "GLM", decimals: 18 },
+    rpcUrls: ["https://braga.hoodi.arkiv.network/rpc"],
+    blockExplorerUrls: ["https://explorer.braga.hoodi.arkiv.network"],
   }],
 })
 
@@ -247,7 +247,7 @@ const [address] = await window.ethereum.request({
 })
 
 const walletClient = createWalletClient({
-  chain: kaolin,
+  chain: braga,
   transport: custom(window.ethereum),
 })
 ```

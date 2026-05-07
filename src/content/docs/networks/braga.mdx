@@ -1,0 +1,66 @@
+---
+title: Braga
+description: Arkiv Braga testnet details — chain ID, RPC endpoints, faucet, explorer, bridge, and MetaMask configuration.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Braga is Arkiv's current testnet db-chain. It uses **test GLM as the native gas token** and produces blocks every 2 seconds. There is no Arkiv mainnet yet; everything you ship today runs on testnet.
+
+<Aside type="caution" title="Migrating from Kaolin?">
+  Braga replaces the Kaolin testnet. If you have an app running on Kaolin, see the [migration guide](/networks/migrate-from-kaolin/). Kaolin is scheduled to sunset on **15 May 2026**.
+</Aside>
+
+## Network details
+
+| Property              | Value                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| Chain ID              | `60138453102`                                                                        |
+| HTTP RPC              | `https://braga.hoodi.arkiv.network/rpc`                                              |
+| WebSocket RPC         | `wss://braga.hoodi.arkiv.network/rpc/ws`                                             |
+| Native gas token      | GLM                                                                                  |
+| Block time            | 2 seconds                                                                            |
+| Standard Bridge       | `0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`                                         |
+| Faucet                | [braga.hoodi.arkiv.network/faucet](https://braga.hoodi.arkiv.network/faucet/)        |
+| Explorer              | [explorer.braga.hoodi.arkiv.network](https://explorer.braga.hoodi.arkiv.network/)    |
+| Bridge UI             | [braga.hoodi.arkiv.network/bridgette](https://braga.hoodi.arkiv.network/bridgette/)  |
+| Status                | [status.braga.hoodi.arkiv.network](https://status.braga.hoodi.arkiv.network)         |
+
+## Adding Braga to MetaMask
+
+Click the button below to add the Braga testnet to your MetaMask wallet:
+
+<button id="add-braga-btn" class="bg-arkiv-blue text-white hover:bg-arkiv-blue/95 cursor-pointer px-4 py-2 rounded" type="button" data-umami-event="add-braga-to-wallet">
+  Add Braga to MetaMask
+</button>
+<p id="add-braga-msg" style="margin-top: 0.5rem; font-size: 0.875rem;"></p>
+
+<script>{`
+  document.getElementById('add-braga-btn').addEventListener('click', async () => {
+    const msg = document.getElementById('add-braga-msg');
+    if (typeof window.ethereum === 'undefined') {
+      msg.textContent = 'MetaMask is not installed. Please install it first.';
+      msg.style.color = 'var(--sl-color-red)';
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0xe0087f86e',
+          chainName: 'Arkiv Braga Testnet',
+          nativeCurrency: { name: 'Golem', symbol: 'GLM', decimals: 18 },
+          rpcUrls: ['https://braga.hoodi.arkiv.network/rpc'],
+          blockExplorerUrls: ['https://explorer.braga.hoodi.arkiv.network'],
+        }],
+      });
+      msg.textContent = 'Braga testnet added successfully!';
+      msg.style.color = 'var(--sl-color-green)';
+    } catch (err) {
+      msg.textContent = 'Failed to add network: ' + (err.message || err);
+      msg.style.color = 'var(--sl-color-red)';
+    }
+  });
+`}</script>
+
+Then get test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/).

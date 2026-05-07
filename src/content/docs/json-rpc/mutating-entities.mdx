@@ -11,7 +11,7 @@ All entity mutations are sent as standard Ethereum transactions to a special Ark
 |----------|-------|
 | Arkiv Address | `0x00000000000000000000000000000061726b6976` |
 | Block Time | 2 seconds |
-| Transaction Value | 0 (no ETH transferred) |
+| Transaction Value | 0 (no native token transferred) |
 
 <Aside>
 Most developers should use the [TypeScript SDK](/typescript-sdk/mutating-data/) instead of raw transactions. This page documents the low-level protocol for advanced use cases.
@@ -180,7 +180,7 @@ This final hex string is the transaction `data` field.
 ### Broadcasting
 
 ```bash
-curl -s https://kaolin.hoodi.arkiv.network/rpc \
+curl -s https://braga.hoodi.arkiv.network/rpc \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -193,7 +193,7 @@ curl -s https://kaolin.hoodi.arkiv.network/rpc \
 ### Polling for the Receipt
 
 ```bash
-curl -s https://kaolin.hoodi.arkiv.network/rpc \
+curl -s https://braga.hoodi.arkiv.network/rpc \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
