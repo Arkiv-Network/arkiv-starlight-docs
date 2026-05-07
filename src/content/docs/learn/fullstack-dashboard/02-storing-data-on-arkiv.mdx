@@ -25,7 +25,7 @@ First, we need to import the necessary functions from the Arkiv SDK and set up o
 
 <Code
   code={`import { createWalletClient, http } from '@arkiv-network/sdk';
-import { kaolin } from '@arkiv-network/sdk/chains';
+import { braga } from '@arkiv-network/sdk/chains';
 import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 
 // Load the private key from the environment file.
@@ -39,7 +39,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: kaolin, // We are using the Kaolin testnet.
+    chain: braga, // We are using the Braga testnet.
     transport: http(),
     account: account,
 });
@@ -57,15 +57,15 @@ node --env-file backend/.env backend/index.js
 
 You should see output like: `Backend service connected as: 0x1234...`
 
-### Step 2: Get Testnet ETH
+### Step 2: Get Test GLM
 
-Before we can create entities on Arkiv, we need some testnet ETH to pay for gas fees. Visit the Kaolin testnet faucet:
+Before we can create entities on Arkiv, we need some test GLM to pay for gas fees. Braga uses GLM as its native gas token. Visit the Braga faucet:
 
-**👉 [https://kaolin.hoodi.arkiv.network/faucet/](https://kaolin.hoodi.arkiv.network/faucet/)**
+**👉 [https://braga.hoodi.arkiv.network/faucet/](https://braga.hoodi.arkiv.network/faucet/)**
 
-Enter your wallet address (the one displayed in the previous step) and request testnet ETH. This is completely free and only takes a moment.
+Enter your wallet address (the one displayed in the previous step) and request test GLM. This is completely free and only takes a moment.
 
-You may need to wait a few minutes for the transaction to be processed. You can check your balance using a Kaolin block explorer: **👉 [https://explorer.kaolin.hoodi.arkiv.network/](https://explorer.kaolin.hoodi.arkiv.network/)**
+You may need to wait a few minutes for the transaction to be processed. You can check your balance using a Braga block explorer: **👉 [https://explorer.braga.hoodi.arkiv.network/](https://explorer.braga.hoodi.arkiv.network/)**
 
 ### Step 3: Fetching Data from CoinGecko
 
@@ -73,7 +73,7 @@ Next, let's add a function to call the CoinGecko API and fetch our cryptocurrenc
 
 <Code
   code={`import { createWalletClient, http } from '@arkiv-network/sdk';
-import { kaolin } from '@arkiv-network/sdk/chains';
+import { braga } from '@arkiv-network/sdk/chains';
 import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 import axios from 'axios';
 
@@ -88,7 +88,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: kaolin, // We are using the Kaolin testnet.
+    chain: braga, // We are using the Braga testnet.
     transport: http(),
     account: account,
 });
@@ -128,7 +128,7 @@ This is the core of our backend. This function takes all the crypto data and cre
 
 <Code
   code={`import { createWalletClient, http } from '@arkiv-network/sdk';
-import { kaolin } from '@arkiv-network/sdk/chains';
+import { braga } from '@arkiv-network/sdk/chains';
 import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
 import axios from 'axios';
@@ -144,7 +144,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: kaolin, // We are using the Kaolin testnet.
+    chain: braga, // We are using the Braga testnet.
     transport: http(),
     account: account,
 });
@@ -225,7 +225,7 @@ Finally, let's create a main loop to tie everything together. This function will
 
 <Code
   code={`import { createWalletClient, http } from '@arkiv-network/sdk';
-import { kaolin } from '@arkiv-network/sdk/chains';
+import { braga } from '@arkiv-network/sdk/chains';
 import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
 import axios from 'axios';
@@ -241,7 +241,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: kaolin, // We are using the Kaolin testnet.
+    chain: braga, // We are using the Braga testnet.
     transport: http(),
     account: account,
 });

@@ -94,7 +94,7 @@ connectBtn.addEventListener("click", async () => {
 
 ### Step 3: Gallery Rendering
 
-Add the functions that load sketches from Arkiv and render them as image thumbnails with explorer links. Each sketch in the gallery includes a link to verify it on the Arkiv Kaolin Explorer.
+Add the functions that load sketches from Arkiv and render them as image thumbnails with explorer links. Each sketch in the gallery includes a link to verify it on the Arkiv Braga Explorer.
 
 <Code
   code={`import "./style.css";
@@ -156,7 +156,7 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
             \${sketch.id.slice(0, 12)}...
           </a>
         </div>\`;
@@ -232,7 +232,7 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
             \${sketch.id.slice(0, 12)}...
           </a>
         </div>\`;
@@ -325,7 +325,7 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.kaolin.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
+          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
             \${sketch.id.slice(0, 12)}...
           </a>
         </div>\`;
@@ -437,11 +437,11 @@ h2 { font-size: 1.2rem; color: #4a5568; margin-bottom: 15px; }
 
     Vite will start a local server, usually at `http://localhost:5173`.
 
-2. **Connect MetaMask:** Click "Connect MetaMask" in the app. MetaMask will prompt you to switch to the Kaolin testnet (or add it if it's not configured yet), then connect your account.
+2. **Connect MetaMask:** Click "Connect MetaMask" in the app. MetaMask will prompt you to switch to the Braga testnet (or add it if it's not configured yet), then connect your account.
 
 3. **Draw and save:** Draw on the canvas with your mouse, then click "Save". MetaMask will ask you to confirm the transaction to store your sketch on Arkiv.
 
-4. **View your gallery:** After the transaction confirms, your sketch will appear in the "Recent Sketches" panel on the left. Each sketch links to the [Arkiv Kaolin Explorer](https://explorer.kaolin.hoodi.arkiv.network/) so you can verify it on-chain.
+4. **View your gallery:** After the transaction confirms, your sketch will appear in the "Recent Sketches" panel on the left. Each sketch links to the [Arkiv Braga Explorer](https://explorer.braga.hoodi.arkiv.network/) so you can verify it on-chain.
 
 </Steps>
 

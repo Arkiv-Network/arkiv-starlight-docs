@@ -14,7 +14,7 @@ Make sure you have the following installed on your system:
 - **Node.js**: A recent version, specifically **v20.6.0 or higher**.
 - **A Text Editor**: A code editor like VS Code is highly recommended.
 - **MetaMask**: The [MetaMask browser extension](https://metamask.io/) installed in your browser. This is how users will sign transactions.
-- **Test ETH**: You'll need some testnet ETH from the [Kaolin Faucet](https://kaolin.hoodi.arkiv.network/faucet/). The app will prompt MetaMask to switch to the Kaolin testnet automatically.
+- **Test GLM**: You'll need some test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/). Braga uses GLM as its native gas token. The app will prompt MetaMask to switch to the Braga testnet automatically.
 
 ## 2. Project Setup
 
@@ -195,7 +195,7 @@ Now for the most important part of this tutorial: connecting to MetaMask. Open `
 
 ### Step 1: Imports and Chain Switching
 
-First, we import the SDK and create a helper function to switch MetaMask to the Kaolin testnet. If the chain hasn't been added to MetaMask yet, we add it automatically.
+First, we import the SDK and create a helper function to switch MetaMask to the Braga testnet. If the chain hasn't been added to MetaMask yet, we add it automatically.
 
 <Code
   code={`import {
@@ -204,15 +204,15 @@ First, we import the SDK and create a helper function to switch MetaMask to the 
   custom,
   http,
 } from "@arkiv-network/sdk";
-import { kaolin } from "@arkiv-network/sdk/chains";
+import { braga } from "@arkiv-network/sdk/chains";
 import "viem/window";
 
-async function switchToKaolinChain() {
+async function switchToBragaChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
+  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -232,10 +232,10 @@ async function switchToKaolinChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: kaolin.name,
-            nativeCurrency: kaolin.nativeCurrency,
-            rpcUrls: kaolin.rpcUrls.default.http,
-            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+            chainName: braga.name,
+            nativeCurrency: braga.nativeCurrency,
+            rpcUrls: braga.rpcUrls.default.http,
+            blockExplorerUrls: [braga.blockExplorers.default.url],
           },
         ],
       });
@@ -248,7 +248,7 @@ async function switchToKaolinChain() {
   title="src/wallet.ts"
 />
 
-The `switchToKaolinChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902` (chain not found), it falls back to `wallet_addEthereumChain`, using the chain details from the SDK's `kaolin` object.
+The `switchToBragaChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902` (chain not found), it falls back to `wallet_addEthereumChain`, using the chain details from the SDK's `braga` object.
 
 ### Step 2: Connect Wallet
 
@@ -261,15 +261,15 @@ Next, add the `connectWallet` function. This switches to the correct chain and t
   custom,
   http,
 } from "@arkiv-network/sdk";
-import { kaolin } from "@arkiv-network/sdk/chains";
+import { braga } from "@arkiv-network/sdk/chains";
 import "viem/window";
 
-async function switchToKaolinChain() {
+async function switchToBragaChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
+  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -289,10 +289,10 @@ async function switchToKaolinChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: kaolin.name,
-            nativeCurrency: kaolin.nativeCurrency,
-            rpcUrls: kaolin.rpcUrls.default.http,
-            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+            chainName: braga.name,
+            nativeCurrency: braga.nativeCurrency,
+            rpcUrls: braga.rpcUrls.default.http,
+            blockExplorerUrls: [braga.blockExplorers.default.url],
           },
         ],
       });
@@ -307,7 +307,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToKaolinChain();
+  await switchToBragaChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -331,15 +331,15 @@ Finally, add the factory function that creates both a **public client** (for rea
   custom,
   http,
 } from "@arkiv-network/sdk";
-import { kaolin } from "@arkiv-network/sdk/chains";
+import { braga } from "@arkiv-network/sdk/chains";
 import "viem/window";
 
-async function switchToKaolinChain() {
+async function switchToBragaChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${kaolin.id.toString(16)}\`;
+  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -359,10 +359,10 @@ async function switchToKaolinChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: kaolin.name,
-            nativeCurrency: kaolin.nativeCurrency,
-            rpcUrls: kaolin.rpcUrls.default.http,
-            blockExplorerUrls: [kaolin.blockExplorers.default.url],
+            chainName: braga.name,
+            nativeCurrency: braga.nativeCurrency,
+            rpcUrls: braga.rpcUrls.default.http,
+            blockExplorerUrls: [braga.blockExplorers.default.url],
           },
         ],
       });
@@ -377,7 +377,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToKaolinChain();
+  await switchToBragaChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -392,12 +392,12 @@ export function createArkivClients(account?: \`0x\${string}\`) {
   }
 
   const publicClient = createPublicClient({
-    chain: kaolin,
+    chain: braga,
     transport: http(),
   });
 
   const walletClient = createWalletClient({
-    chain: kaolin,
+    chain: braga,
     transport: custom(window.ethereum),
     account,
   });

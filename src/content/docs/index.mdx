@@ -25,32 +25,35 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
 <div class="quickstart-layout">
   <div class="testnet-card">
     <div class="testnet-header">
-      <span class="testnet-name">KAOLIN DB-CHAIN</span>
-      <a href="https://kaolin.hoodi.arkiv.network/" class="testnet-status" target="_blank" rel="noopener">Status Page</a>
+      <span class="testnet-name">BRAGA DB-CHAIN</span>
+      <a href="https://status.braga.hoodi.arkiv.network/" class="testnet-status" target="_blank" rel="noopener">Status Page</a>
     </div>
     <div class="testnet-grid">
       <div class="testnet-field">
         <span class="testnet-label">NETWORK ID</span>
-        <code>60138453025</code>
+        <code>60138453102</code>
       </div>
       <div class="testnet-field">
         <span class="testnet-label">RPC URL</span>
-        <code>https://kaolin.hoodi.arkiv.network/rpc</code>
+        <code>https://braga.hoodi.arkiv.network/rpc</code>
       </div>
       <div class="testnet-field">
         <span class="testnet-label">WEBSOCKET</span>
-        <code>wss://kaolin.hoodi.arkiv.network/rpc/ws</code>
+        <code>wss://braga.hoodi.arkiv.network/rpc/ws</code>
       </div>
       <div class="testnet-field">
         <span class="testnet-label">BRIDGE CONTRACT</span>
-        <code>0x6db217C596Cd203256058dBbFcA37d5A62161b78</code>
+        <code>0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813</code>
       </div>
     </div>
     <div class="testnet-actions">
-      <a href="https://explorer.kaolin.hoodi.arkiv.network/" target="_blank" rel="noopener">Explorer</a>
-      <button id="add-kaolin-btn" type="button" data-umami-event="add-kaolin-to-wallet">Add Network to Wallet</button>
-      <a href="https://kaolin.hoodi.arkiv.network/faucet/" target="_blank" rel="noopener">Get Test Tokens</a>
+      <a href="https://explorer.braga.hoodi.arkiv.network/" target="_blank" rel="noopener">Explorer</a>
+      <button id="add-braga-btn" type="button" data-umami-event="add-braga-to-wallet">Add Network to Wallet</button>
+      <a href="https://braga.hoodi.arkiv.network/faucet/" target="_blank" rel="noopener">Get Test Tokens</a>
     </div>
+    <p class="testnet-migrate">
+      Coming from Kaolin? <a href="/networks/migrate-from-kaolin/">Read the migration guide</a> — Kaolin sunsets 15 May 2026.
+    </p>
   </div>
   <div class="quickstart-cards">
     <div class="qs-card">
@@ -266,11 +269,19 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
     cursor: pointer;
     transition: all 0.15s ease;
   }
+  .testnet-migrate {
+    margin: 1rem 0 0;
+    font-size: 0.8rem;
+    color: var(--sl-color-gray-3);
+  }
+  .testnet-migrate a {
+    color: var(--color-arkiv-orange);
+  }
 `}</style>
 
 <script>
 {`
-  document.getElementById('add-kaolin-btn')?.addEventListener('click', async () => {
+  document.getElementById('add-braga-btn')?.addEventListener('click', async () => {
     if (!window.ethereum) {
       alert('Please install MetaMask or another Web3 wallet.');
       return;
@@ -279,11 +290,11 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
       await window.ethereum.request({
         method: 'wallet_addEthereumChain',
         params: [{
-          chainId: '0xe0087f821',
-          chainName: 'Arkiv Kaolin Testnet',
-          nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-          rpcUrls: ['https://kaolin.hoodi.arkiv.network/rpc'],
-          blockExplorerUrls: ['https://explorer.kaolin.hoodi.arkiv.network/']
+          chainId: '0xe0087f86e',
+          chainName: 'Arkiv Braga Testnet',
+          nativeCurrency: { name: 'Golem', symbol: 'GLM', decimals: 18 },
+          rpcUrls: ['https://braga.hoodi.arkiv.network/rpc'],
+          blockExplorerUrls: ['https://explorer.braga.hoodi.arkiv.network/']
         }]
       });
     } catch (err) {
