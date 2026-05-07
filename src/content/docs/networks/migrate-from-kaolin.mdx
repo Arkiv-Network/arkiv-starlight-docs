@@ -25,7 +25,7 @@ Test tokens don't carry over. Request fresh test GLM from the [Braga faucet](htt
 
 Entities you wrote to Kaolin also stay on Kaolin — re-create them on Braga if your app depends on them.
 
-Your app code, SDK version, and wallet all keep working. The only things that change are the chain import and the RPC URL.
+Your app code and wallet keep working. If you're using the JavaScript SDK, upgrade to **`@arkiv-network/sdk` 0.6.5 or higher** so the `braga` chain export is available.
 
 ## Network parameters
 
@@ -39,7 +39,29 @@ Your app code, SDK version, and wallet all keep working. The only things that ch
 | Faucet                | kaolin.hoodi.arkiv.network/faucet                | **braga.hoodi.arkiv.network/faucet**                 |
 | Explorer              | explorer.kaolin.hoodi.arkiv.network              | **explorer.braga.hoodi.arkiv.network**               |
 
-## Step-by-step
+## Automatic migration using AI
+
+If you're using an AI coding agent, the fastest path is to let it make the network changes for you.
+
+### 1. Install the latest Arkiv agent skill
+
+Follow the [Arkiv agent skill](/start-here/agent-skill/) setup guide and make sure you're using the latest version of the skill.
+
+### 2. Ask the agent to migrate your project
+
+Use this prompt:
+
+```text
+Migrate my project from kaolin to braga
+```
+
+The Arkiv skill can help update the SDK chain import, RPC URLs, and other Kaolin-specific configuration.
+
+### 3. Review the changes and finish the network setup
+
+After the agent updates your code, make sure your wallet is connected to Braga, request test GLM from the faucet, and re-create any entities your app needs on Braga. Your agent can assist with these steps too if you ask.
+
+## Manual migration step by step
 
 ### 1. Add Braga to your wallet
 
@@ -47,7 +69,7 @@ Easiest path: open the [Braga network page](/networks/braga/) and click **Add Br
 
 ### 2. Update your SDK initialisation
 
-The Arkiv SDK exports a chain object per network. Swap `kaolin` for `braga`:
+Braga is available in the JavaScript SDK starting in **`@arkiv-network/sdk` 0.6.5**. Once you're on that version or newer, swap `kaolin` for `braga`:
 
 <Tabs>
   <TabItem label="Before (Kaolin)">
