@@ -28,7 +28,7 @@ export default defineConfig({
 					items: [
 						{ label: "Fundamentals", slug: "start-here/fundamentals" },
 						{ label: "Installation", slug: "start-here/installation" },
-						{ label: "Agent Skill", slug: "start-here/agent-skill" },
+						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 					],
 				},
 				{
