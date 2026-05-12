@@ -40,9 +40,9 @@ jobs:
       - name: Deploy infra files and restart
         run: |
           scp -i ~/.ssh/deploy_key \
-            docker-compose.yml nginx.conf \
+            docker-compose.yml nginx.conf server.ts \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}/
 
           ssh -i ~/.ssh/deploy_key \
             ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
-            "cd ${{ secrets.DEPLOY_PATH }} && docker compose up -d docs-prod"
+            "cd ${{ secrets.DEPLOY_PATH }} && docker compose up -d docs-prod docs-feedback"

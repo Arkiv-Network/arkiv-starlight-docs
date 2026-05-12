@@ -7,7 +7,9 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "feedback": "bun run server.ts",
+    "feedback:dev": "bun --watch server.ts"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.2",
@@ -18,5 +20,8 @@
     "sharp": "^0.34.2",
     "starlight-page-actions": "^0.5.0",
     "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.13"
   }
 }
