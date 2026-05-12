@@ -25,7 +25,11 @@ Teaches your agent how to build on Arkiv:
 - Common pitfalls and how to avoid them
 
 ```bash
+# npm
 npx skills add https://github.com/Arkiv-Network/skills --skill arkiv-best-practices
+
+# pnpm
+pnpm dlx skills add https://github.com/Arkiv-Network/skills --skill arkiv-best-practices
 ```
 
 ### `arkiv-feedback`
@@ -33,16 +37,24 @@ npx skills add https://github.com/Arkiv-Network/skills --skill arkiv-best-practi
 Walks you through reporting a bug or sharing a feature idea, without leaving your editor. The skill mirrors the official [issue forms](https://github.com/Arkiv-Network/reported-issues/issues/new/choose) on `Arkiv-Network/reported-issues`, asks the right questions, and submits the issue on your behalf via the GitHub CLI. If `gh` isn't installed, it saves a structured draft to disk and points you at the form in your browser.
 
 ```bash
+# npm
 npx skills add https://github.com/Arkiv-Network/skills --skill arkiv-feedback
+
+# pnpm
+pnpm dlx skills add https://github.com/Arkiv-Network/skills --skill arkiv-feedback
 ```
 
 ## Install everything at once
 
 ```bash
+# npm
 npx skills add https://github.com/Arkiv-Network/skills --all
+
+# pnpm
+pnpm dlx skills add https://github.com/Arkiv-Network/skills --all
 ```
 
-Pass `-g` (or `--global`) to install at the user level instead of the current project. See `npx skills --help` for the full set of flags.
+Pass `-g` (or `--global`) to install at the user level instead of the current project. See `npx skills --help` for the full set of flags (or `pnpm dlx skills --help`).
 
 <Aside type="tip">
 The repository is also browsable at [skills.sh/arkiv-network/skills](https://skills.sh/arkiv-network/skills).
