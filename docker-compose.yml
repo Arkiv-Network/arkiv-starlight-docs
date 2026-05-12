@@ -20,6 +20,10 @@ services:
       - "traefik.http.routers.docs-feedback.priority=100"
       - "traefik.http.routers.docs-feedback.entrypoints=websecure"
       - "traefik.http.routers.docs-feedback.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.docs-feedback.middlewares=docs-feedback-ratelimit"
+      - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.burst=20"
       - "traefik.http.services.docs-feedback.loadbalancer.server.port=3000"
 
   docs-stage:
