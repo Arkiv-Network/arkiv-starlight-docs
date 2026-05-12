@@ -1,4 +1,27 @@
 services:
+  docs-feedback:
+    image: oven/bun:1-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: ["bun", "run", "/app/server.ts"]
+    volumes:
+      - ./server.ts:/app/server.ts:ro
+    environment:
+      PORT: 3000
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL is required}
+      ALLOWED_ORIGINS: ${FEEDBACK_ALLOWED_ORIGINS:-https://docs.arkiv.network,https://stage.docs.arkiv.network,http://localhost:4321,http://127.0.0.1:4321}
+      FEEDBACK_MAX_BODY_BYTES: ${FEEDBACK_MAX_BODY_BYTES:-16384}
+      FEEDBACK_MAX_COMMENT_LENGTH: ${FEEDBACK_MAX_COMMENT_LENGTH:-4000}
+    networks:
+      - arkiv_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.docs-feedback.rule=Host(`docs.arkiv.network`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.docs-feedback.priority=100"
+      - "traefik.http.routers.docs-feedback.entrypoints=websecure"
+      - "traefik.http.routers.docs-feedback.tls.certresolver=letsencrypt"
+      - "traefik.http.services.docs-feedback.loadbalancer.server.port=3000"
+
   docs-stage:
     image: nginx:alpine
     restart: unless-stopped
@@ -25,6 +48,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.docs-prod.rule=Host(`docs.arkiv.network`)"
+      - "traefik.http.routers.docs-prod.priority=1"
       - "traefik.http.routers.docs-prod.entrypoints=websecure"
       - "traefik.http.routers.docs-prod.tls.certresolver=letsencrypt"
       - "traefik.http.services.docs-prod.loadbalancer.server.port=80"
