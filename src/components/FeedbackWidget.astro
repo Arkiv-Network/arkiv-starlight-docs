@@ -1,0 +1,545 @@
+---
+
+---
+
+<section
+  class="feedback-widget"
+  data-feedback-widget
+  data-page-title={Astro.locals.starlightRoute.entry.data.title}
+>
+  <div class="feedback-line">
+    <p class="feedback-prompt">Was this page helpful?</p>
+
+    <div
+      class="feedback-choices"
+      role="group"
+      aria-label="Was this page helpful?"
+    >
+      <button
+        type="button"
+        class="feedback-choice"
+        data-feedback-choice
+        data-sentiment="positive"
+        aria-label="This page was helpful"
+        aria-pressed="false"
+      >
+        <span class="feedback-choice-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M14 10V5.5A2.5 2.5 0 0 0 11.5 3L8 10v11h9.24a2 2 0 0 0 1.97-1.64l1.2-7A2 2 0 0 0 18.44 10H14Z"
+            ></path>
+            <path d="M8 10H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4"></path>
+          </svg>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="feedback-choice"
+        data-feedback-choice
+        data-sentiment="negative"
+        aria-label="This page was not helpful"
+        aria-pressed="false"
+      >
+        <span class="feedback-choice-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M10 14v4.5A2.5 2.5 0 0 0 12.5 21l3.5-7V3H6.76a2 2 0 0 0-1.97 1.64l-1.2 7A2 2 0 0 0 5.56 14H10Z"
+            ></path>
+            <path d="M16 14h4a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1h-4"></path>
+          </svg>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <div class="feedback-panel" data-feedback-panel>
+    <div class="feedback-panel-inner">
+      <textarea
+        id="arkiv-feedback-comment"
+        class="feedback-textarea"
+        data-feedback-comment
+        aria-label="Optional feedback comment"
+        rows="3"
+        maxlength="4000"
+        placeholder="What worked, what was missing, or what felt unclear?"
+      ></textarea>
+
+      <div class="feedback-actions">
+        <p class="feedback-status" data-feedback-status aria-live="polite"></p>
+        <button type="button" class="feedback-send" data-feedback-send disabled>
+          Send
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <p
+    class="feedback-status feedback-status-mobile"
+    data-feedback-status-mobile
+    aria-live="polite"
+  >
+  </p>
+</section>
+
+<script is:inline>
+  const PROD_FEEDBACK_ENDPOINT = "https://docs.arkiv.network/api/feedback";
+
+  function trackFeedbackEvent(eventName, eventData = {}) {
+    const umami = window.umami;
+
+    if (!umami || typeof umami.track !== "function") {
+      return;
+    }
+
+    umami.track(eventName, eventData);
+  }
+
+  function resolveFeedbackEndpoint() {
+    const { protocol, hostname } = window.location;
+
+    if (hostname === "docs.arkiv.network") {
+      return "/api/feedback";
+    }
+
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return `${protocol}//${hostname}:3000/feedback`;
+    }
+
+    return PROD_FEEDBACK_ENDPOINT;
+  }
+
+  function initFeedbackWidget(root) {
+    if (root.dataset.feedbackReady === "true") {
+      return;
+    }
+
+    root.dataset.feedbackReady = "true";
+
+    const choiceButtons = Array.from(
+      root.querySelectorAll("[data-feedback-choice]"),
+    );
+    const sendButton = root.querySelector("[data-feedback-send]");
+    const commentField = root.querySelector("[data-feedback-comment]");
+    const panel = root.querySelector("[data-feedback-panel]");
+    const status = root.querySelector("[data-feedback-status]");
+    const mobileStatus = root.querySelector("[data-feedback-status-mobile]");
+
+    if (
+      !(sendButton instanceof HTMLButtonElement) ||
+      !(commentField instanceof HTMLTextAreaElement) ||
+      !(panel instanceof HTMLElement) ||
+      !(status instanceof HTMLElement) ||
+      !(mobileStatus instanceof HTMLElement)
+    ) {
+      return;
+    }
+
+    let selectedSentiment = "";
+    let isSubmitted = false;
+    const pageTitle = root.dataset.pageTitle || document.title;
+
+    const feedbackEventContext = () => ({
+      sentiment: selectedSentiment,
+      pageTitle,
+      pagePath: window.location.pathname,
+    });
+
+    const setStatus = (message, tone = "") => {
+      status.textContent = message;
+      status.dataset.tone = tone;
+      mobileStatus.textContent = message;
+      mobileStatus.dataset.tone = tone;
+    };
+
+    const setPending = (isPending) => {
+      root.dataset.pending = isPending ? "true" : "false";
+      sendButton.disabled = isPending || !selectedSentiment || isSubmitted;
+
+      choiceButtons.forEach((button) => {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = isPending || isSubmitted;
+        }
+      });
+
+      commentField.disabled = isPending || isSubmitted;
+      sendButton.textContent = isSubmitted
+        ? "Sent"
+        : isPending
+          ? "Sending..."
+          : "Send";
+    };
+
+    const openPanel = (sentiment) => {
+      selectedSentiment = sentiment;
+      root.dataset.sentiment = sentiment;
+      panel.dataset.open = "true";
+      sendButton.disabled = false;
+
+      trackFeedbackEvent("feedback_sentiment_selected", {
+        ...feedbackEventContext(),
+      });
+
+      choiceButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+          return;
+        }
+
+        const isActive = button.dataset.sentiment === sentiment;
+        button.setAttribute("aria-pressed", String(isActive));
+        button.dataset.active = isActive ? "true" : "false";
+      });
+
+      setStatus("");
+
+      window.requestAnimationFrame(() => {
+        commentField.focus();
+      });
+    };
+
+    choiceButtons.forEach((button) => {
+      if (!(button instanceof HTMLButtonElement)) {
+        return;
+      }
+
+      button.addEventListener("click", () => {
+        openPanel(button.dataset.sentiment || "");
+      });
+    });
+
+    sendButton.addEventListener("click", async () => {
+      if (!selectedSentiment) {
+        return;
+      }
+
+      const comment = commentField.value.trim();
+      const payload = {
+        sentiment: selectedSentiment,
+        comment: comment || undefined,
+        pageTitle,
+        pageUrl: window.location.href,
+      };
+
+      trackFeedbackEvent("feedback_send_clicked", {
+        ...feedbackEventContext(),
+        hasComment: comment.length > 0,
+      });
+
+      setPending(true);
+      setStatus("Sending feedback...");
+
+      try {
+        const response = await fetch(resolveFeedbackEndpoint(), {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          let message = "Could not send feedback right now.";
+
+          try {
+            const data = await response.json();
+            if (data && typeof data.error === "string") {
+              message = data.error;
+            }
+          } catch {}
+
+          throw new Error(message);
+        }
+
+        isSubmitted = true;
+        root.dataset.submitted = "true";
+        panel.dataset.open = "false";
+        commentField.value = "";
+        setStatus(
+          selectedSentiment === "positive"
+            ? "Thanks for the signal."
+            : "Thanks. We will improve it.",
+          "success",
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Could not send feedback right now.";
+        setStatus(message, "error");
+        setPending(false);
+        return;
+      }
+
+      setPending(false);
+    });
+  }
+
+  document.querySelectorAll("[data-feedback-widget]").forEach((root) => {
+    if (root instanceof HTMLElement) {
+      initFeedbackWidget(root);
+    }
+  });
+</script>
+
+<style>
+  @layer starlight.core {
+    .feedback-widget {
+      display: grid;
+      justify-items: center;
+      gap: 0.8rem;
+      width: min(100%, 34rem);
+      margin: 1rem auto 0;
+    }
+
+    .feedback-line {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.9rem;
+      flex-wrap: nowrap;
+      width: fit-content;
+      max-width: 100%;
+      padding: 0.55rem 0.65rem 0.55rem 1rem;
+      border: 1px solid
+        color-mix(
+          in srgb,
+          var(--sl-color-hairline) 76%,
+          var(--color-arkiv-orange) 24%
+        );
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--sl-color-bg) 94%, white 6%);
+      box-shadow: 0 1rem 2.2rem -1.8rem
+        color-mix(in srgb, var(--color-accent-900) 45%, transparent);
+    }
+
+    .feedback-prompt {
+      margin: 0;
+      color: var(--sl-color-gray-2);
+      font-size: var(--sl-text-sm);
+      white-space: nowrap;
+    }
+
+    .feedback-choices {
+      display: inline-flex;
+      gap: 0.5rem;
+    }
+
+    .feedback-choice {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      border: 1px solid var(--sl-color-hairline);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--sl-color-bg) 92%, white 8%);
+      color: var(--sl-color-text);
+      font: inherit;
+      cursor: pointer;
+      transition:
+        transform 180ms ease,
+        border-color 180ms ease,
+        background-color 180ms ease,
+        color 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .feedback-choice:hover:not(:disabled),
+    .feedback-choice:focus-visible {
+      transform: translateY(-1px) scale(1.02);
+      border-color: color-mix(
+        in srgb,
+        var(--color-arkiv-orange) 56%,
+        var(--sl-color-hairline)
+      );
+      box-shadow: 0 0 0 0.18rem
+        color-mix(in srgb, var(--color-arkiv-orange) 18%, transparent);
+      outline: none;
+    }
+
+    .feedback-choice[data-active="true"] {
+      border-color: var(--color-arkiv-orange);
+      background: var(--color-arkiv-orange);
+      color: var(--sl-color-black);
+      box-shadow: 0 0.9rem 1.8rem -1.3rem
+        color-mix(in srgb, var(--color-arkiv-orange) 58%, transparent);
+    }
+
+    .feedback-choice:disabled {
+      cursor: wait;
+      opacity: 0.72;
+    }
+
+    .feedback-choice-icon {
+      display: inline-flex;
+      width: 1.1rem;
+      height: 1.1rem;
+    }
+
+    .feedback-choice-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .feedback-panel {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      margin-top: 0;
+      width: 100%;
+      transition:
+        grid-template-rows 220ms ease,
+        opacity 220ms ease,
+        margin-top 220ms ease;
+    }
+
+    .feedback-panel[data-open="true"] {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      margin-top: 0.15rem;
+    }
+
+    .feedback-panel-inner {
+      min-height: 0;
+      overflow: hidden;
+      display: grid;
+      gap: 0.7rem;
+      padding: 0.15rem;
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      resize: vertical;
+      min-height: 5.2rem;
+      border: 1px solid var(--sl-color-hairline);
+      border-radius: 1rem;
+      background: color-mix(in srgb, var(--sl-color-bg) 94%, white 6%);
+      padding: 0.85rem 0.95rem;
+      color: var(--sl-color-text);
+      font: inherit;
+      line-height: 1.5;
+      box-shadow: 0 1rem 2rem -1.7rem
+        color-mix(in srgb, var(--color-accent-900) 42%, transparent);
+      transition:
+        border-color 180ms ease,
+        box-shadow 180ms ease;
+    }
+
+    .feedback-textarea:focus-visible {
+      outline: none;
+      border-color: color-mix(
+        in srgb,
+        var(--color-arkiv-orange) 56%,
+        var(--sl-color-hairline)
+      );
+      box-shadow: 0 0 0 0.2rem
+        color-mix(in srgb, var(--color-arkiv-orange) 18%, transparent);
+    }
+
+    .feedback-textarea:disabled {
+      cursor: wait;
+      opacity: 0.72;
+    }
+
+    .feedback-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .feedback-status {
+      margin: 0;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-xs);
+      min-height: 1.2rem;
+    }
+
+    .feedback-send {
+      border: 0;
+      border-radius: 999px;
+      background: var(--color-arkiv-orange);
+      color: var(--sl-color-black);
+      padding: 0.65rem 1rem;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        transform 180ms ease,
+        filter 180ms ease,
+        opacity 180ms ease;
+    }
+
+    .feedback-send:hover:not(:disabled),
+    .feedback-send:focus-visible {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+      outline: none;
+    }
+
+    .feedback-send:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .feedback-status-mobile {
+      display: none;
+    }
+
+    .feedback-status[data-tone="success"] {
+      color: color-mix(
+        in srgb,
+        var(--sl-color-green-high) 70%,
+        var(--sl-color-text)
+      );
+    }
+
+    .feedback-status[data-tone="error"] {
+      color: var(--sl-color-red-high);
+    }
+
+    .feedback-widget[data-submitted="true"] .feedback-choice,
+    .feedback-widget[data-submitted="true"] .feedback-textarea {
+      cursor: default;
+    }
+
+    @media (max-width: 40rem) {
+      .feedback-line {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .feedback-actions {
+        align-items: stretch;
+      }
+
+      .feedback-status {
+        display: none;
+      }
+
+      .feedback-status-mobile {
+        display: block;
+        margin: 0.6rem 0 0;
+      }
+
+      .feedback-send {
+        width: 100%;
+      }
+    }
+  }
+</style>

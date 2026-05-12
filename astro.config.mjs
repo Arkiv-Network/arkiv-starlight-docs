@@ -112,6 +112,7 @@ export default defineConfig({
 				"./src/styles/global.css",
 			],
 			components: {
+				Pagination: "./src/components/DocsPagination.astro",
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},
 			plugins: [

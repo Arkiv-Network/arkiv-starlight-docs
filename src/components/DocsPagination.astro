@@ -1,0 +1,14 @@
+---
+import DefaultPagination from "@astrojs/starlight/components/Pagination.astro";
+import FeedbackWidget from "./FeedbackWidget.astro";
+
+void DefaultPagination;
+void FeedbackWidget;
+---
+
+<DefaultPagination />
+{
+  Astro.locals.starlightRoute.entry.data.template !== "splash" && (
+    <FeedbackWidget />
+  )
+}
