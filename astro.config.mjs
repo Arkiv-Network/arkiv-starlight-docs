@@ -164,6 +164,34 @@ export default defineConfig({
 							window.umami?.track('code-copied', { page, section, lang });
 						});
 					});`
+			}, {
+				tag: "script",
+				content: `document.addEventListener('DOMContentLoaded', () => {
+						let debounceTimer;
+						function onSearchInput(e) {
+							clearTimeout(debounceTimer);
+							debounceTimer = setTimeout(() => {
+								const raw = e.target.value || '';
+								const sanitized = raw
+									.replace(/[^\s]+@[^\s]+\.[^\s]+/g, '')
+									.replace(/0x[0-9a-fA-F]+/g, '')
+									.trim();
+								if (!sanitized) return;
+								const resultEl = document.querySelector('.pagefind-ui__results');
+								const hasResults = resultEl ? resultEl.children.length > 0 : false;
+								window.umami?.track('docs-search', { query: sanitized, hasResults });
+							}, 400);
+						}
+						function attachSearchListener() {
+							const input = document.querySelector('input[type="search"]');
+							if (input && !input._umamiSearchBound) {
+								input.addEventListener('input', onSearchInput);
+								input._umamiSearchBound = true;
+							}
+						}
+						attachSearchListener();
+						document.addEventListener('click', () => setTimeout(attachSearchListener, 100));
+					});`
 			}]
 		}),
 	],
