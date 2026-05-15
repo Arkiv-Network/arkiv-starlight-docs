@@ -29,6 +29,7 @@ export default defineConfig({
 						{ label: "Fundamentals", slug: "start-here/fundamentals" },
 						{ label: "Installation", slug: "start-here/installation" },
 						{ label: "Agent Skill", slug: "start-here/agent-skill" },
+						{ label: "Data Explorer", slug: "start-here/data-explorer" },
 					],
 				},
 				{
