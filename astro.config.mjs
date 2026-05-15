@@ -146,78 +146,102 @@ export default defineConfig({
 					});`
 			}, {
 				tag: "script",
-				content: `document.addEventListener('DOMContentLoaded', () => {
-						document.addEventListener('click', (e) => {
-							const btn = e.target.closest('.copy');
-							if (!btn) return;
-							const page = window.location.pathname;
-							const codeEl = btn.closest('pre')?.querySelector('code') || btn.closest('figure')?.querySelector('code');
-							const langClass = codeEl ? Array.from(codeEl.classList).find(c => c.startsWith('language-')) : null;
-							const lang = langClass ? langClass.replace('language-', '') : 'unknown';
-							const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
-							let section = 'intro';
-							headings.forEach(h => {
-								if (btn.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_PRECEDING) {
-									section = h.id;
-								}
-							});
-							window.umami?.track('code-copied', { page, section, lang });
-						});
-					});`
+				content: `
+    (() => {
+      if (window.__copyAnalyticsBound) return;
+      window.__copyAnalyticsBound = true;
+
+      const nearestSection = (el) => {
+        const headings = document.querySelectorAll('h2[id], h3[id], h4[id], h5[id], h6[id]');
+        for (let i = headings.length - 1; i >= 0; i--) {
+          if (el.compareDocumentPosition(headings[i]) & Node.DOCUMENT_POSITION_PRECEDING) {
+            return headings[i].id;
+          }
+        }
+        return 'intro';
+      };
+
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (!(target instanceof Element)) return;
+        const btn = target.closest('button[data-code]');
+        if (!btn) return;
+
+        const pre = btn.closest('figure')?.querySelector('pre');
+        const lang = pre?.getAttribute('data-language') ?? 'unknown';
+
+        window.umami?.track('code-copied', {
+          page: location.pathname,
+          section: nearestSection(btn),
+          lang,
+        });
+      });
+    })();
+  `
 			}, {
 				tag: "script",
-				content: `document.addEventListener('DOMContentLoaded', () => {
-						let debounceTimer;
-						let pendingQuery = null;
-						let observer = null;
-						let settleTimer = null;
-						let safetyTimer = null;
-						function fireAndClean(query) {
-							if (observer) { observer.disconnect(); observer = null; }
-							clearTimeout(settleTimer);
-							clearTimeout(safetyTimer);
-							if (pendingQuery !== query) return;
-							pendingQuery = null;
-							const resultEl = document.querySelector('.pagefind-ui__results');
-							const hasResults = resultEl ? resultEl.children.length > 0 : false;
-							window.umami?.track('docs-search', { query, hasResults });
-						}
-						function observeResults(query) {
-							if (observer) { observer.disconnect(); observer = null; }
-							clearTimeout(settleTimer);
-							clearTimeout(safetyTimer);
-							const resultEl = document.querySelector('.pagefind-ui__results');
-							if (!resultEl) { fireAndClean(query); return; }
-							safetyTimer = setTimeout(() => fireAndClean(query), 2000);
-							observer = new MutationObserver(() => {
-								clearTimeout(settleTimer);
-								settleTimer = setTimeout(() => fireAndClean(query), 150);
-							});
-							observer.observe(resultEl, { childList: true, subtree: true });
-						}
-						function onSearchInput(e) {
-							clearTimeout(debounceTimer);
-							debounceTimer = setTimeout(() => {
-								const raw = e.target.value || '';
-								const sanitized = raw
-									.replace(/[^\s]+@[^\s]+\.[^\s]+/g, '')
-									.replace(/0x[0-9a-fA-F]+/g, '')
-									.trim();
-								if (!sanitized) return;
-								pendingQuery = sanitized;
-								observeResults(sanitized);
-							}, 400);
-						}
-						function attachSearchListener() {
-							const input = document.querySelector('input[type="search"]');
-							if (input && !input._umamiSearchBound) {
-								input.addEventListener('input', onSearchInput);
-								input._umamiSearchBound = true;
-							}
-						}
-						attachSearchListener();
-						document.addEventListener('click', () => setTimeout(attachSearchListener, 100));
-					});`
+				content: `
+    (() => {
+      if (window.__searchAnalyticsBound) return;
+      window.__searchAnalyticsBound = true;
+
+      // Order matters: bearer before jwt before api-key, paths before generic hex.
+      const PATTERNS = [
+        { name: 'email',       re: /\\S+@\\S+\\.\\S+/g },
+        { name: 'bearer',      re: /\\bBearer\\s+\\S+/gi },
+        { name: 'jwt',         re: /\\beyJ[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\.[A-Za-z0-9_-]{8,}\\b/g },
+        { name: 'api-key',     re: /\\b(?:sk|pk|rk)-[A-Za-z0-9_-]{16,}\\b/g },
+        { name: 'uuid',        re: /\\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\\b/g },
+        { name: 'unix-path',   re: /\\/(?:Users|home)\\/[^\\s/]+/g },
+        { name: 'win-path',    re: /[A-Za-z]:\\\\Users\\\\[^\\s\\\\]+/g },
+        { name: 'ipv4',        re: /\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b/g },
+        { name: 'hex-address', re: /\\b0x[0-9a-fA-F]{6,}\\b/g },
+        { name: 'cc-like',     re: /\\b(?:\\d[ -]?){13,19}\\b/g },
+      ];
+
+      const sanitize = (raw) => {
+        const redactions = [];
+        let out = raw;
+        for (const { name, re } of PATTERNS) {
+          if (re.test(out)) {
+            redactions.push(name);
+            re.lastIndex = 0;
+            out = out.replace(re, \`[\${name}]\`);
+          }
+        }
+        return {
+          query: out.replace(/\\s+/g, ' ').trim().slice(0, 100),
+          redactions,
+        };
+      };
+
+      let timer;
+      let lastSent = '';
+
+      document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!(target instanceof HTMLInputElement)) return;
+        if (!target.classList.contains('pagefind-ui__search-input')) return;
+
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const { query, redactions } = sanitize(target.value ?? '');
+          if (query.length < 2 || query === lastSent) return;
+          lastSent = query;
+
+          const hasResults =
+            document.querySelectorAll('.pagefind-ui__result').length > 0;
+
+          window.umami?.track('docs-search', {
+            query,
+            hasResults,
+            redacted: redactions.length > 0,
+            redactionTypes: redactions.join(','),
+          });
+        }, 600);
+      });
+    })();
+  `
 			}]
 		}),
 	],
