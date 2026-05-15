@@ -168,6 +168,33 @@ export default defineConfig({
 				tag: "script",
 				content: `document.addEventListener('DOMContentLoaded', () => {
 						let debounceTimer;
+						let pendingQuery = null;
+						let observer = null;
+						let settleTimer = null;
+						let safetyTimer = null;
+						function fireAndClean(query) {
+							if (observer) { observer.disconnect(); observer = null; }
+							clearTimeout(settleTimer);
+							clearTimeout(safetyTimer);
+							if (pendingQuery !== query) return;
+							pendingQuery = null;
+							const resultEl = document.querySelector('.pagefind-ui__results');
+							const hasResults = resultEl ? resultEl.children.length > 0 : false;
+							window.umami?.track('docs-search', { query, hasResults });
+						}
+						function observeResults(query) {
+							if (observer) { observer.disconnect(); observer = null; }
+							clearTimeout(settleTimer);
+							clearTimeout(safetyTimer);
+							const resultEl = document.querySelector('.pagefind-ui__results');
+							if (!resultEl) { fireAndClean(query); return; }
+							safetyTimer = setTimeout(() => fireAndClean(query), 2000);
+							observer = new MutationObserver(() => {
+								clearTimeout(settleTimer);
+								settleTimer = setTimeout(() => fireAndClean(query), 150);
+							});
+							observer.observe(resultEl, { childList: true, subtree: true });
+						}
 						function onSearchInput(e) {
 							clearTimeout(debounceTimer);
 							debounceTimer = setTimeout(() => {
@@ -177,9 +204,8 @@ export default defineConfig({
 									.replace(/0x[0-9a-fA-F]+/g, '')
 									.trim();
 								if (!sanitized) return;
-								const resultEl = document.querySelector('.pagefind-ui__results');
-								const hasResults = resultEl ? resultEl.children.length > 0 : false;
-								window.umami?.track('docs-search', { query: sanitized, hasResults });
+								pendingQuery = sanitized;
+								observeResults(sanitized);
 							}, 400);
 						}
 						function attachSearchListener() {
