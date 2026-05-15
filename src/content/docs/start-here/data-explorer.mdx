@@ -3,105 +3,36 @@ title: Data Explorer
 description: Browse and query Arkiv entities in the browser — without writing any code.
 ---
 
-import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-The [Arkiv Data Explorer](https://data.arkiv.network?utm_source=docs&utm_medium=referral&utm_campaign=data-explorer&utm_content=docs-page-hero) is a browser-based tool for querying and inspecting entities on Arkiv testnets. It gives you a live view of what's on-chain: run queries, inspect payloads, check expiration dates, and jump straight to the equivalent SDK code — all without touching a terminal.
+The [Arkiv Data Explorer](https://data.arkiv.network?utm_source=docs&utm_medium=referral&utm_campaign=data-explorer&utm_content=docs-page-hero) is a browser-based tool for querying and inspecting entities on Arkiv testnets. Reach for it when you want to verify that your app wrote what you expected, prototype a query before putting it in code, or simply explore what's on a testnet.
 
-Reach for it when you want to verify that your app wrote what you expected, prototype a query before putting it in code, or simply explore what's on a testnet.
+![The Arkiv Data Explorer landing screen, with the query editor and example queries.](../../../assets/data-explorer-home.png)
 
 ## Query editor
 
-The query editor at the top of the Explorer accepts Arkiv's full query syntax. As you type, autocomplete surfaces available operators and synthetic attributes like `$key`, `$owner`, and `$creator`.
+The query editor at the top of the Explorer accepts Arkiv's full query syntax — operators, attribute types, glob matching, and range filters.
 
-For a full reference of the query language — operators, attribute types, glob matching, and range filters — see [Querying Data](/typescript-sdk/querying-data/).
+For the full reference, see [Query syntax](/json-rpc/querying-data/#query-syntax).
 
-### Smart input normalisation
+## Searching for entities or owners
 
-Paste raw values directly into the editor and the Explorer converts them automatically:
+Paste a raw value directly into the editor and the Explorer normalises it automatically:
 
 - A 32-byte hex string becomes `$key = "0x…"`
 - A 20-byte address becomes `$owner = "0x…"`
 
 No manual quoting or operator selection needed.
 
-### Example queries
+## Sharing results
 
-The landing screen offers five one-click examples to get you started:
-
-- Fetch by entity key (`$key = "0x…"`)
-- Fetch by owner address (`$owner = "0x…"`)
-- Filter by a text attribute (`type = "note"`)
-- Filter by a numeric attribute (`priority > 3`)
-- Return everything (`$all`)
-
-Clicking any example loads it into the editor and runs it immediately.
-
-## Switching networks
-
-Use the chain picker to choose between the **Braga** and **Kaolin** testnets. The selected chain is encoded in the URL, so switching networks is reflected in any link you share.
-
-## Sharing queries
-
-The current query and selected chain are always part of the URL. Copy the address bar to share an exact query — anyone who opens the link sees the same query pre-loaded and auto-run.
+The current query and selected chain are always encoded in the URL. Copy the address bar to share an exact query — anyone who opens the link sees the same query pre-loaded and auto-run.
 
 <Aside type="tip">
-This is useful for bug reports: paste the Explorer URL alongside the entity key and the recipient lands directly on the relevant result.
+This makes Explorer links useful for bug reports: paste the URL and the recipient lands directly on the relevant result.
 </Aside>
 
-## Browsing results
+If you want a quick deep-link to a specific entity or owner from your own app, you can link directly:
 
-Results load 50 entities per page. The page shows how many entities have been loaded; clicking **Load next page** appends the next 50.
-
-To narrow results to entities about to disappear, enable the **expiring within 24 hours** filter — useful when debugging expiration behaviour.
-
-## Entity document view
-
-Each result expands to show the full entity record:
-
-<CardGrid>
-  <Card title="Identity" icon="magnifier">
-    Full entity key, owner address, and creator address — each clickable to query or copy.
-  </Card>
-  <Card title="Content" icon="document">
-    Payload rendered as JSON, plain text, or binary depending on the content type. Creation block linked to the block explorer where available.
-  </Card>
-  <Card title="Expiration" icon="warning">
-    Expiration block number alongside a human-readable estimate (e.g. "in ~3 days").
-  </Card>
-  <Card title="Attributes" icon="list-format">
-    All attributes displayed as badges. Click any value to replace or append it to the current query.
-  </Card>
-</CardGrid>
-
-## Filter and add-to-query interactions
-
-Every piece of data in the entity view is interactive. Clicking an attribute value, owner address, creator address, or entity key gives you the option to:
-
-- **Replace** the current query with a filter on that value
-- **Append** it to the existing query with `&&`
-- **Copy** it to the clipboard
-
-This makes it straightforward to drill down from a broad query to a specific entity without typing.
-
-## TypeScript snippet panel
-
-Every query you run has a corresponding **Code** panel. It shows the `@arkiv-network/sdk` equivalent of your current query and chain selection — ready to copy into your project.
-
-```ts
-// Example: what the panel might show for type = "note"
-import { createPublicClient, http } from "@arkiv-network/sdk";
-import { buildQuery, eq } from "@arkiv-network/sdk/query";
-import { braga } from "@arkiv-network/sdk/chains";
-
-const client = createPublicClient({ chain: braga, transport: http() });
-const query = buildQuery().where(eq("type", "note"));
-const result = await client.getEntities(query);
-```
-
-<Aside>
-The snippet always reflects the current chain — switching from Braga to Kaolin updates the import automatically.
-</Aside>
-
-## Dark mode
-
-The Explorer respects your system preference and includes a manual toggle in the header.
+- `https://data.arkiv.network/entity/0x123…` — opens the Explorer with that entity key pre-queried
+- `https://data.arkiv.network/owner/0x123…` — opens the Explorer filtered by that owner address
