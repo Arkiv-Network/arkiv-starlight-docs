@@ -28,7 +28,7 @@ export default defineConfig({
 					items: [
 						{ label: "Fundamentals", slug: "start-here/fundamentals" },
 						{ label: "Installation", slug: "start-here/installation" },
-						{ label: "Agent Skill", slug: "start-here/agent-skill" },
+						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 						{ label: "Data Explorer", slug: "start-here/data-explorer" },
 					],
 				},
@@ -113,6 +113,7 @@ export default defineConfig({
 				"./src/styles/global.css",
 			],
 			components: {
+				Pagination: "./src/components/DocsPagination.astro",
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},
 			plugins: [
