@@ -144,6 +144,26 @@ export default defineConfig({
 						}
 						});
 					});`
+			}, {
+				tag: "script",
+				content: `document.addEventListener('DOMContentLoaded', () => {
+						document.addEventListener('click', (e) => {
+							const btn = e.target.closest('.copy');
+							if (!btn) return;
+							const page = window.location.pathname;
+							const codeEl = btn.closest('pre')?.querySelector('code') || btn.closest('figure')?.querySelector('code');
+							const langClass = codeEl ? Array.from(codeEl.classList).find(c => c.startsWith('language-')) : null;
+							const lang = langClass ? langClass.replace('language-', '') : 'unknown';
+							const headings = document.querySelectorAll('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]');
+							let section = 'intro';
+							headings.forEach(h => {
+								if (btn.compareDocumentPosition(h) & Node.DOCUMENT_POSITION_PRECEDING) {
+									section = h.id;
+								}
+							});
+							window.umami?.track('code-copied', { page, section, lang });
+						});
+					});`
 			}]
 		}),
 	],
