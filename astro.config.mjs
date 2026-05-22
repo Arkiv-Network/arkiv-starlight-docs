@@ -1,15 +1,51 @@
 // @ts-check
 
+import { existsSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import starlightPageActions from "starlight-page-actions";
+import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
+
+const configDir = dirname(fileURLToPath(import.meta.url));
+const sdkClonePath = resolve(configDir, ".sdk-cache/arkiv-sdk-js");
+const sdkAvailable = existsSync(resolve(sdkClonePath, "src/index.ts"));
+if (!sdkAvailable) {
+	console.warn(
+		"[astro.config] SDK source not found at .sdk-cache/arkiv-sdk-js/ — skipping API reference generation. Run `bun run sync-sdk` to populate.",
+	);
+}
+
+// typedoc-plugin-markdown emits links like `/foo/bar/index/` when entryFileName
+// is "index" (so each module gets its own root page). Starlight collapses any
+// `<dir>/index.md` to `/<dir>/`, so those typedoc links 404. This remark plugin
+// rewrites them back. Only rewrites trailing `/index/` (with optional fragment)
+// to avoid touching anything else.
+function rewriteIndexLinks() {
+	/** @param {any} tree */
+	return (tree) => {
+		const walk = (/** @type {any} */ node) => {
+			if (node?.type === "link" && typeof node.url === "string") {
+				node.url = node.url.replace(/\/index\/(#.*)?$/, "/$1");
+			}
+			if (Array.isArray(node?.children)) {
+				for (const child of node.children) walk(child);
+			}
+		};
+		walk(tree);
+	};
+}
 
 // https://astro.build/config
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
 		"/start-here/testnet": "/networks/braga/",
+	},
+	markdown: {
+		remarkPlugins: [rewriteIndexLinks],
 	},
 	integrations: [
 		starlight({
@@ -50,6 +86,7 @@ export default defineConfig({
 							slug: "typescript-sdk/react-integration",
 						},
 						{ label: "Best Practices", slug: "typescript-sdk/best-practices" },
+						...(sdkAvailable ? [typeDocSidebarGroup] : []),
 					],
 				},
 				{
@@ -120,6 +157,34 @@ export default defineConfig({
 				starlightPageActions({
 					baseUrl: process.env.SITE_URL || "https://docs.arkiv.network",
 				}),
+				...(sdkAvailable
+					? [
+							starlightTypeDoc({
+								entryPoints: [
+									resolve(sdkClonePath, "src/index.ts"),
+									resolve(sdkClonePath, "src/chains/index.ts"),
+									resolve(sdkClonePath, "src/query/index.ts"),
+									resolve(sdkClonePath, "src/types/index.ts"),
+									resolve(sdkClonePath, "src/utils/index.ts"),
+								],
+								tsconfig: resolve(sdkClonePath, "tsconfig.json"),
+								output: "typescript-sdk/api-reference",
+								sidebar: {
+									label: "API Reference",
+									collapsed: true,
+								},
+							typeDoc: {
+								excludeExternals: true,
+								includeVersion: true,
+								name: "@arkiv-network/sdk",
+								entryFileName: "index",
+								compilerOptions: {
+									ignoreDeprecations: "6.0",
+								},
+							},
+							}),
+						]
+					: []),
 			],
 			head: [{
 				tag: "meta",
