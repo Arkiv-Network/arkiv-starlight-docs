@@ -199,6 +199,10 @@ await walletClient.mutateEntities({
 
 ## ExpirationTime Reference
 
+<Aside type="caution">
+Every entity on Arkiv requires an expiration date — there is no permanent storage. Passing `null` or `undefined` for `expiresIn` throws a cryptic `BigInt` conversion error at runtime. Always pass an explicit duration via the `ExpirationTime` helpers below.
+</Aside>
+
 Always use the helper instead of raw numbers:
 
 ```ts
