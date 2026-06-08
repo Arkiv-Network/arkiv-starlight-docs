@@ -192,6 +192,20 @@ if (result.hasNextPage()) {
 }
 ```
 
+## Concurrent Writes
+
+A wallet has a single shared nonce counter on-chain. Firing multiple `createEntity` (or any write) calls concurrently via `Promise.all` causes nonce collisions — most transactions will fail with a nonce error.
+
+```ts
+// BAD — nonce collision, most writes fail
+await Promise.all(items.map(item => walletClient.createEntity({ ... })))
+
+// GOOD — single transaction, no collision
+await walletClient.mutateEntities({ creates: items.map(item => ({ ... })) })
+```
+
+If you need fine-grained control (e.g. mixing create/update/delete in parallel), use viem's [nonce manager](https://viem.sh/docs/accounts/local/createNonceManager) to serialise nonce allocation while keeping the rest of your code async.
+
 ## Ordering Results
 
 <Aside type="caution" title="Braga testnet">
