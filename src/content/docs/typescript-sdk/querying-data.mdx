@@ -89,6 +89,18 @@ lte('expiration', limit)   // expiration <= limit
 String attributes only support `eq()`. Numeric attributes support all comparison operators. Always store numbers as numeric attributes if you need range queries.
 </Aside>
 
+### Address Normalisation
+
+`eq()` is case-sensitive. A checksummed address (`0xAbCd...`) will not match its lowercase equivalent (`0xabcd...`), silently returning zero results. Normalise addresses to a consistent case at **both** write time and query time:
+
+```ts
+// Write time — always store as lowercase
+attributes: [{ key: 'owner', value: userAddress.toLowerCase() }]
+
+// Query time — match the same case
+.where(eq('owner', userAddress.toLowerCase()))
+```
+
 ## Filtering by Owner and Creator
 
 Every entity has two metadata fields:
