@@ -139,7 +139,6 @@ Two client types exist:
 
 The SDK's query builder supports more than basic filtering. Before you reach for client-side sorting or manual pagination, check what's built in:
 
-- **Ordering** — sort results by any numeric attribute with `orderBy(desc('field', 'number'))`
 - **Pagination** — cursor-based, up to 200 results per page with `hasNextPage()` / `next()`
 - **Entity count** — get a count without fetching entities via `getEntityCount()`
 - **Owner & creator filters** — `.ownedBy()` and `.createdBy()` for wallet-level filtering
