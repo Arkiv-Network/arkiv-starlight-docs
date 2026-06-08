@@ -65,6 +65,24 @@ An entity is a data record on Arkiv. Every entity contains:
 - **ExpiresIn** — Automatic expiration measured in seconds
 - **Content Type** — MIME type of the payload
 
+### Ownership and Identity
+
+Every entity has two system-level ownership fields that are distinct from any custom attributes you define:
+
+- **`$owner`** — The wallet address that currently controls the entity (can update, delete, extend, or transfer it). This is a write-permission key and is **not queryable** with custom operators — use `.ownedBy()` instead.
+- **`$creator`** — The wallet that originally created the entity. Immutable. Also not a queryable custom attribute — use `.createdBy()`.
+
+If your app needs a queryable identity field (e.g. to filter "all notes belonging to this user"), add an explicit `owner` attribute yourself:
+
+```ts
+attributes: [
+  { key: 'owner', value: userAddress.toLowerCase() },
+  { key: 'type', value: 'note' },
+]
+```
+
+This custom `owner` attribute behaves like any other string attribute and supports `eq()` queries. See the [best-practices guide](/typescript-sdk/best-practices/) for the filter-by-creator and relational patterns.
+
 ### Attributes
 
 Attributes are the backbone of querying. The type you choose determines what query operators are available:
