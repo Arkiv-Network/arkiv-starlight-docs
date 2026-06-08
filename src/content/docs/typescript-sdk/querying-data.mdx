@@ -25,6 +25,10 @@ const publicClient = createPublicClient({
 
 Use `buildQuery()` to construct queries with chainable methods:
 
+<Aside type="caution" title="Selecting fields">
+Without `.withPayload(true)`, `.withAttributes(true)`, and `.withMetadata(true)`, `.fetch()` returns entity keys only — payload and attribute fields will be absent. Always add the `.with*()` selectors you need before calling `.fetch()`.
+</Aside>
+
 ```ts
 import { eq, gt } from "@arkiv-network/sdk/query"
 
@@ -34,6 +38,7 @@ const result = await publicClient
   .where(gt('created', Date.now() - 86400000))
   .withPayload(true)
   .withAttributes(true)
+  .withMetadata(true)
   .limit(10)
   .fetch()
 
