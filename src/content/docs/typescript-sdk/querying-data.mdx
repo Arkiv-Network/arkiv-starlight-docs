@@ -85,8 +85,10 @@ gte('created', timestamp)  // created >= timestamp
 lte('expiration', limit)   // expiration <= limit
 ```
 
-<Aside>
-String attributes only support `eq()`. Numeric attributes support all comparison operators. Always store numbers as numeric attributes if you need range queries.
+<Aside type="caution" title="Numeric attribute types">
+Range queries (`gt()`, `lt()`, `gte()`, `lte()`) run against string-typed values silently return wrong results — no error is thrown. If you store a number as a string (e.g. `{ key: 'price', value: '100' }`), comparisons like `gt('price', 50)` will behave unexpectedly.
+
+Always store numeric data as a numeric attribute value. For decimal values, use integer scaling — store `0.874` as `874` and divide by 1000 on read.
 </Aside>
 
 ### Address Normalisation
