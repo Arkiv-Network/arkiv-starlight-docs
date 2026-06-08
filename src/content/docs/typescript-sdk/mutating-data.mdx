@@ -215,6 +215,23 @@ ExpirationTime.fromHours(24)    // 86400 seconds
 ExpirationTime.fromDays(7)      // 604800 seconds
 ```
 
+## Attribute Value Types
+
+Attribute values must be either a `string` or a whole `number` (integer). Float values are **not supported** — passing a float crashes with a `BigInt` conversion error.
+
+<Aside type="caution">
+Float attribute values (e.g. `0.874`) are unsupported and will throw a `BigInt` error at runtime. Store floats as scaled integers and divide on read.
+</Aside>
+
+```ts
+// BAD — crashes at runtime
+attributes: [{ key: 'score', value: 0.874 }]
+
+// GOOD — store as integer × 1000, divide by 1000 on read
+attributes: [{ key: 'score', value: 874 }]  // represents 0.874
+// On read: entity.attributes.find(a => a.key === 'score').value / 1000
+```
+
 ## Browser Usage with MetaMask
 
 In browser applications, use MetaMask as the transport instead of a private key:
