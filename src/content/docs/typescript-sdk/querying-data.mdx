@@ -50,7 +50,7 @@ console.log('Found:', result.entities.length)
 | `.withMetadata(true)` | Include metadata (owner, creator, TTL) |
 | `.ownedBy(address)` | Filter by current owner |
 | `.createdBy(address)` | Filter by original creator (immutable) |
-| `.orderBy(desc('field', 'type'))` | Order results |
+| `.orderBy(desc('field', 'type'))` | Order results (mainnet only — not functional on Braga) |
 | `.limit(n)` | Limit number of results |
 | `.fetch()` | Execute the query |
 
@@ -180,18 +180,19 @@ if (result.hasNextPage()) {
 
 ## Ordering Results
 
-```ts
-import { desc } from "@arkiv-network/sdk/query"
+<Aside type="caution" title="Braga testnet">
+`orderBy` is **not functional on the Braga testnet**. Calling `.orderBy()` is accepted without error but results are returned in an unspecified order. Sort client-side for now:
 
-const result = await publicClient
-  .buildQuery()
-  .where(eq('type', 'sketch'))
-  .ownedBy(userAddress)
-  .orderBy(desc('timestamp', 'number'))
-  .withPayload(true)
-  .limit(9)
-  .fetch()
+```ts
+result.entities.sort((a, b) => {
+  const aVal = a.attributes.find(attr => attr.key === 'timestamp')?.value ?? 0
+  const bVal = b.attributes.find(attr => attr.key === 'timestamp')?.value ?? 0
+  return Number(bVal) - Number(aVal) // descending
+})
 ```
+
+Server-side ordering is planned for mainnet.
+</Aside>
 
 :::caution[String pattern matching]
 The protocol supports glob matching on string attributes (`attribute ~ "My_Project_*"`), but the operator is not yet exposed in the TypeScript SDK. If you need pattern matching today, use the [JSON-RPC API](/json-rpc/querying-data/) directly.
