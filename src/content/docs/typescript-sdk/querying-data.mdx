@@ -55,7 +55,7 @@ console.log('Found:', result.entities.length)
 | `.withMetadata(true)` | Include metadata (owner, creator, TTL) |
 | `.ownedBy(address)` | Filter by current owner |
 | `.createdBy(address)` | Filter by original creator (immutable) |
-| `.orderBy(desc('field', 'type'))` | Order results (mainnet only — not functional on Braga) |
+| `.orderBy(desc('field', 'type'))` | Order results (not currently functional on the Braga testnet) |
 | `.limit(n)` | Limit number of results |
 | `.fetch()` | Execute the query |
 
@@ -91,22 +91,20 @@ lte('expiration', limit)   // expiration <= limit
 ```
 
 <Aside type="caution" title="Numeric attribute types">
-Range queries (`gt()`, `lt()`, `gte()`, `lte()`) run against string-typed values silently return wrong results — no error is thrown. If you store a number as a string (e.g. `{ key: 'price', value: '100' }`), comparisons like `gt('price', 50)` will behave unexpectedly.
-
-Always store numeric data as a numeric attribute value. For decimal values, use integer scaling — store `0.874` as `874` and divide by 1000 on read.
+Using range queries (`gt()`, `lt()`, `gte()`, `lte()`) on string attributes may lead to unexpected results. Always store numeric data as numeric attributes. For decimal values, use integer scaling — store `0.874` as `874` and divide by 1000 on read.
 </Aside>
 
-### Address Normalisation
-
+<Aside type="tip" title="Address normalisation">
 `eq()` is case-sensitive. A checksummed address (`0xAbCd...`) will not match its lowercase equivalent (`0xabcd...`), silently returning zero results. Normalise addresses to a consistent case at **both** write time and query time:
 
 ```ts
 // Write time — always store as lowercase
-attributes: [{ key: 'owner', value: userAddress.toLowerCase() }]
+attributes: [{ key: 'author', value: userAddress.toLowerCase() }]
 
 // Query time — match the same case
-.where(eq('owner', userAddress.toLowerCase()))
+.where(eq('author', userAddress.toLowerCase()))
 ```
+</Aside>
 
 ## Filtering by Owner and Creator
 
