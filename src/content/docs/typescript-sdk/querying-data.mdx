@@ -210,7 +210,7 @@ If you need fine-grained control (e.g. mixing create/update/delete in parallel),
 
 ## Ordering Results
 
-Query results are returned in an unspecified order. Sort client-side after fetching:
+Ordering query results is not currently supported — sort client-side after fetching:
 
 ```ts
 result.entities.sort((a, b) => {
