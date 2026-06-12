@@ -69,19 +69,21 @@ An entity is a data record on Arkiv. Every entity contains:
 
 Every entity has two system-level ownership fields that are distinct from any custom attributes you define:
 
-- **`$owner`** — The wallet address that currently controls the entity (can update, delete, extend, or transfer it). This is a write-permission key and is **not queryable** with custom operators — use `.ownedBy()` instead.
-- **`$creator`** — The wallet that originally created the entity. Immutable. Also not a queryable custom attribute — use `.createdBy()`.
+- **`$owner`** — The wallet address that currently controls the entity (can update, delete, extend, or transfer it).
+- **`$creator`** — The wallet that originally created the entity. Immutable.
 
-If your app needs a queryable identity field (e.g. to filter "all notes belonging to this user"), add an explicit `owner` attribute yourself:
+Both are queryable like any other attribute — `eq('$owner', address)` is equivalent to the `.ownedBy(address)` shorthand, and `eq('$creator', address)` to `.createdBy(address)`.
+
+If your app needs an identity field that is *not* the writing wallet (e.g. a backend creates entities on behalf of users), add a custom attribute — and give it a domain-specific name like `author` or `profileId` rather than `owner`, which is too easy to confuse with the system-level `$owner`:
 
 ```ts
 attributes: [
-  { key: 'owner', value: userAddress.toLowerCase() },
+  { key: 'author', value: userAddress.toLowerCase() },
   { key: 'type', value: 'note' },
 ]
 ```
 
-This custom `owner` attribute behaves like any other string attribute and supports `eq()` queries. See the [best-practices guide](/typescript-sdk/best-practices/) for the filter-by-creator and relational patterns.
+See the [best-practices guide](/typescript-sdk/best-practices/) for the filter-by-creator and relational patterns.
 
 ### Attributes
 
