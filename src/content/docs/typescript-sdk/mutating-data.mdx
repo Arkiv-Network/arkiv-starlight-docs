@@ -97,6 +97,8 @@ const { txHash } = await walletClient.updateEntity({
 
 <Aside type="caution">
 `updateEntity` overwrites the entire payload and **all** attributes in one operation. Omitting an attribute silently deletes it from the entity. Always re-send every attribute you want to keep.
+
+The expiration is replaced too: the new expiration is counted from the block the update lands in, not added to the previous one. To extend an entity's lifetime without touching its data, use [`extendEntity`](#extend-expiration) instead.
 </Aside>
 
 ## Delete Entity
@@ -200,7 +202,7 @@ await walletClient.mutateEntities({
 ## ExpirationTime Reference
 
 <Aside type="caution">
-Every entity on Arkiv requires an expiration date — there is no permanent storage. Passing `null` or `undefined` for `expiresIn` throws a cryptic `BigInt` conversion error at runtime. Always pass an explicit duration via the `ExpirationTime` helpers below.
+Every entity on Arkiv requires an expiration date — there is no permanent storage. The SDK throws an error if you omit `expiresIn` or pass an invalid expiration time. Always pass an explicit duration via the `ExpirationTime` helpers below.
 </Aside>
 
 Always use the helper instead of raw numbers:
