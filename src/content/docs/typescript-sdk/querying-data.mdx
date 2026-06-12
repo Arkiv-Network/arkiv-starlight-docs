@@ -55,7 +55,6 @@ console.log('Found:', result.entities.length)
 | `.withMetadata(true)` | Include metadata (owner, creator, TTL) |
 | `.ownedBy(address)` | Filter by current owner |
 | `.createdBy(address)` | Filter by original creator (immutable) |
-| `.orderBy(desc('field', 'type'))` | Order results (not currently functional on the Braga testnet) |
 | `.limit(n)` | Limit number of results |
 | `.fetch()` | Execute the query |
 
@@ -211,8 +210,7 @@ If you need fine-grained control (e.g. mixing create/update/delete in parallel),
 
 ## Ordering Results
 
-<Aside type="caution" title="Braga testnet">
-`orderBy` is **not functional on the Braga testnet**. Calling `.orderBy()` is accepted without error but results are returned in an unspecified order. Sort client-side for now:
+Query results are returned in an unspecified order. Sort client-side after fetching:
 
 ```ts
 result.entities.sort((a, b) => {
@@ -221,9 +219,6 @@ result.entities.sort((a, b) => {
   return Number(bVal) - Number(aVal) // descending
 })
 ```
-
-Server-side ordering is planned for mainnet.
-</Aside>
 
 ## String Pattern Matching
 
