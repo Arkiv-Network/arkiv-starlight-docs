@@ -70,15 +70,16 @@ const publicClient = createPublicClient({
      <TabItem label="npm">
        ```bash
        mkdir hello-arkiv && cd hello-arkiv
-       npm init --init-type=module -y
-       npm install @arkiv-network/sdk viem dotenv typescript
+       npm init -y
+       npm pkg set type=module
+       npm install @arkiv-network/sdk viem typescript
        ```
      </TabItem>
      <TabItem label="Bun">
        ```bash
        mkdir hello-arkiv && cd hello-arkiv
        bun init -y
-       bun add @arkiv-network/sdk viem dotenv
+       bun add @arkiv-network/sdk viem
        ```
      </TabItem>
    </Tabs>
@@ -99,9 +100,6 @@ const publicClient = createPublicClient({
    import { braga } from '@arkiv-network/sdk/chains';
    import { http } from 'viem';
    import { privateKeyToAccount } from 'viem/accounts';
-   import { config } from 'dotenv';
-
-   config({ path: '.env' });
 
    const walletClient = createWalletClient({
      chain: braga,
@@ -135,7 +133,7 @@ const publicClient = createPublicClient({
    <Tabs>
      <TabItem label="npm">
        ```bash
-       npx tsx hello.ts
+       npx tsx --env-file=.env hello.ts
        ```
      </TabItem>
      <TabItem label="Bun">
