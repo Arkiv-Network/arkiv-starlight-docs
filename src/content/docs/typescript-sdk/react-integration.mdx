@@ -20,9 +20,10 @@ First, define fetcher functions separate from hooks so they're reusable and test
 
 ```ts
 // lib/arkiv-queries.ts
-import { createPublicClient, http } from "@arkiv-network/sdk"
+import { createPublicClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
 import { eq } from "@arkiv-network/sdk/query"
+import { http } from "viem"
 
 const PROJECT_ATTRIBUTE = { key: "project", value: "my-app" }
 
@@ -34,19 +35,17 @@ export const publicClient = createPublicClient({
 export async function fetchEntitiesByType<T>(
   entityType: string
 ): Promise<(T & { arkivEntityKey: string })[]> {
-  const query = publicClient.buildQuery()
-  const result = await query
-    .where([
+  const result = await publicClient
+    .select({ key: true, payload: true })
+    .where(
       eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
       eq("entityType", entityType),
-    ])
-    .withPayload(true)
-    .withMetadata(true)
+    )
     .limit(50)
     .fetch()
 
   return result.entities
-    .map((entity: any) => {
+    .map((entity) => {
       try {
         return { arkivEntityKey: entity.key, ...entity.toJson() }
       } catch {
@@ -133,11 +132,9 @@ If your project uses [wagmi](https://wagmi.sh) (or a wagmi-powered kit like Rain
 
 ```tsx
 import { useAccount, useWalletClient } from "wagmi"
-import {
-  createWalletClient as createArkivWalletClient,
-  custom,
-} from "@arkiv-network/sdk"
+import { createWalletClient as createArkivWalletClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { custom } from "viem"
 
 function useArkivWalletClient() {
   const { address } = useAccount()
@@ -226,8 +223,9 @@ export const config = createConfig({
 If you're not using wagmi, you can connect MetaMask directly:
 
 ```ts
-import { createWalletClient, custom } from "@arkiv-network/sdk"
+import { createWalletClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { custom } from "viem"
 
 // Prompt MetaMask to add the network
 await window.ethereum.request({

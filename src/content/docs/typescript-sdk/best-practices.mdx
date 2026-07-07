@@ -35,12 +35,11 @@ const { entityKey } = await walletClient.createEntity({
 
 // Querying — always filter by PROJECT_ATTRIBUTE
 const result = await publicClient
-  .buildQuery()
-  .where([
+  .select({ key: true, payload: true })
+  .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
     eq("entityType", "post"),
-  ])
-  .withPayload(true)
+  )
   .limit(50)
   .fetch()
 ```
@@ -95,15 +94,20 @@ Broad queries return too much data. Always add multiple filter criteria:
 
 ```ts
 // Bad — returns every note ever
-await query.where(eq("type", "note")).fetch()
+await publicClient.select({ key: true }).where(eq("type", "note")).fetch()
 
 // Good — narrows to what you need
-await query
-  .where(eq("type", "note"))
-  .where(gt("created", Date.now() - 86400000))
-  .where(gt("priority", 3))
+await publicClient
+  .select({ key: true })
+  .where(
+    eq("type", "note"),
+    gt("created", Date.now() - 86400000),
+    gt("priority", 3),
+  )
   .fetch()
 ```
+
+The same applies to the field selection: `select()` fetches only the fields you name, so ask for what you'll actually use. `select()` with no argument (fetch everything) is convenient while prototyping but wasteful in production.
 
 ## 6. Right-Size Expiration
 
@@ -159,6 +163,16 @@ If you'll filter or sort by a value, store it as a number attribute. String attr
 { key: 'priority', value: '5' }
 ```
 
+Numeric attribute values **must be integers** — a float like `19.99` throws an `InvalidAttributeError`. Scale non-integers to a fixed precision instead:
+
+```ts
+// Good: scaled to cents — integer, still supports range queries
+{ key: 'priceCents', value: 1999 }
+
+// Throws InvalidAttributeError
+{ key: 'price', value: 19.99 }
+```
+
 ## 10. Model Related Data with Shared Attributes
 
 Link entities together using a shared attribute key. This is Arkiv's version of foreign keys:
@@ -174,9 +188,9 @@ attributes: [
 ]
 
 // Query all votes for a proposal
-await query
-  .where(eq("type", "vote"))
-  .where(eq("proposalKey", proposalEntityKey))
+await publicClient
+  .select({ key: true, payload: true })
+  .where(eq("type", "vote"), eq("proposalKey", proposalEntityKey))
   .fetch()
 ```
 
@@ -204,13 +218,12 @@ export const CREATOR_WALLET_ADDRESS = "0xYourBackendWalletAddress";
 import { PROJECT_ATTRIBUTE, CREATOR_WALLET_ADDRESS } from "./lib/arkiv"
 
 const trustedPosts = await publicClient
-  .buildQuery()
-  .where([
+  .select({ key: true, payload: true })
+  .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
     eq("entityType", "post"),
-  ])
+  )
   .createdBy(CREATOR_WALLET_ADDRESS)
-  .withPayload(true)
   .fetch()
 ```
 
@@ -309,12 +322,42 @@ await walletClient.mutateEntities({
 
 // 3. Query all profiles with "frontend" skill
 const frontendDevs = await publicClient
-  .buildQuery()
-  .where([
+  .select({ key: true, payload: true })
+  .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
     eq("entityType", "profileSkill"),
     eq("skill", "frontend"),
-  ])
-  .withPayload(true)
+  )
   .fetch()
 ```
+
+## 16. Remember That updateEntity Is a Full Replace
+
+`updateEntity` is a full replace, not a patch: any attribute you don't re-send is removed, and the payload, content type, and expiration are overwritten. To change only some fields, read the entity first and re-send the complete state with your changes applied:
+
+```ts
+// Bad — wipes every attribute except "status", replaces the payload
+await walletClient.updateEntity({
+  entityKey,
+  payload: jsonToPayload({}),
+  contentType: "application/json",
+  attributes: [{ key: "status", value: "done" }],
+  expiresIn: ExpirationTime.fromDays(7),
+})
+
+// Good — read, modify, write back the full entity
+const entity = await publicClient.getEntity(entityKey)
+
+await walletClient.updateEntity({
+  entityKey,
+  payload: entity.payload,
+  contentType: entity.contentType,
+  attributes: [
+    ...entity.attributes.filter((attr) => attr.key !== "status"),
+    { key: "status", value: "done" },
+  ],
+  expiresIn: ExpirationTime.fromDays(7),
+})
+```
+
+See [Mutating Data](/typescript-sdk/mutating-data/#update-entity) for details.

@@ -353,9 +353,10 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 }
 
 // Import Arkiv SDK for blockchain data access
-import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
-import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
+import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
+import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
@@ -382,9 +383,10 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 }
 
 // Import Arkiv SDK for blockchain data access
-import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
-import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
+import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
+import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
@@ -396,11 +398,10 @@ console.log('Arkiv client initialized for address:', USER_ADDRESS);
 
 // Fetch token data from Arkiv blockchain
 async function fetchTokenDataFromArkiv(tokenId) {
-    const query = client.buildQuery();
-    const result = await query
+    const result = await client
+        .select({ key: true, payload: true })
         .where(eq('token', tokenId))
         .ownedBy(USER_ADDRESS)
-        .withPayload(true)
         .fetch();
 
     return result.entities
@@ -409,7 +410,7 @@ async function fetchTokenDataFromArkiv(tokenId) {
 }`}
   lang="js"
   title="frontend/script.js"
-  ins={[22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34]}
+  ins={[23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34]}
 />
 
 ### Step 6: Putting It All Together
@@ -438,9 +439,10 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 }
 
 // Import Arkiv SDK for blockchain data access
-import { createPublicClient, http } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1?target=es2022&bundle-deps";
-import { eq } from "https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.3.2-dev.1/chains?target=es2022&bundle-deps';
+import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
+import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
+import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Import chart management functions
 import {
@@ -461,11 +463,10 @@ console.log('Arkiv client initialized for address:', USER_ADDRESS);
 
 // Fetch token data from Arkiv blockchain
 async function fetchTokenDataFromArkiv(tokenId) {
-    const query = client.buildQuery();
-    const result = await query
+    const result = await client
+        .select({ key: true, payload: true })
         .where(eq('token', tokenId))
         .ownedBy(USER_ADDRESS)
-        .withPayload(true)
         .fetch();
 
     return result.entities
@@ -509,7 +510,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });`}
   lang="js"
   title="frontend/script.js"
-  ins={[14, 15, 16, 17, 18, 19, 20, 21, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]}
+  ins={[15, 16, 17, 18, 19, 20, 21, 22, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]}
 />
 
 

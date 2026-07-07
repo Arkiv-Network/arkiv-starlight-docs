@@ -1,19 +1,20 @@
 ---
 title: Querying Data
-description: Query entities from Arkiv using the TypeScript SDK — operators, pagination, filtering, and ordering.
+description: Query entities from Arkiv using the TypeScript SDK — field selection, operators, pagination, and filtering.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Read entities from Arkiv using the TypeScript SDK's public client and its chainable query builder — with support for filtering, pagination, ordering, and payload retrieval.
+Read entities from Arkiv using the TypeScript SDK's public client and its chainable query builder — with support for field selection, filtering, pagination, and payload retrieval.
 
 ## PublicClient Setup
 
 All queries use the read-only public client:
 
 ```ts
-import { createPublicClient, http } from "@arkiv-network/sdk"
+import { createPublicClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
 
 const publicClient = createPublicClient({
   chain: braga,
@@ -23,52 +24,92 @@ const publicClient = createPublicClient({
 
 ## Building Queries
 
-Use `buildQuery()` to construct queries with chainable methods:
+Use `select()` to declare which entity fields you want returned, then chain filters and execute with `.fetch()`:
 
 ```ts
 import { eq, gt } from "@arkiv-network/sdk/query"
 
 const result = await publicClient
-  .buildQuery()
-  .where(eq('type', 'note'))
-  .where(gt('created', Date.now() - 86400000))
-  .withPayload(true)
-  .withAttributes(true)
+  .select({ key: true, payload: true, attributes: true })
+  .where(eq('type', 'note'), gt('created', Date.now() - 86400000))
   .limit(10)
   .fetch()
 
 console.log('Found:', result.entities.length)
 ```
 
+### Selecting Fields
+
+Pass nothing (or `"*"`) to fetch everything, or pass an object to fetch only specific fields:
+
+```ts
+// All fields
+await publicClient.select().where(eq('type', 'note')).fetch()
+
+// Only the fields you need
+await publicClient
+  .select({ key: true, owner: true, payload: true })
+  .where(eq('type', 'note'))
+  .fetch()
+```
+
+Available fields: `key`, `owner`, `creator`, `contentType`, `payload`, `attributes`, `expiresAtBlock`, `createdAtBlock`, `lastModifiedAtBlock`, `transactionIndexInBlock`, `operationIndexInTransaction`.
+
+<Aside>
+**Select only what you need.** Every selected field is fetched over the network, so requesting data you won't use makes queries slower. Note that every field is opt-in — including `key`.
+</Aside>
+
+The result type is inferred from your selection. The `toText()` / `toJson()` payload helpers are available only when you select `payload`.
+
+```ts
+const [entity] = (await publicClient.select({ owner: true, payload: true }).fetch()).entities
+
+entity.owner     // ✅ Hex
+entity.toJson()  // ✅ payload was selected
+entity.creator   // ❌ compile error — not selected
+```
+
+<Aside type="caution">
+Pass the selection **inline**. A selection stored in a variable widens its `true` values to `boolean`, so the result type can't be narrowed. If you need to reuse one, annotate it `as const`:
+
+```ts
+const fields = { owner: true, payload: true } as const
+await publicClient.select(fields).where(eq('type', 'note')).fetch()
+```
+</Aside>
+
+
 ### Query Builder Methods
 
 | Method | Description |
 |--------|-------------|
-| `.where(condition)` | Add a filter condition (chainable) |
-| `.withPayload(true)` | Include entity payload in results |
-| `.withAttributes(true)` | Include attributes in results |
-| `.withMetadata(true)` | Include metadata (owner, creator, TTL) |
+| `.where(...conditions)` | Add filter conditions (chainable) |
 | `.ownedBy(address)` | Filter by current owner |
 | `.createdBy(address)` | Filter by original creator (immutable) |
-| `.orderBy(desc('field', 'type'))` | Order results |
 | `.limit(n)` | Limit number of results |
 | `.fetch()` | Execute the query |
 
 ### Passing Multiple Conditions
 
-You can chain `.where()` calls or pass an array:
+You can chain `.where()` calls, pass several conditions as arguments, or pass an array — all conditions are combined with AND:
 
 ```ts
 // Chained — each .where() adds an AND condition
 const result = await publicClient
-  .buildQuery()
+  .select({ key: true, payload: true })
   .where(eq('type', 'note'))
   .where(gt('priority', 3))
   .fetch()
 
-// Array syntax — equivalent to above
+// Varargs — equivalent to above
 const result = await publicClient
-  .buildQuery()
+  .select({ key: true, payload: true })
+  .where(eq('type', 'note'), gt('priority', 3))
+  .fetch()
+
+// Array syntax — also equivalent
+const result = await publicClient
+  .select({ key: true, payload: true })
   .where([eq('type', 'note'), gt('priority', 3)])
   .fetch()
 ```
@@ -89,6 +130,22 @@ lte('expiration', limit)   // expiration <= limit
 String attributes only support `eq()`. Numeric attributes support all comparison operators. Always store numbers as numeric attributes if you need range queries.
 </Aside>
 
+### Combining with and() / or()
+
+Nest conditions with `and()` and `or()`. Both accept the predicates as separate arguments or as a single array:
+
+```ts
+import { and, or, eq, gt } from "@arkiv-network/sdk/query"
+
+// type = "note" AND (priority > 3 OR pinned = "true")
+const result = await publicClient
+  .select({ key: true, payload: true })
+  .where(eq('type', 'note'), or(gt('priority', 3), eq('pinned', 'true')))
+  .fetch()
+
+// Array form works too: or([gt('priority', 3), eq('pinned', 'true')])
+```
+
 ## Filtering by Owner and Creator
 
 Every entity has two metadata fields:
@@ -99,20 +156,16 @@ Every entity has two metadata fields:
 ```ts
 // Filter by current owner
 const owned = await publicClient
-  .buildQuery()
+  .select({ key: true, owner: true, payload: true })
   .where(eq('type', 'note'))
   .ownedBy('0xOwnerAddress')
-  .withPayload(true)
-  .withMetadata(true)
   .fetch()
 
 // Filter by original creator (tamper-proof)
 const created = await publicClient
-  .buildQuery()
+  .select({ key: true, creator: true, payload: true })
   .where(eq('type', 'note'))
   .createdBy('0xCreatorAddress')
-  .withPayload(true)
-  .withMetadata(true)
   .fetch()
 ```
 
@@ -136,21 +189,19 @@ const text = entity.toText()   // Text payload
 
 ```ts
 const result = await publicClient
-  .buildQuery()
+  .select({ key: true, payload: true, attributes: true })
   .where(eq('type', 'note'))
-  .withPayload(true)
-  .withAttributes(true)
   .fetch()
 
 for (const entity of result.entities) {
-  // Access payload
+  // Access payload (payload was selected)
   const data = entity.toJson()
   console.log(data.title, data.content)
 
-  // Access entity key
+  // Access entity key (key was selected)
   console.log('Key:', entity.key)
 
-  // Access attributes (when withAttributes is true)
+  // Access attributes (attributes were selected)
   for (const attr of entity.attributes) {
     console.log(`${attr.key}: ${attr.value}`)
   }
@@ -163,9 +214,8 @@ Arkiv uses cursor-based pagination. Results per page are capped at 200.
 
 ```ts
 const result = await publicClient
-  .buildQuery()
+  .select({ key: true, payload: true })
   .where(eq('type', 'note'))
-  .withPayload(true)
   .limit(10)
   .fetch()
 
@@ -178,20 +228,31 @@ if (result.hasNextPage()) {
 }
 ```
 
-## Ordering Results
+## Sorting Results
+
+The network always returns matching entities **newest first**. Ordering by anything else is not supported server-side. To sort by an attribute, fetch the entities and sort them in JavaScript:
 
 ```ts
-import { desc } from "@arkiv-network/sdk/query"
-
-const result = await publicClient
-  .buildQuery()
-  .where(eq('type', 'sketch'))
-  .ownedBy(userAddress)
-  .orderBy(desc('timestamp', 'number'))
-  .withPayload(true)
-  .limit(9)
+const { entities } = await publicClient
+  .select({ key: true, payload: true, attributes: true })
+  .where(eq('type', 'note'))
   .fetch()
+
+// Read the numeric "priority" attribute off an entity
+const priorityOf = (entity: (typeof entities)[number]) =>
+  Number(entity.attributes.find((attr) => attr.key === 'priority')?.value ?? 0)
+
+// Highest priority first
+entities.sort((a, b) => priorityOf(b) - priorityOf(a))
 ```
+
+<Aside type="caution">
+When sorting client-side, remember that `.limit(n)` caps the results **before** your sort — it gives you the n *newest* matches, not the top n by your attribute. To get a true top n, fetch all matching entities (paginating if needed), then sort and slice.
+</Aside>
+
+<Aside type="caution">
+Older SDK versions exposed `orderBy()` and the `asc()` / `desc()` helpers. They are **deprecated** and have no effect on the returned order - sort client-side instead.
+</Aside>
 
 :::caution[String pattern matching]
 The protocol supports glob matching on string attributes (`attribute ~ "My_Project_*"`), but the operator is not yet exposed in the TypeScript SDK. If you need pattern matching today, use the [JSON-RPC API](/json-rpc/querying-data/) directly.

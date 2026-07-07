@@ -38,7 +38,7 @@ Open your terminal and run the following commands:
 2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
 
     ```bash
-    npm install @arkiv-network/sdk p5 @types/p5
+    npm install @arkiv-network/sdk viem p5 @types/p5
     ```
 
 3. **Clean up default files and create our project files:**
@@ -68,7 +68,7 @@ Open PowerShell and run the following commands:
 2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
 
     ```sh
-    npm install @arkiv-network/sdk p5 @types/p5
+    npm install @arkiv-network/sdk viem p5 @types/p5
     ```
 
 3. **Clean up default files and create our project files:**
@@ -198,13 +198,9 @@ Now for the most important part of this tutorial: connecting to MetaMask. Open `
 First, we import the SDK and create a helper function to switch MetaMask to the Braga testnet. If the chain hasn't been added to MetaMask yet, we add it automatically.
 
 <Code
-  code={`import {
-  createPublicClient,
-  createWalletClient,
-  custom,
-  http,
-} from "@arkiv-network/sdk";
+  code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
 import { braga } from "@arkiv-network/sdk/chains";
+import { custom, http } from "viem";
 import "viem/window";
 
 async function switchToBragaChain() {
@@ -255,13 +251,9 @@ The `switchToBragaChain` function first tries `wallet_switchEthereumChain`. If M
 Next, add the `connectWallet` function. This switches to the correct chain and then requests account access from MetaMask.
 
 <Code
-  code={`import {
-  createPublicClient,
-  createWalletClient,
-  custom,
-  http,
-} from "@arkiv-network/sdk";
+  code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
 import { braga } from "@arkiv-network/sdk/chains";
+import { custom, http } from "viem";
 import "viem/window";
 
 async function switchToBragaChain() {
@@ -317,7 +309,7 @@ export async function connectWallet() {
 }`}
   lang="ts"
   title="src/wallet.ts"
-  ins={[47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57]}
+  ins={[43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53]}
 />
 
 ### Step 3: Create Arkiv Clients
@@ -325,13 +317,9 @@ export async function connectWallet() {
 Finally, add the factory function that creates both a **public client** (for reading data) and a **wallet client** (for writing data). This is exported so other modules can use it.
 
 <Code
-  code={`import {
-  createPublicClient,
-  createWalletClient,
-  custom,
-  http,
-} from "@arkiv-network/sdk";
+  code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
 import { braga } from "@arkiv-network/sdk/chains";
+import { custom, http } from "viem";
 import "viem/window";
 
 async function switchToBragaChain() {
@@ -406,7 +394,7 @@ export function createArkivClients(account?: \`0x\${string}\`) {
 }`}
   lang="ts"
   title="src/wallet.ts"
-  ins={[60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78]}
+  ins={[56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74]}
 />
 
 <Aside type="tip">

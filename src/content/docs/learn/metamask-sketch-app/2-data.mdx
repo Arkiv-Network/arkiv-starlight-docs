@@ -34,7 +34,7 @@ First, we import the query helpers, our wallet module from Step 1, and the SDK u
 </FileTree>
 
 <Code
-  code={`import { desc, eq } from "@arkiv-network/sdk/query";
+  code={`import { eq } from "@arkiv-network/sdk/query";
 import { createArkivClients } from "./wallet";
 import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
 
@@ -56,7 +56,7 @@ When the user clicks "Save", we capture the canvas as a PNG data URL and store i
 - **ExpiresIn**: Sketches are set to expire after 365 days.
 
 <Code
-  code={`import { desc, eq } from "@arkiv-network/sdk/query";
+  code={`import { eq } from "@arkiv-network/sdk/query";
 import { createArkivClients } from "./wallet";
 import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
 
@@ -101,7 +101,7 @@ Each save triggers a MetaMask confirmation popup. The entity is created on-chain
 Now add the query function that fetches all sketches owned by the connected wallet, sorted by newest first. This uses a **public client** — no wallet signature is needed for read-only queries.
 
 <Code
-  code={`import { desc, eq } from "@arkiv-network/sdk/query";
+  code={`import { eq } from "@arkiv-network/sdk/query";
 import { createArkivClients } from "./wallet";
 import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
 
@@ -138,11 +138,9 @@ export async function loadSketches(userAddress: string): Promise<Sketch[]> {
     const { publicClient } = createArkivClients();
 
     const result = await publicClient
-      .buildQuery()
+      .select({ key: true, payload: true })
       .where(eq("type", "sketch"))
       .ownedBy(userAddress as \`0x\${string}\`)
-      .orderBy(desc("timestamp", "number"))
-      .withPayload(true)
       .limit(9)
       .fetch();
 
@@ -173,15 +171,14 @@ export async function loadSketches(userAddress: string): Promise<Sketch[]> {
 }`}
   lang="ts"
   title="src/sketch.ts"
-  ins={[32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68]}
+  ins={[32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66]}
 />
 
 Let's break down the query:
 
+- `.select({ key: true, payload: true })` — declares which entity fields to fetch: the key and the full payload data (our image)
 - `.where(eq("type", "sketch"))` — filters entities to only those with a `type` attribute equal to `"sketch"`
 - `.ownedBy(userAddress)` — restricts results to entities created by this wallet
-- `.orderBy(desc("timestamp", "number"))` — sorts newest first
-- `.withPayload(true)` — includes the full payload data (our image) in the response
 - `.limit(9)` — caps the gallery at 9 items
 
 Each entity is then parsed from JSON. We use `.filter()` to safely discard any entities that don't have a valid `imageData` field.

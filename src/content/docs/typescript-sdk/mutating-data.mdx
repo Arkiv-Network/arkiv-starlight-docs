@@ -12,9 +12,10 @@ Learn how to create, update, delete, and extend entities on Arkiv using the Type
 All write operations require a wallet client:
 
 ```ts
-import { createWalletClient, http } from "@arkiv-network/sdk"
-import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
+import { createWalletClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
   chain: braga,
@@ -71,6 +72,27 @@ console.log("Created:", entityKey)
 | `attributes` | `Array` | Key-value pairs for querying |
 | `expiresIn` | `number` | Lifetime in seconds (use `ExpirationTime` helpers) |
 
+### Validation Rules
+
+The SDK validates mutations before sending them and throws a descriptive error on invalid input:
+
+- **Numeric attribute values must be integers.** A non-integer number throws an `InvalidAttributeError`. To store a non-integer, scale it to an integer (e.g. `1.5` → `1500`, dividing by the same factor on read) to keep numeric ordering and range queries working — or store it as a string (`"1.5"`), which only supports equality.
+- **`expiresIn` must be a positive integer and a multiple of 2 seconds.** Arkiv measures expiration in whole blocks (1 block = 2 seconds).
+
+```ts
+// ❌ InvalidAttributeError — floats are not supported
+attributes: [{ key: "price", value: 19.99 }]
+
+// ✅ scale to an integer (divide by 100 on read)
+attributes: [{ key: "priceCents", value: 1999 }]
+
+// ❌ InvalidExpirationError — not a multiple of the 2s block time
+expiresIn: 7
+
+// ✅ positive integer, multiple of 2
+expiresIn: ExpirationTime.fromHours(1)
+```
+
 ### Returns
 
 | Field | Type | Description |
@@ -96,7 +118,7 @@ const { txHash } = await walletClient.updateEntity({
 ```
 
 <Aside type="caution">
-`updateEntity` is a **full replace**, not a patch. It overwrites the entire payload and all attributes. If you omit an attribute from the update call, it will be silently removed from the entity. Always re-send every attribute you want to keep.
+`updateEntity` is a **full replace**, not a patch. It overwrites the entire payload, content type, and expiration, and the attribute set becomes exactly the provided list. If you omit an attribute from the update call, it will be silently removed from the entity. To change only some fields and keep the rest, read the entity first and re-send the complete state with your changes applied.
 </Aside>
 
 ## Delete Entity
@@ -151,7 +173,7 @@ Start with a short expiration and extend when needed. Over-allocating wastes sto
 
 ## Batch Operations
 
-Create multiple entities in a single transaction using `mutateEntities()`:
+Perform multiple operations in a single transaction using `mutateEntities()`. It accepts `creates`, `updates`, `deletes`, `extensions`, and `ownershipChanges`:
 
 ```ts
 await walletClient.mutateEntities({
@@ -175,6 +197,24 @@ await walletClient.mutateEntities({
 <Aside type="caution">
 Don't use a loop with individual `createEntity()` calls — that's slow and expensive. Always use `mutateEntities()` for batch operations.
 </Aside>
+
+### Mixing Operation Types
+
+```ts
+await walletClient.mutateEntities({
+  creates: [{
+    payload: jsonToPayload({ content: "New item" }),
+    contentType: "application/json",
+    attributes: [{ key: "type", value: "item" }],
+    expiresIn: ExpirationTime.fromHours(1),
+  }],
+  extensions: [{
+    entityKey: "0x456...",
+    expiresIn: ExpirationTime.fromHours(1),
+  }],
+  deletes: [{ entityKey: "0x321..." }],
+})
+```
 
 ### Batch with Dynamic Data
 
@@ -214,8 +254,9 @@ ExpirationTime.fromDays(7)      // 604800 seconds
 In browser applications, use MetaMask as the transport instead of a private key:
 
 ```ts
-import { createWalletClient, custom } from "@arkiv-network/sdk"
+import { createWalletClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { custom } from "viem"
 
 // Request wallet connection
 await window.ethereum.request({ method: 'eth_requestAccounts' })
@@ -243,10 +284,29 @@ try {
   })
 } catch (error) {
   // Common failures:
+  // - Invalid input (InvalidAttributeError, InvalidExpirationError)
   // - User rejected the transaction (MetaMask popup dismissed)
   // - Insufficient funds / gas
   // - Network error (RPC unreachable)
   // - Entity already expired (for update/extend)
   console.error("Transaction failed:", error)
+}
+```
+
+The SDK's typed errors are exported from the package root, so you can handle them specifically:
+
+```ts
+import { InvalidAttributeError, InvalidExpirationError } from "@arkiv-network/sdk"
+
+try {
+  await walletClient.createEntity({ ... })
+} catch (error) {
+  if (error instanceof InvalidAttributeError) {
+    // a numeric attribute value was not an integer
+  } else if (error instanceof InvalidExpirationError) {
+    // expiresIn was not a positive multiple of the 2s block time
+  } else {
+    throw error
+  }
 }
 ```
