@@ -195,7 +195,7 @@ await walletClient.mutateEntities({
 ```
 
 <Aside type="caution">
-Don't use a loop with individual `createEntity()` calls — that's slow and expensive. Always use `mutateEntities()` for batch operations.
+Don't use a loop with individual `createEntity()` calls — that's slow and expensive. And don't fire them in parallel with `Promise.all` — concurrent writes from one wallet collide on the transaction nonce (see [Concurrent Writes and Nonces](#concurrent-writes-and-nonces)). Always use `mutateEntities()` for batch operations.
 </Aside>
 
 ### Mixing Operation Types
@@ -234,6 +234,51 @@ await walletClient.mutateEntities({
   })),
 })
 ```
+
+## Concurrent Writes and Nonces
+
+Every write is an on-chain transaction, and all transactions from one wallet must use strictly sequential nonces. The SDK does not manage nonces for you — each write fetches the next nonce from the network at send time. Two writes in flight at the same moment fetch the **same** nonce and collide: one transaction gets rejected or silently replaces the other.
+
+```ts
+// ❌ Both writes fetch the same nonce — one of them will fail or be replaced
+await Promise.all([
+  walletClient.createEntity({ ... }),
+  walletClient.createEntity({ ... }),
+])
+```
+
+There are two ways to write concurrently from one wallet:
+
+**Batch into a single transaction (preferred).** `mutateEntities()` submits any number of operations as one transaction — one nonce, no collisions. See [Batch Operations](#batch-operations).
+
+**Use viem's nonce manager.** If separate transactions are unavoidable (e.g. independent writes triggered from different code paths), create the account with viem's `nonceManager` so nonces are allocated locally and sequentially instead of fetched per write:
+
+```ts
+import { createWalletClient } from "@arkiv-network/sdk"
+import { braga } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+import { privateKeyToAccount, nonceManager } from "viem/accounts"
+
+const walletClient = createWalletClient({
+  chain: braga,
+  transport: http(),
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`, {
+    nonceManager,
+  }),
+})
+
+// ✅ Safe — the nonce manager hands out sequential nonces
+await Promise.all([
+  walletClient.createEntity({ ... }),
+  walletClient.createEntity({ ... }),
+])
+```
+
+See viem's [`createNonceManager` docs](https://viem.sh/docs/accounts/local/createNonceManager) for customization.
+
+<Aside type="caution">
+A nonce manager only coordinates writes **within a single process**. Multiple processes or servers writing with the same private key will still collide. Give each writer its own wallet, or route all writes through one process.
+</Aside>
 
 ## ExpirationTime Reference
 

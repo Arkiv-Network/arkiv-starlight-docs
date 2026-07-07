@@ -77,7 +77,10 @@ for (const item of items) {
   await walletClient.createEntity(item)
 }
 
-// Good — single batch operation
+// Also bad — parallel writes from one wallet collide on the transaction nonce
+await Promise.all(items.map((item) => walletClient.createEntity(item)))
+
+// Good — single batch operation, single transaction
 await walletClient.mutateEntities({
   creates: items.map((item) => ({
     payload: jsonToPayload(item.data),
@@ -87,6 +90,8 @@ await walletClient.mutateEntities({
   })),
 })
 ```
+
+If you genuinely need separate concurrent transactions, create the account with viem's `nonceManager` — see [Concurrent Writes and Nonces](/typescript-sdk/mutating-data/#concurrent-writes-and-nonces).
 
 ## 5. Write Specific Queries
 
