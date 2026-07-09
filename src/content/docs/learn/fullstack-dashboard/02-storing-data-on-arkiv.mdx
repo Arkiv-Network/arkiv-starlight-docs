@@ -24,9 +24,10 @@ First, we need to import the necessary functions from the Arkiv SDK and set up o
 </FileTree>
 
 <Code
-  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+  code={`import { createWalletClient } from '@arkiv-network/sdk';
 import { braga } from '@arkiv-network/sdk/chains';
-import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+import { http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 // Load the private key from the environment file.
 const privateKey = process.env.PRIVATE_KEY;
@@ -72,9 +73,10 @@ You may need to wait a few minutes for the transaction to be processed. You can 
 Next, let's add a function to call the CoinGecko API and fetch our cryptocurrency data.
 
 <Code
-  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+  code={`import { createWalletClient } from '@arkiv-network/sdk';
 import { braga } from '@arkiv-network/sdk/chains';
-import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
+import { http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
 
 // Load the private key from the environment file.
@@ -115,7 +117,7 @@ async function fetchCryptoData() {
 }`}
   lang="js"
   title="backend/index.js"
-  ins={[4, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41]}
+  ins={[5, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42]}
 />
 
 ### Step 4: Uploading Data to Arkiv
@@ -127,10 +129,11 @@ This is the core of our backend. This function takes all the crypto data and cre
 - **ExpiresIn**: Entities can be set to automatically expire after a certain time.
 
 <Code
-  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+  code={`import { createWalletClient } from '@arkiv-network/sdk';
 import { braga } from '@arkiv-network/sdk/chains';
-import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import { http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
 
 // Load the private key from the environment file.
@@ -216,7 +219,7 @@ async function uploadDataToArkiv(cryptoData) {
 }`}
   lang="js"
   title="backend/index.js"
-  ins={[4, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87]}
+  ins={[3, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88]}
 />
 
 ### Step 5: The Main Loop
@@ -224,10 +227,11 @@ async function uploadDataToArkiv(cryptoData) {
 Finally, let's create a main loop to tie everything together. This function will fetch the data and upload all tokens in a single batch operation.
 
 <Code
-  code={`import { createWalletClient, http } from '@arkiv-network/sdk';
+  code={`import { createWalletClient } from '@arkiv-network/sdk';
 import { braga } from '@arkiv-network/sdk/chains';
-import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import { http } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
 
 // Load the private key from the environment file.
@@ -327,7 +331,7 @@ runUpdateCycle();
 setInterval(runUpdateCycle, 60000); // 60000 ms = 60 seconds`}
   lang="js"
   title="backend/index.js"
-  ins={[89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107]}
+  ins={[90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102]}
 />
 
 ### Step 6: Run the Backend

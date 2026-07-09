@@ -7,17 +7,19 @@ import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 Arkiv provides an official TypeScript/JavaScript SDK — [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) — that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event subscriptions, and payload encoding.
 
+The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency**, so install `viem` alongside the SDK.
+
 ## Install the SDK
 
 <Tabs>
   <TabItem label="npm">
     ```bash
-    npm install @arkiv-network/sdk
+    npm install @arkiv-network/sdk viem
     ```
   </TabItem>
   <TabItem label="Bun">
     ```bash
-    bun add @arkiv-network/sdk
+    bun add @arkiv-network/sdk viem
     ```
   </TabItem>
 </Tabs>
@@ -29,9 +31,10 @@ Arkiv provides an official TypeScript/JavaScript SDK — [`@arkiv-network/sdk`](
 Requires a private key. Use for creating, updating, and deleting entities:
 
 ```ts
-import { createWalletClient, http } from "@arkiv-network/sdk"
-import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
+import { createWalletClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
   chain: braga,
@@ -47,8 +50,9 @@ const walletClient = createWalletClient({
 No private key needed. Use for queries — safe for frontend use:
 
 ```ts
-import { createPublicClient, http } from "@arkiv-network/sdk"
+import { createPublicClient } from "@arkiv-network/sdk"
 import { braga } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
 
 const publicClient = createPublicClient({
   chain: braga,
@@ -66,15 +70,16 @@ const publicClient = createPublicClient({
      <TabItem label="npm">
        ```bash
        mkdir hello-arkiv && cd hello-arkiv
-       npm init --init-type=module -y
-       npm install @arkiv-network/sdk dotenv typescript
+       npm init -y
+       npm pkg set type=module
+       npm install @arkiv-network/sdk viem typescript
        ```
      </TabItem>
      <TabItem label="Bun">
        ```bash
        mkdir hello-arkiv && cd hello-arkiv
        bun init -y
-       bun add @arkiv-network/sdk dotenv
+       bun add @arkiv-network/sdk viem
        ```
      </TabItem>
    </Tabs>
@@ -90,13 +95,11 @@ const publicClient = createPublicClient({
 3. **Write your first entity**
 
    ```ts title="hello.ts"
-   import { createWalletClient, createPublicClient, http } from '@arkiv-network/sdk';
+   import { createWalletClient, createPublicClient } from '@arkiv-network/sdk';
    import { stringToPayload } from '@arkiv-network/sdk/utils';
    import { braga } from '@arkiv-network/sdk/chains';
-   import { privateKeyToAccount } from '@arkiv-network/sdk/accounts';
-   import { config } from 'dotenv';
-
-   config({ path: '.env' });
+   import { http } from 'viem';
+   import { privateKeyToAccount } from 'viem/accounts';
 
    const walletClient = createWalletClient({
      chain: braga,
@@ -130,7 +133,7 @@ const publicClient = createPublicClient({
    <Tabs>
      <TabItem label="npm">
        ```bash
-       npx tsx hello.ts
+       npx tsx --env-file=.env hello.ts
        ```
      </TabItem>
      <TabItem label="Bun">
@@ -155,7 +158,8 @@ All entities in Arkiv are stored in a shared database. Tag your data with a uniq
 For static HTML/JS pages without a bundler:
 
 ```js
-import { createPublicClient, http } from 'https://esm.sh/@arkiv-network/sdk@0.6.0?target=es2022&bundle-deps'
-import { eq } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/query?target=es2022&bundle-deps'
-import { braga } from 'https://esm.sh/@arkiv-network/sdk@0.6.0/chains?target=es2022&bundle-deps'
+import { createPublicClient } from 'https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps'
+import { eq } from 'https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps'
+import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps'
+import { http } from 'https://esm.sh/viem?target=es2022'
 ```
