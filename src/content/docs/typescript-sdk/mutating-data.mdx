@@ -141,12 +141,12 @@ const { entityKey, txHash } = await walletClient.changeOwnership({
 `extendEntity` is **additive**: the duration you pass is added to the entity's current expiration date, not a replacement. This is the key difference from `updateEntity`, which replaces everything.
 
 ```ts
-// Example: entity currently expires at block 5000
+// Example: entity currently set to expire 1 hour from now
 const { txHash } = await walletClient.extendEntity({
   entityKey: entityKey,
-  expiresIn: ExpirationTime.fromHours(1), // 3600 seconds
+  expiresIn: ExpirationTime.fromHours(1), // add another hour
 })
-// New expiration: block 5000 + 3600 = block 8600
+// New expiration: ~2 hours from now (existing 1 hour + 1 hour added)
 ```
 
 <Aside type="tip">
