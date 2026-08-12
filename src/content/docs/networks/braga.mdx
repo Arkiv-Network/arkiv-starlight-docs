@@ -1,66 +1,35 @@
 ---
 title: Braga
-description: Arkiv Braga testnet details — chain ID, RPC endpoints, faucet, explorer, bridge, and MetaMask configuration.
+description: Braga shuts down on 12 August 2026. What happens, what's available now, and where to get access to the next network.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Braga is Arkiv's current testnet db-chain. It uses **test GLM as the native gas token** and produces blocks every 2 seconds. There is no Arkiv mainnet yet; everything you ship today runs on testnet.
-
-<Aside type="caution" title="Migrating from Kaolin?">
-  Braga replaces the Kaolin testnet. If you have an app running on Kaolin, see the [migration guide](/networks/migrate-from-kaolin/). Kaolin is scheduled to sunset on **15 May 2026**.
+<Aside type="caution" title="Braga shuts down 12 August 2026">
+  Braga shuts down at 23:59 CET on 12 August 2026. After that there are no public endpoints and no faucet. An experimental devnet is running with limited access, and a public testnet follows in September.
 </Aside>
 
-## Network details
+Braga has been Arkiv's testnet db-chain. It shuts down at 23:59 CET on 12 August 2026, and its faucet, block explorer and RPC/WebSocket endpoints go offline with it. If you came here for any of those, there's no replacement until the public testnet in September.
 
-| Property              | Value                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------ |
-| Chain ID              | `60138453102`                                                                        |
-| HTTP RPC              | `https://braga.hoodi.arkiv.network/rpc`                                              |
-| WebSocket RPC         | `wss://braga.hoodi.arkiv.network/rpc/ws`                                             |
-| Native gas token      | GLM                                                                                  |
-| Block time            | 2 seconds                                                                            |
-| Standard Bridge       | `0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`                                         |
-| Faucet                | [braga.hoodi.arkiv.network/faucet](https://braga.hoodi.arkiv.network/faucet/)        |
-| Explorer              | [explorer.braga.hoodi.arkiv.network](https://explorer.braga.hoodi.arkiv.network/)    |
-| Bridge UI             | [braga.hoodi.arkiv.network/bridgette](https://braga.hoodi.arkiv.network/bridgette/)  |
-| Status                | [status.braga.hoodi.arkiv.network](https://status.braga.hoodi.arkiv.network)         |
+See the [shutdown announcement](https://x.com/arkivnetwork/status/2082409854308626490) for details.
 
-## Adding Braga to MetaMask
+## What to do now
 
-Click the button below to add the Braga testnet to your MetaMask wallet:
+- **Want into the devnet?** An experimental devnet is running in August with limited access. Ask in [Discord](https://discord.gg/arkiv) — that's where access requests are handled.
+- **Waiting for the next testnet?** A public testnet opens in September 2026. Watch Discord for the announcement, and check back on this page.
 
-<button id="add-braga-btn" class="bg-arkiv-blue text-white hover:bg-arkiv-blue/95 cursor-pointer px-4 py-2 rounded" type="button" data-umami-event="add-braga-to-wallet">
-  Add Braga to MetaMask
-</button>
-<p id="add-braga-msg" style="margin-top: 0.5rem; font-size: 0.875rem;"></p>
+Once Braga is down there's nothing to build against — no public RPC, no faucet, no explorer.
 
-<script>{`
-  document.getElementById('add-braga-btn').addEventListener('click', async () => {
-    const msg = document.getElementById('add-braga-msg');
-    if (typeof window.ethereum === 'undefined') {
-      msg.textContent = 'MetaMask is not installed. Please install it first.';
-      msg.style.color = 'var(--sl-color-red)';
-      return;
-    }
-    try {
-      await window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [{
-          chainId: '0xe0087f86e',
-          chainName: 'Arkiv Braga Testnet',
-          nativeCurrency: { name: 'Golem', symbol: 'GLM', decimals: 18 },
-          rpcUrls: ['https://braga.hoodi.arkiv.network/rpc'],
-          blockExplorerUrls: ['https://explorer.braga.hoodi.arkiv.network'],
-        }],
-      });
-      msg.textContent = 'Braga testnet added successfully!';
-      msg.style.color = 'var(--sl-color-green)';
-    } catch (err) {
-      msg.textContent = 'Failed to add network: ' + (err.message || err);
-      msg.style.color = 'var(--sl-color-red)';
-    }
-  });
-`}</script>
+## Network reference
 
-Then get test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/).
+These values describe Braga as it ran. They stop working at shutdown, and are kept here only to help you make sense of old transactions and configs.
+
+| Property         | Value                                          |
+| ----------------- | ----------------------------------------------- |
+| Chain ID          | `60138453102`                                   |
+| Native gas token  | GLM                                             |
+| Standard Bridge   | `0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`     |
+
+## Need help?
+
+Questions about the transition go in [Discord](https://discord.gg/arkiv).

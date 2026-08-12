@@ -38,15 +38,6 @@ function rewriteIndexLinks() {
 	};
 }
 
-const ANNOUNCEMENT_URL = "https://x.com/arkivnetwork/status/2082409854308626490";
-
-// Braga shuts down at 23:59 CET on 12 August 2026.
-// On 13 August, point `banner.content` at POST_SHUTDOWN_BANNER and redeploy.
-// This site is static — there is no runtime flag, so the switch is a merge plus a deploy.
-const SUNSET_BANNER = `<strong>Braga sunsets 23:59 CET, 12 August.</strong> Export any data you need before then. An experimental devnet follows in August with limited access, and a public testnet in September. <a href="${ANNOUNCEMENT_URL}">Read the announcement →</a>`;
-
-const POST_SHUTDOWN_BANNER = `<strong>Braga has been shut down.</strong> There's no open network to build on until the public testnet in September. Ask about devnet access on <a href="https://discord.gg/arkiv">Discord</a>. <a href="${ANNOUNCEMENT_URL}">Read the announcement →</a>`;
-
 // https://astro.build/config
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
@@ -59,9 +50,6 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: "Arkiv documentation",
-			banner: {
-				content: SUNSET_BANNER,
-			},
 			social: [
 				{
 					icon: "github",
@@ -162,6 +150,7 @@ export default defineConfig({
 				"./src/styles/global.css",
 			],
 			components: {
+				Banner: "./src/components/SiteBanner.astro",
 				Pagination: "./src/components/DocsPagination.astro",
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},

@@ -5,10 +5,14 @@ description: Move your Arkiv app from the Kaolin testnet to Braga — what chang
 
 import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Braga is Arkiv's current testnet db-chain, and it replaces Kaolin. Both are testnets; there is no Arkiv mainnet yet. If you've been building on Kaolin, here's how to move across.
+<Aside type="caution" title="Braga is shutting down too">
+  This guide moved apps from Kaolin to Braga. Braga shuts down at 23:59 CET on 12 August 2026, so it's no longer a migration target. See the [Braga network page](/networks/braga/) for what's available now.
+</Aside>
+
+Braga replaced Kaolin as Arkiv's testnet db-chain. Both are testnets; there is no Arkiv mainnet yet. If you've been building on Kaolin, here's how to move across.
 
 <Aside type="caution" title="Sunset date">
-  Kaolin runs alongside Braga until **15 May 2026**. After that, Kaolin endpoints stop responding. Plan to migrate before then.
+  Kaolin sunset on **15 May 2026**. Its endpoints no longer respond.
 </Aside>
 
 ## Why Braga?
@@ -133,13 +137,13 @@ No. Only the chain import changes — same methods, same types, same return shap
 
 No. Testnet state is not ported. Re-create entities on Braga.
 
-### Can I run Kaolin and Braga in parallel during migration?
+### Could I run Kaolin and Braga in parallel during migration?
 
-Yes, until 15 May 2026. Both networks accept traffic. After that date, Kaolin endpoints stop responding.
+Yes, until 15 May 2026, when Kaolin endpoints stopped responding.
 
 ### What about the bridge contract?
 
-The Standard Bridge address is different on Braga (`0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`). If you bridge programmatically, update the address. Funds bridged into Kaolin stay on Kaolin — withdraw before the sunset.
+The Standard Bridge address is different on Braga (`0xB52b417A79c9dE21ffe221dF9a3821B7EaC60813`). If you bridge programmatically, update the address. Funds bridged into Kaolin stay on Kaolin — they needed to be withdrawn before the sunset.
 
 ### Why GLM and not ETH for gas?
 

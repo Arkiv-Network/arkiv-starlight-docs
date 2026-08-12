@@ -1,0 +1,37 @@
+---
+// Overrides Starlight's Banner component so the notice shows on every page.
+// Starlight's own `banner` is per-page frontmatter, and there is no site-wide
+// config key for it — overriding the component is the supported way to do this.
+//
+// Braga shuts down at 23:59 CET on 12 August 2026. On 13 August, point
+// `content` at POST_SHUTDOWN and redeploy. This site is static, so there is
+// no runtime flag — the switch is a merge plus a deploy.
+
+const ANNOUNCEMENT_URL = "https://x.com/arkivnetwork/status/2082409854308626490";
+
+const SUNSET = `<strong>Braga sunsets 23:59 CET, 12 August.</strong> Export any data you need before then. An experimental devnet follows in August with limited access, and a public testnet in September. <a href="${ANNOUNCEMENT_URL}">Read the announcement →</a>`;
+
+const POST_SHUTDOWN = `<strong>Braga has been shut down.</strong> There's no open network to build on until the public testnet in September. Ask about devnet access on <a href="https://discord.gg/arkiv">Discord</a>. <a href="${ANNOUNCEMENT_URL}">Read the announcement →</a>`;
+
+const content = SUNSET;
+---
+
+<div class="sl-banner" data-pagefind-ignore set:html={content} />
+
+<style>
+	@layer starlight.core {
+		.sl-banner {
+			--__sl-banner-text: var(--sl-color-banner-text, var(--sl-color-text-invert));
+			padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+			background-color: var(--sl-color-banner-bg, var(--sl-color-bg-accent));
+			color: var(--__sl-banner-text);
+			line-height: var(--sl-line-height-headings);
+			text-align: center;
+			text-wrap: balance;
+			box-shadow: var(--sl-shadow-sm);
+		}
+		.sl-banner :global(a) {
+			color: var(--__sl-banner-text);
+		}
+	}
+</style>
