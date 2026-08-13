@@ -151,7 +151,7 @@ export default defineConfig({
 				"./src/styles/global.css",
 			],
 			components: {
-				Banner: "./src/components/SiteBanner.astro",
+				Header: "./src/components/SiteHeader.astro",
 				Pagination: "./src/components/DocsPagination.astro",
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},

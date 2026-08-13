@@ -86,4 +86,53 @@
       line-height: 1.5;
     }
   }
+
+  :root {
+    --sl-nav-row-height: 3.5rem;
+    --sl-banner-height: 3.9rem;
+    --sl-nav-height: calc(var(--sl-nav-row-height) + var(--sl-banner-height));
+  }
+
+  @media (min-width: 32em) {
+    :root {
+      --sl-banner-height: 2.7rem;
+    }
+  }
+
+  @media (min-width: 50em) {
+    :root {
+      --sl-nav-row-height: 4rem;
+    }
+  }
+
+  .page > .header {
+    height: auto;
+    padding: 0;
+  }
+
+  .site-nav {
+    height: var(--sl-nav-row-height);
+    padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+  }
+
+  /* Keep the room Starlight reserves for the mobile menu button, and centre
+     that button on the nav row rather than on banner + nav. */
+  [data-has-sidebar] .site-nav {
+    padding-inline-end: calc(
+      var(--sl-nav-gap) + var(--sl-nav-pad-x) + var(--sl-menu-button-size)
+    );
+  }
+
+  starlight-menu-button button {
+    top: calc(
+      var(--sl-banner-height) + (var(--sl-nav-row-height) -
+            var(--sl-menu-button-size)) / 2
+    );
+  }
+
+  @media (min-width: 50em) {
+    [data-has-sidebar] .site-nav {
+      padding-inline-end: var(--sl-nav-pad-x);
+    }
+  }
 }
