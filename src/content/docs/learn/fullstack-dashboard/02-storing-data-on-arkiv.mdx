@@ -8,7 +8,7 @@ import { Code, FileTree, Aside } from '@astrojs/starlight/components';
 In this part, we'll build the Node.js script that acts as our data publisher. It will fetch data from CoinGecko and use the Arkiv SDK to write it to the blockchain.
 
 <Aside type="caution">
-Braga shuts down at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
+Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
 </Aside>
 
 Open `backend/index.js` and let's build it step by step.
@@ -65,7 +65,7 @@ You should see output like: `Backend service connected as: 0x1234...`
 ### Step 2: Get Test GLM
 
 <Aside type="caution">
-The Braga faucet and explorer go offline when Braga shuts down on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
+The Braga faucet and explorer went offline when Braga was retired on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
 </Aside>
 
 Before we can create entities on Arkiv, we need some test GLM to pay for gas fees. Braga uses GLM as its native gas token. Visit the Braga faucet:
@@ -345,7 +345,7 @@ setInterval(runUpdateCycle, 60000); // 60000 ms = 60 seconds`}
 ### Step 6: Run the Backend
 
 <Aside type="caution">
-Running the backend means sending transactions to Braga, which shuts down on 12 August 2026. There's no public network until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
+Running the backend means sending transactions to Braga, which was retired on 12 August 2026. There's no public network until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
 </Aside>
 
 Your backend is complete! Run it from your terminal:
