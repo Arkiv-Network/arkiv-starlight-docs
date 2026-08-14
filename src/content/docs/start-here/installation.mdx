@@ -5,6 +5,10 @@ description: Install the Arkiv TypeScript SDK and create your first entity.
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
+<Aside type="caution">
+Braga was retired at 23:59 CET on 12 August 2026 — see the [Braga page](/networks/braga/) for the full story. You can still install the SDK and read through the code below, but you can't run it against a public network until the next testnet arrives in September 2026. A limited devnet is available in the meantime — ask about access on [Discord](https://discord.gg/arkiv).
+</Aside>
+
 Arkiv provides an official TypeScript/JavaScript SDK — [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) — that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event subscriptions, and payload encoding.
 
 The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency**, so install `viem` alongside the SDK.
@@ -90,7 +94,7 @@ const publicClient = createPublicClient({
    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
    ```
 
-   Get test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/) — Braga uses GLM as its native gas token.
+   Arkiv chains use GLM as the native gas token. The Braga faucet went offline when Braga was retired on 12 August 2026 — see the [Braga page](/networks/braga/) for what's next.
 
 3. **Write your first entity**
 
@@ -130,6 +134,8 @@ const publicClient = createPublicClient({
 
 4. **Run it**
 
+   Run it with:
+
    <Tabs>
      <TabItem label="npm">
        ```bash
@@ -142,6 +148,8 @@ const publicClient = createPublicClient({
        ```
      </TabItem>
    </Tabs>
+
+   With Braga retired, this script has nowhere to send its transaction until the next public testnet ships.
 
 </Steps>
 

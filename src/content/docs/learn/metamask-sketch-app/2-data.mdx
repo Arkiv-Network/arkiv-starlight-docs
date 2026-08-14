@@ -7,9 +7,17 @@ import { Code, FileTree, Aside } from '@astrojs/starlight/components';
 
 In this part, we'll build the data module that handles saving sketches to Arkiv and loading the user's gallery. It demonstrates the two core SDK operations: **creating entities** and **querying entities by owner**.
 
+<Aside type="caution">
+Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
+</Aside>
+
 Open `src/sketch.ts` and let's build it step by step.
 
 ## Get Test GLM
+
+<Aside type="caution">
+The Braga faucet went offline when Braga was retired on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
+</Aside>
 
 Before we can create entities on Arkiv, your MetaMask wallet needs some test GLM to pay for gas fees. Braga uses GLM as its native gas token. Visit the Braga faucet:
 

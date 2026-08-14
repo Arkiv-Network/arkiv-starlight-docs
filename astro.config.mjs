@@ -43,6 +43,7 @@ export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
 		"/start-here/testnet": "/networks/braga/",
+		"/networks/migrate-from-kaolin": "/networks/older-networks/",
 	},
 	markdown: {
 		remarkPlugins: [rewriteIndexLinks],
@@ -72,7 +73,7 @@ export default defineConfig({
 					label: "Networks",
 					items: [
 						{ label: "Braga", slug: "networks/braga" },
-						{ label: "Migrating from Kaolin", slug: "networks/migrate-from-kaolin" },
+						{ label: "Older networks", slug: "networks/older-networks" },
 					],
 				},
 				{
@@ -150,6 +151,7 @@ export default defineConfig({
 				"./src/styles/global.css",
 			],
 			components: {
+				Header: "./src/components/SiteHeader.astro",
 				Pagination: "./src/components/DocsPagination.astro",
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},
