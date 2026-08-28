@@ -82,19 +82,19 @@ The SDK validates mutations before sending them and throws a descriptive error o
 ```ts
 import { dec } from "@arkiv-network/sdk/attr"
 
-// ❌ InvalidValueError, floats are not a valid i32
+// Throws InvalidValueError, floats are not a valid i32
 attributes: { price: 19.99 }
 
-// ✅ a genuine decimal, full precision preserved
+// Correct: a genuine decimal, full precision preserved
 attributes: { price: dec("19.99") }
 
-// ✅ or scale to an integer (divide by 100 on read)
+// Correct: or scale to an integer (divide by 100 on read)
 attributes: { priceCents: 1999 }
 
-// ❌ InvalidExpiryError, not a multiple of the 2s block time
+// Throws InvalidExpiryError, not a multiple of the 2s block time
 expires: ExpirationTime.fromSeconds(7)
 
-// ✅ positive integer, multiple of 2
+// Correct: positive integer, multiple of 2
 expires: ExpirationTime.fromHours(1)
 ```
 
@@ -222,7 +222,7 @@ await walletClient.executeBatch({
 ```
 
 <Aside type="caution">
-Do not use a loop with individual `createEntity()` calls: that is slow and expensive. And do not fire them in parallel with `Promise.all`: concurrent writes from one wallet collide on the transaction nonce (see [Concurrent Writes and Nonces](#concurrent-writes-and-nonces)). Always use `executeBatch()` for batch operations.
+Do not use a loop with individual `createEntity()` calls. That is slow and expensive. Do not fire them in parallel with `Promise.all` either. Concurrent writes from one wallet collide on the transaction nonce (see [Concurrent Writes and Nonces](#concurrent-writes-and-nonces)). Always use `executeBatch()` for batch operations.
 </Aside>
 
 ### Mixing Operation Types
@@ -271,7 +271,7 @@ await walletClient.executeBatch({
 Every write is an on-chain transaction, and all transactions from one wallet must use strictly sequential nonces. The SDK does not manage nonces for you: each write fetches the next nonce from the network at send time. Two writes in flight at the same moment fetch the **same** nonce and collide: one transaction gets rejected or silently replaces the other.
 
 ```ts
-// ❌ Both writes fetch the same nonce: one of them will fail or be replaced
+// Wrong: both writes fetch the same nonce, so one of them fails or is replaced
 await Promise.all([
   walletClient.createEntity({ ... }),
   walletClient.createEntity({ ... }),
@@ -298,7 +298,7 @@ const walletClient = createWalletClient({
   }),
 })
 
-// ✅ Safe: the nonce manager hands out sequential nonces
+// Correct: the nonce manager hands out sequential nonces
 await Promise.all([
   walletClient.createEntity({ ... }),
   walletClient.createEntity({ ... }),

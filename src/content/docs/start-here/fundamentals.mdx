@@ -9,14 +9,14 @@ Arkiv is a universal data layer that brings queryable, time-scoped storage to Et
 
 ## Reasons to use Arkiv
 
-<Card title="Instant Queries" icon="magnifier">
+<Card title="Indexed Queries" icon="magnifier">
   You can run SQL-like queries on attributes. The data has an index, so you do not need an external indexer.
 </Card>
 <Card title="Cost-Efficient" icon="approve-check-circle">
   You pay only for the storage duration you choose. Arkiv prunes data automatically, so there are no permanent storage fees.
 </Card>
 <Card title="Ethereum-Native" icon="star">
-  Arkiv is built on Ethereum infrastructure. It is fully transparent, tamper-evident, and it works with existing Web3 tools.
+  Arkiv is built on Ethereum infrastructure. It is transparent, tamper-evident, and it works with existing Web3 tools.
 </Card>
 <Card title="Developer-Friendly" icon="pencil">
   Arkiv gives you simple CRUD operations and a TypeScript SDK with full type safety.
@@ -24,7 +24,7 @@ Arkiv is a universal data layer that brings queryable, time-scoped storage to Et
 
 ## Architecture
 
-Arkiv uses a three-layer architecture:
+Arkiv is designed as three layers:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -35,7 +35,7 @@ Arkiv uses a three-layer architecture:
                          ▼
 ┌─────────────────────────────────────────────────────┐
 │  LAYER 3 : DB-CHAINS                                │
-│  High-performance CRUD, indexed queries,            │
+│  Convenient CRUD, indexed queries,                  │
 │  programmable expiration                            │
 └────────────────────────┬────────────────────────────┘
                          │  coordination

@@ -64,9 +64,9 @@ The result type comes from your selection. The `toText()` and `toJson()` payload
 ```ts
 const [entity] = (await publicClient.select({ owner: true, payload: true }).fetch()).entities
 
-entity.owner     // ✅ Hex
-entity.toJson()  // ✅ payload was selected
-entity.creator   // ❌ compile error, not selected
+entity.owner     // OK: Hex
+entity.toJson()  // OK: payload was selected
+entity.creator   // Compile error: not selected
 ```
 
 <Aside type="caution">

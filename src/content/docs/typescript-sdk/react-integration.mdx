@@ -130,7 +130,7 @@ Do not use `useEffect` and `useState` for data fetching. This combination does n
 
 ## Writing Data with wagmi
 
-If your project uses [wagmi](https://wagmi.sh) (or a wagmi-powered kit like RainbowKit or ConnectKit), you can derive an Arkiv wallet client directly from the wagmi wallet client. This avoids duplicate wallet connection logic.
+Your project can use [wagmi](https://wagmi.sh), or a wagmi-powered kit such as RainbowKit or ConnectKit. You can then derive an Arkiv wallet client directly from the wagmi wallet client. This avoids duplicate wallet connection logic.
 
 ### Derive an Arkiv Wallet Client
 
@@ -187,7 +187,7 @@ function CreatePostButton() {
 ```
 
 <Aside type="tip">
-The `transport: custom(wagmiWalletClient.transport)` line is the key: it reuses the same wallet connection that wagmi already manages, so users do not see a second connect prompt.
+The `transport: custom(wagmiWalletClient.transport)` line is the key. It reuses the wallet connection that wagmi already manages. Users then do not see a second connect prompt.
 </Aside>
 
 ### Add the Cheesecake Network to wagmi Config
