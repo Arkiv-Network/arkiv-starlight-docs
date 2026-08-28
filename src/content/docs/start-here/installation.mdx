@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the Arkiv TypeScript SDK and create your first entity.
+description: Install the Arkiv TypeScript SDK. Create your first entity.
 ---
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -11,7 +11,7 @@ This page connects you to [Cheesecake](/networks/cheesecake/), the current publi
 
 Arkiv provides an official TypeScript/JavaScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event watching, and payload encoding.
 
-The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency**, so install `viem` alongside the SDK.
+The SDK builds on [viem](https://viem.sh). It declares viem as a **peer dependency**. Install `viem` alongside the SDK.
 
 ## Install the SDK
 
@@ -32,7 +32,7 @@ The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency
 
 ### WalletClient (read/write)
 
-Requires a private key. Use for creating, patching, and deleting entities:
+WalletClient needs a private key. Use it to create, patch, and delete entities:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
@@ -47,11 +47,11 @@ const walletClient = createWalletClient({
 })
 ```
 
-<Aside type="caution">Keep your private key in environment variables. Never hardcode it.</Aside>
+<Aside type="caution">Keep your private key in environment variables. Do not hardcode it.</Aside>
 
 ### PublicClient (read-only)
 
-No private key needed. Use for queries, safe for frontend use:
+PublicClient needs no private key. Use it for queries. It is safe for frontend use:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
@@ -94,7 +94,7 @@ const publicClient = createPublicClient({
    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
    ```
 
-   Arkiv chains use GLM as the native gas token. The faucet for Cheesecake is not published yet. To get funded, ask in [Discord](https://discord.gg/arkiv).
+   Arkiv chains use GLM as the native gas token. The faucet for Cheesecake is not published yet. If you need funds, ask in [Discord](https://discord.gg/arkiv).
 
 3. **Write your first entity**
 
@@ -156,7 +156,7 @@ Most real applications store JSON data. Use `jsonToPayload` instead of `stringTo
 </Aside>
 
 <Aside>
-All entities in Arkiv are stored in a shared database. Tag your data with a unique project attribute so your queries only return your app's entities. See [Best Practices](/typescript-sdk/best-practices/#1-always-use-a-project-attribute).
+Arkiv stores all entities in a shared database. Tag your data with a unique project attribute. Then your queries return only your app's entities. See [Best Practices](/typescript-sdk/best-practices/#1-always-use-a-project-attribute).
 </Aside>
 
 ## Browser Usage (CDN)

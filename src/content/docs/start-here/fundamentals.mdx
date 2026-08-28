@@ -10,16 +10,16 @@ Arkiv is a universal data layer that brings queryable, time-scoped storage to Et
 ## Reasons to use Arkiv
 
 <Card title="Instant Queries" icon="magnifier">
-  SQL-like queries with attributes, indexed data retrieval, no external indexing required.
+  You can run SQL-like queries on attributes. The data has an index, so you do not need an external indexer.
 </Card>
 <Card title="Cost-Efficient" icon="approve-check-circle">
-  Pay only for storage duration. Automatic data pruning, no permanent storage fees.
+  You pay only for the storage duration you choose. Arkiv prunes data automatically, so there are no permanent storage fees.
 </Card>
 <Card title="Ethereum-Native" icon="star">
-  Built on Ethereum infrastructure. Fully transparent, tamper-evident, and compatible with existing Web3 tools.
+  Arkiv is built on Ethereum infrastructure. It is fully transparent, tamper-evident, and it works with existing Web3 tools.
 </Card>
 <Card title="Developer-Friendly" icon="pencil">
-  Simple CRUD operations and a TypeScript SDK with full type safety.
+  Arkiv gives you simple CRUD operations and a TypeScript SDK with full type safety.
 </Card>
 
 ## Architecture
@@ -67,7 +67,7 @@ An entity is a data record on Arkiv. Every entity contains:
 
 ### Attributes
 
-Attributes are an object keyed by name. The type you give a value determines what query operators are available. Typed helpers (`str`, `i32`, `u64`, `u256`, `dec`, `bool`, `addr`, `key`, `bytes32`) come from `@arkiv-network/sdk/attr`, and a plain string is accepted without a helper:
+Attributes are an object keyed by name. The type you give a value determines what query operators are available. Typed helpers (`str`, `i32`, `u64`, `u256`, `dec`, `bool`, `addr`, `key`, `bytes32`) come from `@arkiv-network/sdk/attr`. You do not need a helper for a plain string value:
 
 ```ts
 import { i32 } from "@arkiv-network/sdk/attr";
@@ -81,7 +81,7 @@ import { i32 } from "@arkiv-network/sdk/attr";
 ```
 
 <Aside type="caution">
-If you write a number as a `str` instead of a numeric type, you cannot do range queries. `gt()`, `lt()`, `gte()` and `lte()` stop working. Use a numeric helper for any value you plan to filter by range.
+If you write a number as a `str` instead of a numeric type, you cannot do range queries. `gt()`, `lt()`, `gte()` and `lte()` stop working. Use a numeric helper for a value you plan to filter by range.
 </Aside>
 
 <Aside type="caution">
@@ -106,7 +106,7 @@ ExpirationTime.permanent()
 Pass the result as `expires` on `createEntity()` or `extendEntity()`.
 
 <Aside>
-Entities can be extended before they expire using `extendEntity()`. Over-allocating expiration wastes storage fees, so start short and extend if needed.
+You can extend an entity before it expires with `extendEntity()`. Start with a short expiration to save on storage fees. If you need more time, extend it later.
 </Aside>
 
 ### Query Language
@@ -127,18 +127,18 @@ Full syntax reference: [Query syntax](/json-rpc/querying-data/#query-syntax).
 
 Two client types exist:
 
-1. **WalletClient** (read/write): requires a private key or wallet connection. Use for creating, patching, and deleting entities.
-2. **PublicClient** (read-only): no private key needed. Use for queries. Safe for frontend use.
+- **WalletClient** (read/write): Needs a private key or a wallet connection. Use it to create, patch, and delete entities.
+- **PublicClient** (read-only): Needs no private key. Use it for queries. It is safe for frontend use.
 
 ## What You Can Query
 
 The query builder of the SDK does more than basic filtering. Before you write a manual workaround, see what it already provides:
 
-- **Field selection**: fetch only the entity fields you need with `select({ key: true, payload: true })`. The result type narrows to exactly those fields.
-- **Newest-first results**: matching entities always come back newest first. For any other order, sort in JavaScript.
-- **Pagination**: cursor-based, up to 200 results per page with `hasNextPage()` / `next()`
-- **Entity count**: get a count without fetching entities via `getEntityCount()`
-- **Owner & creator filters**: `.ownedBy()` and `.createdBy()` for wallet-level filtering
+- **Field selection**: You fetch only the entity fields you need with `select({ key: true, payload: true })`. The result type narrows to exactly those fields.
+- **Newest-first results**: Matching entities always come back newest first. To sort them differently, sort the results in JavaScript.
+- **Pagination**: You can page through results with `hasNextPage()` and `next()`. Each page holds up to 200 results.
+- **Entity count**: You can get a count without fetching entities. Call `getEntityCount()`.
+- **Owner and creator filters**: Use `.ownedBy()` and `.createdBy()` to filter by wallet.
 
 Full reference: [Querying Data](/typescript-sdk/querying-data/)
 

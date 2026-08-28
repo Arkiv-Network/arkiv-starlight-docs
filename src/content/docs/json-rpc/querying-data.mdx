@@ -1,11 +1,11 @@
 ---
 title: Querying Data
-description: Query entities from Arkiv using the JSON-RPC API: syntax, operators, pagination, and utility methods.
+description: Query Arkiv entities with the JSON-RPC API. This page covers syntax, operators, pagination, and utility methods.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Query entities stored on Arkiv using standard JSON-RPC 2.0 calls. This page covers the available methods, query syntax, operators, pagination, and utility endpoints.
+You can query entities stored on Arkiv with standard JSON-RPC 2.0 calls. This page covers the methods, query syntax, operators, pagination, and utility endpoints.
 
 ## Endpoint
 
@@ -15,7 +15,7 @@ Query entities stored on Arkiv using standard JSON-RPC 2.0 calls. This page cove
 | HTTP RPC  | `https://rpc.cheesecake.db-chain.devnet.gobas.me`     |
 
 <Aside>
-This is the [Cheesecake testnet](/networks/cheesecake/) endpoint. A block explorer is not published yet. To inspect a transaction directly, ask in [Discord](https://discord.gg/arkiv).
+This is the [Cheesecake testnet](/networks/cheesecake/) endpoint. A block explorer is not published yet. If you need to inspect a transaction, ask in [Discord](https://discord.gg/arkiv).
 </Aside>
 
 ## Request Format
@@ -30,7 +30,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 
 ## arkiv_getEntity
 
-Reads one entity by key, at the tip or as of a past block.
+This method reads one entity by key, at the tip or as of a past block.
 
 ### Parameters
 
@@ -39,7 +39,7 @@ Reads one entity by key, at the tip or as of a past block.
 | 0     | string | Yes      | Entity key, 32-byte hex               |
 | 1     | number | No       | Block number to read as of            |
 
-Returns every field on the entity, since there's no `select` to trim it: the read already names a single entity. Returns `null` if the key never existed, was deleted, or has expired.
+This method returns every field on the entity. There is no `select` option, because the read already names a single entity. If the key never existed, was deleted, or expired, this method returns `null`.
 
 ```bash
 curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
@@ -49,7 +49,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 
 ## arkiv_query
 
-Query entities from the indexed store.
+This method queries entities from the indexed store.
 
 ### Parameters
 
@@ -60,7 +60,7 @@ Query entities from the indexed store.
 
 ### Query Syntax
 
-A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-insensitive, and `--` starts a comment that runs to end of line.
+A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-insensitive. A comment starts with `--` and runs to the end of the line.
 
 **Operators:**
 
@@ -79,7 +79,9 @@ A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-
 
 **Value literals:**
 
-Every value carries a type tag, and the tag is part of what the predicate asserts: `level >= i32(10)` matches only entities whose `level` is an `i32`. Two things are untagged: a bare boolean (`true` / `false`), and a bare number, which defaults to `i32`. Everything else must be spelled out:
+Every value carries a type tag. The tag is part of what the predicate asserts. For example, `level >= i32(10)` matches only entities whose `level` is an `i32`.
+
+Two things are untagged: a bare boolean (`true` / `false`) and a bare number. An untagged number defaults to `i32`. You must give every other value an explicit type tag:
 
 | Type | Literal form |
 |------|--------------|
@@ -130,7 +132,7 @@ Every value carries a type tag, and the tag is part of what the predicate assert
 
 `key`, `owner`, `creator`, `createdAt`, `updatedAt`, `expiresAt`, `creationFlags`, `contentType`, `payload`, `attributeSchema`, `attributes`
 
-`attributes` also accepts an object of names to fetch a subset, for example `{ "attributes": { "status": true } }`, instead of `true` for every attribute.
+`attributes` can also take an object of names, to fetch only those. For example: `{ "attributes": { "status": true } }`.
 
 ### Response Structure
 
@@ -163,15 +165,17 @@ Every value carries a type tag, and the tag is part of what the predicate assert
 ```
 
 <Aside>
-Every field is present only if it was selected: an unselected field is omitted entirely, not sent as `null`. `payload` is hex-encoded bytes: decode it to get the entity content. `createdAt`, `updatedAt` and `expiresAt` are hex block numbers. `cursor` is omitted when no more pages remain.
+If you select a field, it appears in the response. If you do not select a field, it does not appear at all. The response never sends an unselected field as `null`.
 
-The `type` of an attribute sets how its `value` is encoded:
+`payload` is hex-encoded bytes. Decode it to read the entity content. `createdAt`, `updatedAt` and `expiresAt` are hex block numbers. When no more pages remain, `cursor` is omitted.
 
-- `i32`: a JSON number.
-- `u64` and `u256`: a `0x` hex quantity.
-- `dec`: a decimal string.
-- The byte-shaped types: `0x` bytes.
-- `str`: a plain string.
+The `type` of an attribute decides the JSON encoding of its `value`:
+
+- `i32`: a JSON number
+- `u64` and `u256`: a `0x` hex quantity
+- `dec`: a decimal string
+- The byte-shaped types: `0x` bytes
+- `str`: a plain string
 </Aside>
 
 ### Query Examples
@@ -270,7 +274,7 @@ When `cursor` is absent from the response, there are no more pages.
 
 ## arkiv_getEntityCount
 
-Returns the total number of entities matching an optional query, at the tip or a past block.
+This method returns the total number of entities that match an optional query, at the tip or a past block.
 
 ### Parameters
 
@@ -288,7 +292,7 @@ Result: a plain JSON number (for example, `18427`).
 
 ## arkiv_getBlockTiming
 
-Returns timing for the current head block. No parameters.
+This method returns the timing for the current head block. It takes no parameters.
 
 ```json
 {

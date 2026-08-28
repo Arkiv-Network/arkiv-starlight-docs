@@ -1,11 +1,11 @@
 ---
 title: Live Events
-description: Watch real-time entity events using the Arkiv TypeScript SDK.
+description: Watch real-time entity events with the Arkiv TypeScript SDK.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-The `watchEntityEvents` method on the public client lets you listen for entity changes in real time. It polls the chain for new events. It then calls the handlers you pass when an entity is created, patched, deleted, extended, or handed to a new owner.
+The `watchEntityEvents` method on the public client lets you listen for entity changes in real time. It polls the chain for new events. When an entity is created, patched, deleted, extended, or handed to a new owner, it calls the handlers you pass.
 
 ## Basic Usage
 
@@ -155,7 +155,7 @@ The event only says an entity's attributes or payload changed, not what changed.
 
 ## Watching from a Specific Block
 
-Use `fromBlock` to replay events starting from a past block:
+Use `fromBlock` to replay events. The replay starts from a past block:
 
 ```ts
 const unwatch = client.watchEntityEvents({
