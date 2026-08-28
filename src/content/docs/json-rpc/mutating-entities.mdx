@@ -1,186 +1,37 @@
 ---
 title: Mutating Entities
-description: Create, update, delete, extend, and transfer entities via raw Ethereum transactions.
+description: Create, patch, delete, extend, and transfer entities. All writes go through standard Ethereum transactions.
 ---
 
-import { Aside, Steps } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
 
-All entity mutations are sent as standard Ethereum transactions to a special Arkiv address. The transaction `data` field carries an encoded payload that describes one or more operations.
-
-| Property | Value |
-|----------|-------|
-| Arkiv Address | `0x00000000000000000000000000000061726b6976` |
-| Block Time | 2 seconds |
-| Transaction Value | 0 (no native token transferred) |
-
-<Aside>
-Most developers should use the [TypeScript SDK](/typescript-sdk/mutating-data/) instead of raw transactions. This page documents the low-level protocol for advanced use cases.
-</Aside>
-
-## Payload Structure
-
-The transaction data is a 5-element array:
-
-```
-[
-  creates,            // index 0
-  updates,            // index 1
-  deletes,            // index 2
-  extensions,         // index 3
-  ownershipChanges    // index 4
-]
-```
-
-Each element is an array of operations of that type.
-
-## Operation Formats
-
-### Create (index 0)
-
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | expiresInBlocks | number | `ceil(seconds / 2)` |
-| 1 | contentType | string | MIME type |
-| 2 | payload | string | Entity content |
-| 3 | stringAttributes | `[[key, value], ...]` | String-typed attributes |
-| 4 | numberAttributes | `[[key, value], ...]` | Number-typed attributes |
-
-### Update (index 1)
-
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | contentType | string | MIME type |
-| 2 | expiresInBlocks | number | `ceil(seconds / 2)` |
-| 3 | payload | string | Entity content |
-| 4 | stringAttributes | `[[key, value], ...]` | String-typed attributes |
-| 5 | numberAttributes | `[[key, value], ...]` | Number-typed attributes |
+All entity mutations, creates, patches, deletes, expiry extensions, ownership changes, and batches of any of these, are sent as standard Ethereum transactions via `eth_sendRawTransaction`. There's no dedicated `arkiv_*` write method: the node reads Arkiv operations out of a normal transaction the same way it reads any other contract call.
 
 <Aside type="caution">
-The field ordering differs from Create. In Update, `entityKey` comes first, and `contentType` and `expiresInBlocks` are swapped.
+The target address of the transaction and its calldata encoding are internal to the SDK. They are not part of the published protocol. Do not build a raw transaction against them. Use the wallet actions of the [TypeScript SDK](/typescript-sdk/mutating-data/). They build, sign, and send the transaction for you.
 </Aside>
 
-### Delete (index 2)
+## Wallet actions
 
-Each delete entry is just the entity key as a `0x`-prefixed hex string.
+Each of these is one call on a `WalletArkivClient`, and each sends exactly one `eth_sendRawTransaction`:
 
-### Extend (index 3)
+| Action | What it does |
+|--------|--------------|
+| `createEntity()` | Creates a new entity with a payload, content type, attributes, and an expiry |
+| `patchEntity()` | Sets or unsets individual attributes, or replaces the payload, leaving anything unnamed untouched |
+| `deleteEntity()` | Deletes an entity |
+| `extendEntity()` | Moves an entity's expiry later |
+| `changeOwnership()` | Transfers an entity to a new owner |
+| `executeBatch()` | Applies any combination of creates, patches, deletes, extensions, and ownership changes atomically in one transaction |
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | expiresInBlocks | number | `ceil(additionalSeconds / 2)` |
+See [Mutating Data](/typescript-sdk/mutating-data/) for usage examples of each.
 
-### Change Ownership (index 4)
+## Confirming a mutation
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | newOwner | hex string | `0x`-prefixed address of the new owner |
-
-## Attributes
-
-Attributes are split into two arrays by value type:
-
-- **String attributes** — `[["category", "documentation"], ["version", "1.0"]]`
-- **Number attributes** — `[["priority", 5], ["count", 100]]`
-
-<Aside>
-A number attribute with value `0` is encoded as an empty byte string (`0x`), which is distinct from the hex encoding of `0` as a number (`0x00`).
-</Aside>
-
-## Encoding Pipeline
-
-The payload goes through four stages before inclusion in a transaction:
-
-<Steps>
-
-1. **Human-readable JSON** — Start with a JSON array matching the 5-element structure.
-
-2. **Hex-encode all leaf values** — Convert every leaf to a `0x`-prefixed hex string. Strings become hex-encoded UTF-8, numbers become hex-encoded integers, and `0` becomes `"0x"`.
-
-3. **RLP-encode** — The nested hex structure is [RLP-encoded](https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/) into a flat byte sequence.
-
-4. **Brotli-compress** — The RLP bytes are compressed with [Brotli](https://github.com/google/brotli). The output is hex-encoded with a `0x` prefix.
-
-</Steps>
-
-## Example: Creating an Entity
-
-Goal: Create an entity with payload `{"message": "Hello from Arkiv"}`, content type `application/json`, 30-day expiration, string and number attributes.
-
-### Step 1 — Build the JSON payload
-
-```json
-[
-  [
-    [
-      1296000,
-      "application/json",
-      "{\"message\":\"Hello from Arkiv\"}",
-      [["category", "example"], ["version", "1.0"]],
-      [["priority", 0], ["count", 100]]
-    ]
-  ],
-  [],
-  [],
-  [],
-  []
-]
-```
-
-### Step 2 — Hex-encode leaf values
-
-```json
-[
-  [
-    [
-      "0x13c680",
-      "0x6170706c69636174696f6e2f6a736f6e",
-      "0x7b226d657373616765223a2248656c6c6f2066726f6d2041726b6976227d",
-      [
-        ["0x63617465676f7279", "0x6578616d706c65"],
-        ["0x76657273696f6e", "0x312e30"]
-      ],
-      [
-        ["0x7072696f72697479", "0x"],
-        ["0x636f756e74", "0x64"]
-      ]
-    ]
-  ],
-  [],
-  [],
-  [],
-  []
-]
-```
-
-### Step 3 — RLP-encode
+`eth_sendRawTransaction` returns a transaction hash immediately. The mutation is not applied until a block includes the transaction.
 
 ```bash
-rlp encode '<hex-encoded-json>'
-```
-
-### Step 4 — Brotli-compress and hex-encode
-
-```bash
-echo "$RLP_HEX" | sed 's/^0x//' | xxd -r -p | brotli | xxd -p | tr -d '\n' | sed 's/^/0x/'
-```
-
-This final hex string is the transaction `data` field.
-
-## Signing and Sending
-
-| Field | Value |
-|-------|-------|
-| `to` | `0x00000000000000000000000000000061726b6976` |
-| `value` | `0` |
-| `data` | the Brotli-compressed hex payload |
-
-### Broadcasting
-
-```bash
-curl -s https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -190,10 +41,10 @@ curl -s https://braga.hoodi.arkiv.network/rpc \
   }'
 ```
 
-### Polling for the Receipt
+Poll for the receipt to make sure that a block includes the transaction:
 
 ```bash
-curl -s https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -203,26 +54,10 @@ curl -s https://braga.hoodi.arkiv.network/rpc \
   }'
 ```
 
-The receipt's `logs` contain the entity keys for each operation.
+The SDK's `waitForTransactionReceipt` (inherited from viem) does this polling for you.
 
-## Batch Operations
+## Watching for the result
 
-All five operation types can be combined in a single transaction:
+Every mutation emits an entity-lifecycle event, decoded from the transaction's logs. There's no dedicated `arkiv_subscribe*` method: watching rides on the standard `eth_getLogs` and `eth_subscribe` methods, the same way any other contract event does.
 
-```json
-[
-  [[1296000, "application/json", "{\"name\":\"Entity A\"}", [["type","alpha"]], []]],
-  [["0xabc...", "application/json", 2592000, "{\"name\":\"Updated B\"}", [["type","beta"]], []]],
-  ["0xdef..."],
-  [["0x123...", 3888000]],
-  [["0x456...", "0x789..."]]
-]
-```
-
-### Transaction Receipt Log Order
-
-When parsing logs from a batch transaction, events are emitted in this order:
-
-1. Creates
-2. Deletes
-3. Updates
+The SDK wraps this in `watchEntityEvents()`, with handlers for each event type (`onEntityCreated`, `onEntityPatched`, `onExpiryExtended`, `onOwnershipTransferred`, `onEntityDeleted`) plus a catch-all `onEvent`. See [Live Events](/typescript-sdk/live-events/) for details.

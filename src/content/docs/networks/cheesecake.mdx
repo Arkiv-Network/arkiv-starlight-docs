@@ -1,0 +1,54 @@
+---
+title: Cheesecake
+description: Cheesecake is Arkiv's current public testnet. This page gives the chain ID, RPC endpoints, and setup steps.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Cheesecake is Arkiv's current public testnet. You can build and test your app against a live network.
+
+## Connect your app
+
+Import the `cheesecake` chain from the SDK. Pass the chain to a client:
+
+```ts
+import { createPublicClient } from "@arkiv-network/sdk"
+import { cheesecake } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+
+const client = createPublicClient({
+  chain: cheesecake,
+  transport: http(),
+})
+```
+
+For the full setup, see [Installation](/start-here/installation/).
+
+## Network reference
+
+| Property         | Value                                                |
+| ----------------- | ----------------------------------------------------- |
+| Chain ID          | `7733102` (`0x75ff6e`)                                |
+| HTTP RPC          | `https://rpc.cheesecake.db-chain.devnet.gobas.me`     |
+| WebSocket RPC     | `wss://rpc.cheesecake.db-chain.devnet.gobas.me`       |
+| Native gas token  | GLM                                                   |
+
+<Aside type="tip">
+If you use a raw JSON-RPC client instead of the SDK, get the chain ID and RPC URL from the table. Add them to your client settings.
+</Aside>
+
+## GLM and unpublished details
+
+Arkiv uses GLM to pay for transactions. This page does not list the following yet:
+
+- Faucet URL
+- Block explorer URL
+- Bridge address
+
+If you need one of these, ask in [Discord](https://discord.gg/arkiv).
+
+If requests to the RPC fail, ask in [Discord](https://discord.gg/arkiv). The team can help you.
+
+## Get help
+
+If you have a problem, ask in [Discord](https://discord.gg/arkiv). A team member is usually available.

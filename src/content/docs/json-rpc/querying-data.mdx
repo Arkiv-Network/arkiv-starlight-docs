@@ -1,6 +1,6 @@
 ---
 title: Querying Data
-description: Query entities from Arkiv using the JSON-RPC API — syntax, operators, pagination, and utility methods.
+description: Query entities from Arkiv using the JSON-RPC API: syntax, operators, pagination, and utility methods.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -9,25 +9,47 @@ Query entities stored on Arkiv using standard JSON-RPC 2.0 calls. This page cove
 
 ## Endpoint
 
-| Property  | Value                                         |
-| --------- | --------------------------------------------- |
-| Chain ID  | `60138453102`                                 |
-| HTTP RPC  | `https://braga.hoodi.arkiv.network/rpc`      |
-| Explorer  | `https://explorer.braga.hoodi.arkiv.network` |
+| Property  | Value                                                |
+| --------- | ----------------------------------------------------- |
+| Chain ID  | `7733102` (`0x75ff6e`)                                |
+| HTTP RPC  | `https://rpc.cheesecake.db-chain.devnet.gobas.me`     |
+
+<Aside>
+This is the [Cheesecake testnet](/networks/cheesecake/) endpoint. A block explorer is not published yet. To inspect a transaction directly, ask in [Discord](https://discord.gg/arkiv).
+</Aside>
 
 ## Request Format
 
 All methods use standard JSON-RPC 2.0:
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"METHOD_NAME","params":[]}'
 ```
 
+## arkiv_getEntity
+
+Reads one entity by key, at the tip or as of a past block.
+
+### Parameters
+
+| Index | Type   | Required | Description                          |
+| ----- | ------ | -------- | ------------------------------------- |
+| 0     | string | Yes      | Entity key, 32-byte hex               |
+| 1     | number | No       | Block number to read as of            |
+
+Returns every field on the entity, since there's no `select` to trim it: the read already names a single entity. Returns `null` if the key never existed, was deleted, or has expired.
+
+```bash
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+  -H "content-type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"arkiv_getEntity","params":["0x9f2c..."]}'
+```
+
 ## arkiv_query
 
-Query entities from the bitmap-backed SQLite store.
+Query entities from the indexed store.
 
 ### Parameters
 
@@ -38,42 +60,77 @@ Query entities from the bitmap-backed SQLite store.
 
 ### Query Syntax
 
+A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-insensitive, and `--` starts a comment that runs to end of line.
+
 **Operators:**
 
 | Operator | Description |
 |----------|-------------|
-| `&&` | Logical AND |
-| `\|\|` | Logical OR |
-| `!` | Negation |
-| `=`, `!=` | Equality / inequality |
-| `<`, `>`, `<=`, `>=` | Numeric comparisons |
-| `~` | Glob match |
-| `!~` | Negated glob match |
+| `AND` | Logical AND |
+| `OR` | Logical OR |
+| `NOT` | Complement, evaluated against the set of live entities |
+| `=` | Equality |
+| `<`, `>`, `<=`, `>=` | Numeric comparisons (ordered types only: `i32`, `u64`, `u256`, `dec`) |
+| `STARTSWITH` | String prefix match (the language's only pattern operator) |
 
-**Synthetic Attributes** (use with `$` prefix):
+<Aside type="caution">
+`!=` is reserved in the grammar but not implemented at this version. It fails to parse. Write `NOT (attr = value)` for the complement instead. This also matches entities that never set the attribute, because it is the full complement, not a typed not-equal.
+</Aside>
 
-| Attribute | Description |
-|-----------|-------------|
-| `$owner` | Entity owner address |
-| `$creator` | Entity creator address (immutable) |
-| `$key` | Entity key |
-| `$expiration` | Expiration block |
-| `$createdAtBlock` | Block at creation |
-| `$sequence`, `$txIndex`, `$opIndex` | Ordering attributes |
-| `$all` | Match all entities |
+**Value literals:**
+
+Every value carries a type tag, and the tag is part of what the predicate asserts: `level >= i32(10)` matches only entities whose `level` is an `i32`. Two things are untagged: a bare boolean (`true` / `false`), and a bare number, which defaults to `i32`. Everything else must be spelled out:
+
+| Type | Literal form |
+|------|--------------|
+| String | `str('open')` |
+| 32-bit integer | `i32(10)` or bare `10` |
+| 64-bit unsigned integer | `u64(1200000)` |
+| 256-bit unsigned integer | `u256(1000000)` |
+| Fixed-point decimal | `dec('3.5')` |
+| Address | `addr(0xAbC...)` |
+| Entity key | `key(0x123...)` |
+| Fixed 32 bytes | `bytes32(0x...)` |
+| Boolean | bare `true` / `false` |
+
+**Match everything:**
+
+```
+*
+```
+
+**Synthetic attributes** (use with `$` prefix):
+
+| Attribute | Type | Filterable |
+|-----------|------|------------|
+| `$key` | key | Yes |
+| `$owner` | addr | Yes |
+| `$creator` | addr | Yes |
+| `$expiresAt` | u64 | Yes |
+| `$createdAt` | u64 | Yes |
+| `$contentType` | str | Yes |
+| `$updatedAt` | n/a | No (returned by projections only) |
+| `$creationFlags` | n/a | No (returned by projections only) |
+| `$payload` | n/a | No (bytes carry no index) |
+
+<Aside type="caution">
+`exists(...)` and `typeof(...)` are reserved in the grammar but not implemented at this version: they fail to parse.
+</Aside>
 
 ### Options
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `atBlock` | hex string | Query at a specific block (e.g., `"0x1bc"`) |
-| `includeData` | object | Controls which fields are returned |
-| `resultsPerPage` | hex string | Page size, max 200 |
-| `cursor` | string | Pagination cursor from previous response |
+| `select` | object | Which fields to return. Defaults to `{ "key": true }` |
+| `limit` | hex string | Page size. Node maximum is 200 |
+| `cursor` | string | Pagination cursor from a previous response |
+| `atBlock` | hex string | Query at a specific block (for example, `"0x1bc"`). Defaults to the head |
 
-**`includeData` fields** (all default to `true` when omitted):
+**`select` fields** (all default to `false` except `key`, which defaults to `true` when `select` is omitted):
 
-`key`, `contentType`, `payload`, `creator`, `owner`, `attributes`, `expiration`
+`key`, `owner`, `creator`, `createdAt`, `updatedAt`, `expiresAt`, `creationFlags`, `contentType`, `payload`, `attributeSchema`, `attributes`
+
+`attributes` also accepts an object of names to fetch a subset, for example `{ "attributes": { "status": true } }`, instead of `true` for every attribute.
 
 ### Response Structure
 
@@ -84,16 +141,19 @@ Query entities from the bitmap-backed SQLite store.
   "result": {
     "data": [
       {
-        "key": "0x...",
-        "value": "0x...",
+        "key": "0x9f2c...",
+        "owner": "0xabc...",
+        "creator": "0xabc...",
+        "createdAt": "0x191",
+        "updatedAt": "0x1bb",
+        "expiresAt": "0x2000",
+        "creationFlags": { "readonly": false, "permissionlessExtension": false, "raw": 0 },
         "contentType": "application/json",
-        "expiresAt": 1200000,
-        "creator": "0x...",
-        "owner": "0x...",
-        "createdAtBlock": 401,
-        "lastModifiedAtBlock": 443,
-        "stringAttributes": [{ "key": "status", "value": "active" }],
-        "numericAttributes": [{ "key": "rarity", "value": 5 }]
+        "payload": "0x7b226d657373616765223a2268656c6c6f227d",
+        "attributes": [
+          { "name": "status", "type": "str", "value": "active" },
+          { "name": "rarity", "type": "i32", "value": 5 }
+        ]
       }
     ],
     "blockNumber": "0x1bc",
@@ -103,7 +163,15 @@ Query entities from the bitmap-backed SQLite store.
 ```
 
 <Aside>
-`value` is hex-encoded bytes — decode to get the payload. `cursor` is omitted when no more pages remain. `blockNumber` is a hex string.
+Every field is present only if it was selected: an unselected field is omitted entirely, not sent as `null`. `payload` is hex-encoded bytes: decode it to get the entity content. `createdAt`, `updatedAt` and `expiresAt` are hex block numbers. `cursor` is omitted when no more pages remain.
+
+The `type` of an attribute sets how its `value` is encoded:
+
+- `i32`: a JSON number.
+- `u64` and `u256`: a `0x` hex quantity.
+- `dec`: a decimal string.
+- The byte-shaped types: `0x` bytes.
+- `str`: a plain string.
 </Aside>
 
 ### Query Examples
@@ -111,14 +179,14 @@ Query entities from the bitmap-backed SQLite store.
 **By attribute:**
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":1,
     "method":"arkiv_query",
     "params":[
-      "type = \"nft\" && status = \"active\"",
-      {"resultsPerPage":"0xa"}
+      "type = str('nft') AND status = str('active')",
+      {"limit":"0xa","select":{"key":true,"attributes":true}}
     ]
   }'
 ```
@@ -126,13 +194,13 @@ curl https://braga.hoodi.arkiv.network/rpc \
 **By owner:**
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":10,
     "method":"arkiv_query",
     "params":[
-      "$owner = \"0x2222222222222222222222222222222222222222\"",
+      "$owner = addr(0x2222222222222222222222222222222222222222)",
       null
     ]
   }'
@@ -141,42 +209,42 @@ curl https://braga.hoodi.arkiv.network/rpc \
 **Numeric range:**
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":12,
     "method":"arkiv_query",
-    "params":["price >= 100 && price <= 1000", null]
+    "params":["price >= i32(100) AND price <= i32(1000)", null]
   }'
 ```
 
-**Glob match with negation:**
+**Prefix match with negation:**
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":13,
     "method":"arkiv_query",
-    "params":["name ~ \"test*\" && !(status = \"deleted\")", null]
+    "params":["name STARTSWITH str('test') AND NOT (status = str('deleted'))", null]
   }'
 ```
 
 **Metadata only (omit payload):**
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":14,
     "method":"arkiv_query",
     "params":[
-      "$all",
+      "*",
       {
-        "resultsPerPage":"0xa",
-        "includeData":{
+        "limit":"0xa",
+        "select":{
           "key":true,"attributes":true,"payload":false,
-          "contentType":true,"expiration":true,
+          "contentType":true,"expiresAt":true,
           "creator":true,"owner":true
         }
       }
@@ -192,8 +260,8 @@ Use the returned `cursor` in the next request:
 {
   "method": "arkiv_query",
   "params": [
-    "type = \"nft\"",
-    { "cursor": "0x2a", "resultsPerPage": "0x2" }
+    "type = str('nft')",
+    { "cursor": "0x2a", "limit": "0x2" }
   ]
 }
 ```
@@ -202,19 +270,21 @@ When `cursor` is absent from the response, there are no more pages.
 
 ## arkiv_getEntityCount
 
-Returns the total number of entities currently stored. No parameters.
+Returns the total number of entities matching an optional query, at the tip or a past block.
+
+### Parameters
+
+| Index | Type        | Required | Description                                          |
+| ----- | ----------- | -------- | ----------------------------------------------------- |
+| 0     | object/null | No       | `{ "query"?: string, "block"?: number }`. Defaults to every entity at the tip |
 
 ```bash
-curl https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
   -H "content-type: application/json" \
   -d '{"jsonrpc":"2.0","id":3,"method":"arkiv_getEntityCount","params":[]}'
 ```
 
-Result: a plain JSON number (e.g., `18427`).
-
-## arkiv_getNumberOfUsedSlots
-
-Returns used storage-accounting slots. No parameters. Result is a hex string.
+Result: a plain JSON number (for example, `18427`).
 
 ## arkiv_getBlockTiming
 
@@ -230,5 +300,5 @@ Returns timing for the current head block. No parameters.
 }
 ```
 
-- `current_block_time` — Unix timestamp in seconds
-- `duration` — seconds since previous block
+- `current_block_time`: Unix timestamp in seconds
+- `duration`: seconds since the previous block
