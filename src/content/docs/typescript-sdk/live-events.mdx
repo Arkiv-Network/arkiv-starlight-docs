@@ -207,5 +207,5 @@ process.on("SIGINT", () => {
 ```
 
 <Aside type="tip">
-Always call the returned `unwatch()` function when you no longer need events: this stops polling and frees resources.
+When you no longer need events, call the returned `unwatch()` function. This stops the polling and frees resources.
 </Aside>

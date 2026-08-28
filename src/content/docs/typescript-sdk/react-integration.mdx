@@ -125,7 +125,7 @@ Every Arkiv entity has a unique `entity.key`. The fetcher merges it as `arkivEnt
 </Aside>
 
 <Aside type="caution">
-Avoid using `useEffect` + `useState` for data fetching. It does not handle caching, race conditions, deduplication, or background refetching. Always use a data-fetching library like TanStack Query or SWR.
+Do not use `useEffect` and `useState` for data fetching. This combination does not handle caching, race conditions, deduplication, or background refetching. Always use a data-fetching library like TanStack Query or SWR.
 </Aside>
 
 ## Writing Data with wagmi
@@ -224,14 +224,14 @@ export const config = createConfig({
 
 ## Writing Data without wagmi
 
-If you are not using wagmi, you can connect MetaMask directly:
+If you do not use wagmi, you can connect MetaMask directly:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
 import { cheesecake } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
-// Prompt MetaMask to add the network (no-op if it's already added)
+// Prompt MetaMask to add the network (no effect if it is already added)
 await window.ethereum.request({
   method: "wallet_addEthereumChain",
   params: [{
@@ -255,5 +255,5 @@ const walletClient = createWalletClient({
 ```
 
 <Aside>
-For a complete browser example using this approach, see the [MetaMask Sketch App](/learn/metamask-sketch-app/) tutorial.
+For a complete browser example of this approach, see the [MetaMask Sketch App](/learn/metamask-sketch-app/) tutorial.
 </Aside>

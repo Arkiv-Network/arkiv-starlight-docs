@@ -5,7 +5,7 @@ description: "Essential patterns for building production Arkiv applications: pro
 
 import { Aside } from '@astrojs/starlight/components';
 
-A collection of essential patterns and conventions for building reliable, production-ready applications with Arkiv, covering project attributes, data modeling, security, and error handling.
+This page collects essential patterns and conventions for reliable, production-ready Arkiv applications. It covers project attributes, data modeling, security, and error handling.
 
 ## 1. Always Use a Project Attribute
 
@@ -129,6 +129,8 @@ Do not over-allocate: it costs more and pollutes queries with stale data.
 
 ## 7. Never Expose Private Keys
 
+CAUTION: Do not hardcode a private key in your source code. Anyone who reads the file can spend your funds.
+
 ```ts
 // Always load from environment
 const privateKey = process.env.PRIVATE_KEY
@@ -139,7 +141,7 @@ const privateKey = "0x1234..." // DANGEROUS
 
 ## 8. Validate Input Before Storing
 
-Check length and content before creating entities:
+Make sure that the length and content are valid before you create an entity:
 
 ```ts
 function createNote(userInput: string) {
@@ -185,7 +187,7 @@ import { dec } from "@arkiv-network/sdk/attr"
 
 ## 10. Model Related Data with Shared Attributes
 
-Link entities together using a shared attribute key. This is Arkiv's version of foreign keys:
+Link entities together with a shared attribute key. This is Arkiv's version of foreign keys:
 
 ```ts
 // Proposal entity
@@ -206,8 +208,8 @@ await publicClient
 
 ## 11. Understand $owner vs $creator
 
-- **`$owner`**: The wallet that currently owns the entity. Can change via ownership transfer. Use `.ownedBy()` to check who can modify/delete.
-- **`$creator`**: The wallet that originally created the entity. Immutable. Use `.createdBy()` for tamper-evident source verification.
+- **`$owner`**: the wallet that currently owns the entity. It can change when the owner transfers the entity. Use `.ownedBy()` to check who can modify or delete it.
+- **`$creator`**: the wallet that first created the entity. This field never changes. Use `.createdBy()` for tamper-evident source verification.
 
 ## 12. Filter by Creator for Trusted Data
 
