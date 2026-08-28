@@ -230,7 +230,7 @@ let result = await publicClient
 
 console.log('Page 1:', result.entities.length)
 
-// Check for more pages: next() returns a new QueryResult, it does not change this one
+// More pages: next() returns a new QueryResult, it does not change this one
 if (result.hasNextPage()) {
   result = await result.next()
   console.log('Page 2:', result.entities.length)
