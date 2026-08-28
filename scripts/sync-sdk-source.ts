@@ -4,7 +4,8 @@
 // time.
 //
 // Env vars:
-//   SDK_DOCS_REF       — git ref to check out (default: "develop"). CI sets "main" for prod.
+//   SDK_DOCS_REF       git ref to check out. Default "v0.8.0-dev.3", the ref the
+//                      guides are written against. CI pins the same ref.
 //   SDK_DOCS_REFRESH=1 — wipe the cached clone and re-clone fresh.
 
 import { spawnSync } from "node:child_process";
@@ -14,7 +15,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const REPO_URL = "https://github.com/Arkiv-Network/arkiv-sdk-js.git";
-const REF = process.env.SDK_DOCS_REF ?? "develop";
+const REF = process.env.SDK_DOCS_REF ?? "v0.8.0-dev.3";
 const FORCE =
 	process.env.SDK_DOCS_REFRESH === "1" || process.argv.includes("--force");
 
