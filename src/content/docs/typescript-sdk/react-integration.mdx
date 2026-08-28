@@ -7,28 +7,32 @@ import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 The Arkiv SDK works in the browser out of the box. This page covers the two most common React patterns:
 
-1. **Reading data** — query entities with a public client, cached via TanStack Query
-2. **Writing data** — sign transactions with the user's wallet via wagmi
+1. **Reading data**: query entities with a public client, cached via TanStack Query
+2. **Writing data**: sign transactions with the user's wallet via wagmi
+
+<Aside type="tip">
+The SDK has no official React hooks package at this version. These examples use the plain SDK with TanStack Query and wagmi. Most React apps already include both.
+</Aside>
 
 ## Reading Data with TanStack Query
 
-Use a public client for queries — no private key required, safe to run in the browser.
+Use a public client for queries: no private key required, safe to run in the browser.
 
 ### Setup the Query Layer
 
-First, define fetcher functions separate from hooks so they're reusable and testable:
+First, define fetcher functions separate from hooks so they are reusable and testable:
 
 ```ts
 // lib/arkiv-queries.ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { cheesecake } from "@arkiv-network/sdk/chains"
 import { eq } from "@arkiv-network/sdk/query"
 import { http } from "viem"
 
 const PROJECT_ATTRIBUTE = { key: "project", value: "my-app" }
 
 export const publicClient = createPublicClient({
-  chain: braga,
+  chain: cheesecake,
   transport: http(),
 })
 
@@ -117,11 +121,11 @@ function PostList() {
 ```
 
 <Aside>
-Every Arkiv entity has a unique `entity.key`. The fetcher merges it as `arkivEntityKey` into each item — use this as your React key instead of array indices.
+Every Arkiv entity has a unique `entity.key`. The fetcher merges it as `arkivEntityKey` into each item: use this as your React key instead of array indices.
 </Aside>
 
 <Aside type="caution">
-Avoid using `useEffect` + `useState` for data fetching. It doesn't handle caching, race conditions, deduplication, or background refetching. Always use a data-fetching library like TanStack Query or SWR.
+Avoid using `useEffect` + `useState` for data fetching. It does not handle caching, race conditions, deduplication, or background refetching. Always use a data-fetching library like TanStack Query or SWR.
 </Aside>
 
 ## Writing Data with wagmi
@@ -133,7 +137,7 @@ If your project uses [wagmi](https://wagmi.sh) (or a wagmi-powered kit like Rain
 ```tsx
 import { useAccount, useWalletClient } from "wagmi"
 import { createWalletClient as createArkivWalletClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { cheesecake } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
 function useArkivWalletClient() {
@@ -143,7 +147,7 @@ function useArkivWalletClient() {
   if (!wagmiWalletClient || !address) return null
 
   return createArkivWalletClient({
-    chain: braga,
+    chain: cheesecake,
     transport: custom(wagmiWalletClient.transport),
     account: address,
   })
@@ -153,7 +157,7 @@ function useArkivWalletClient() {
 Then use the returned client like any other Arkiv wallet client:
 
 ```tsx
-import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils"
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk"
 
 function CreatePostButton() {
   const arkivClient = useArkivWalletClient()
@@ -164,11 +168,11 @@ function CreatePostButton() {
     const { entityKey, txHash } = await arkivClient.createEntity({
       payload: jsonToPayload({ title: "My Post", content: "Hello!" }),
       contentType: "application/json",
-      attributes: [
-        { key: "project", value: "my-app" },
-        { key: "entityType", value: "post" },
-      ],
-      expiresIn: ExpirationTime.fromDays(30),
+      attributes: {
+        project: "my-app",
+        entityType: "post",
+      },
+      expires: ExpirationTime.fromDays(30),
     })
 
     console.log("Created:", entityKey, txHash)
@@ -183,59 +187,59 @@ function CreatePostButton() {
 ```
 
 <Aside type="tip">
-The `transport: custom(wagmiWalletClient.transport)` line is the key — it reuses the same wallet connection that wagmi already manages, so users don't see a second connect prompt.
+The `transport: custom(wagmiWalletClient.transport)` line is the key: it reuses the same wallet connection that wagmi already manages, so users do not see a second connect prompt.
 </Aside>
 
-### Add the Braga Network to wagmi Config
+### Add the Cheesecake Network to wagmi Config
 
-Register the Arkiv Braga testnet in your wagmi config so wallet switching works:
+Register the Arkiv Cheesecake testnet in your wagmi config so wallet switching works:
 
 ```ts
 // wagmi.ts
 import { http, createConfig } from "wagmi"
-import { braga } from "@arkiv-network/sdk/chains"
+import { cheesecake } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [braga],
+  chains: [cheesecake],
   transports: {
-    [braga.id]: http(),
+    [cheesecake.id]: http(),
   },
 })
 ```
 
-If your app supports multiple chains, add `braga` alongside them:
+If your app supports multiple chains, add `cheesecake` alongside them:
 
 ```ts
 import { mainnet } from "wagmi/chains"
-import { braga } from "@arkiv-network/sdk/chains"
+import { cheesecake } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [mainnet, braga],
+  chains: [mainnet, cheesecake],
   transports: {
     [mainnet.id]: http(),
-    [braga.id]: http(),
+    [cheesecake.id]: http(),
   },
 })
 ```
 
 ## Writing Data without wagmi
 
-If you're not using wagmi, you can connect MetaMask directly:
+If you are not using wagmi, you can connect MetaMask directly:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { cheesecake } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
-// Prompt MetaMask to add the network
+// Prompt MetaMask to add the network (no-op if it's already added)
 await window.ethereum.request({
   method: "wallet_addEthereumChain",
   params: [{
-    chainId: "0xe0087f86e",
-    chainName: "Arkiv Braga Testnet",
-    nativeCurrency: { name: "Golem", symbol: "GLM", decimals: 18 },
-    rpcUrls: ["https://braga.hoodi.arkiv.network/rpc"],
-    blockExplorerUrls: ["https://explorer.braga.hoodi.arkiv.network"],
+    chainId: `0x${cheesecake.id.toString(16)}`,
+    chainName: cheesecake.name,
+    nativeCurrency: cheesecake.nativeCurrency,
+    rpcUrls: cheesecake.rpcUrls.default.http,
+    // No blockExplorerUrls: Cheesecake has no public explorer yet, and the field is optional.
   }],
 })
 
@@ -245,7 +249,7 @@ const [address] = await window.ethereum.request({
 })
 
 const walletClient = createWalletClient({
-  chain: braga,
+  chain: cheesecake,
   transport: custom(window.ethereum),
 })
 ```

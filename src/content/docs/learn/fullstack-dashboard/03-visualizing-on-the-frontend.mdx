@@ -7,15 +7,11 @@ import { Code } from '@astrojs/starlight/components';
 import { FileTree } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
 
-With our backend publishing data, let's build the frontend to consume it. We'll use a **public client** from the Arkiv SDK, which can read data without needing a private key.
-
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
-</Aside>
+With the backend now publishing data, build the frontend that consumes it. This step uses a public client from the Arkiv SDK, which reads data without a private key.
 
 ### Step 1: HTML Structure
 
-First, create the skeleton of our dashboard in `index.html`. We need containers for the price displays and `<canvas>` elements for Chart.js to draw on.
+First, create the skeleton of the dashboard in `index.html`. You need containers for the price displays and `<canvas>` elements for Chart.js to draw on.
 
 <FileTree>
 - backend/
@@ -74,7 +70,7 @@ First, create the skeleton of our dashboard in `index.html`. We need containers 
 
 ### Step 2: CSS Styling
 
-Add some styles in `style.css` to make the dashboard presentable.
+Add styles in `style.css` to make the dashboard presentable.
 
 <FileTree>
 - backend/
@@ -104,14 +100,13 @@ h2 { text-align: center; font-size: 1.1rem; color: #4a5568; margin-bottom: 15px;
 .market-cap-chart { background-color: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px; height: 400px; }
 .charts-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 25px; margin-bottom: 25px; }
 .chart-box { background-color: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.explorer-link { display: inline-block; margin-top: 12px; padding: 8px 16px; background-color: #4299e1; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9rem; font-weight: 500; transition: background-color 0.2s; }
-.explorer-link:hover { background-color: #3182ce; }
+.entity-key { display: inline-block; margin-top: 12px; color: #a0aec0; font-size: 0.8rem; font-family: monospace; }
 @media (max-width: 768px) { .charts-container { grid-template-columns: 1fr; } .price-container { flex-direction: column; align-items: center; } }
 ```
 
 ### Step 3: Chart Management Module
 
-Before writing our main script, let's create a separate module to handle all chart-related operations. This keeps our code organized with Arkiv logic in `script.js` and chart management in `charts.js`. Copy and paste the following into `charts.js`:
+Before you write the main script, create a separate module for chart operations. This module keeps the Arkiv logic in `script.js` apart from the chart management in `charts.js`. Copy this code into `charts.js`:
 
 <FileTree>
 - backend/
@@ -308,7 +303,6 @@ export function updatePriceBoxes(btcData, ethData, glmData) {
         const priceChange = latest.change24h || 0;
         const changeClass = priceChange >= 0 ? 'positive' : 'negative';
         const changeSign = priceChange >= 0 ? '+' : '';
-        const explorerUrl = \`https://explorer.braga.hoodi.arkiv.network/entity/\${latest.entityKey}?tab=data\`;
 
         const box = document.createElement('div');
         box.className = 'price-box';
@@ -318,7 +312,7 @@ export function updatePriceBoxes(btcData, ethData, glmData) {
             <div class="price-change \${changeClass}">
                 \${changeSign}\${priceChange.toFixed(2)}% (24h)
             </div>
-            <a href="\${explorerUrl}" target="_blank" class="explorer-link">View on Arkiv Explorer →</a>
+            <div class="entity-key">\${latest.entityKey.slice(0, 14)}...</div>
         \`;
         container.appendChild(box);
     });
@@ -332,9 +326,13 @@ export function getCharts() {
   title="frontend/charts.js"
 />
 
+<Aside>
+Cheesecake has no public block explorer yet. Each price box shows a short entity key instead of an explorer link.
+</Aside>
+
 ### Step 4: Client Setup and Imports
 
-In `script.js`, start by importing the Arkiv SDK and chart functions. Set your wallet address at the top so we only fetch entities you created. Because this is a browser environment, we import the SDK directly from a CDN like `esm.sh`.
+In `script.js`, import the Arkiv SDK and the chart functions. Set your wallet address at the top so the app fetches only your entities. This is a browser environment, so import the SDK directly from a CDN like `esm.sh`.
 
 <FileTree>
 - backend/
@@ -360,12 +358,12 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: braga,
+    chain: cheesecake,
     transport: http(),
 });
 
@@ -376,7 +374,7 @@ console.log('Arkiv client initialized for address:', USER_ADDRESS);`}
 
 ### Step 5: Querying Data from Arkiv
 
-Now add the query function that fetches entities from Arkiv. Notice we query by the `token` attribute our backend set (e.g., `'bitcoin'`, `'ethereum'`, `'golem'`) and filter by `.ownedBy()` to only get your entities.
+Now add the query function that fetches entities from Arkiv. It queries by the `token` attribute that the backend set, for example `'bitcoin'`, `'ethereum'`, or `'golem'`. It also filters with `.ownedBy()` to fetch only your entities.
 
 <Code
   code={`// TODO: Replace with your wallet address from the backend
@@ -390,12 +388,12 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: braga,
+    chain: cheesecake,
     transport: http(),
 });
 
@@ -420,7 +418,7 @@ async function fetchTokenDataFromArkiv(tokenId) {
 
 ### Step 6: Putting It All Together
 
-Finally, create the main update function that fetches data for all cryptocurrencies and updates the UI. Initialize everything when the page loads and set up automatic refreshes every 15 seconds.
+Finally, create the main update function that fetches data for all cryptocurrencies and updates the UI. Initialize everything when the page loads, and set up a refresh every 15 seconds.
 
 <FileTree>
 - backend/
@@ -446,7 +444,7 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Import chart management functions
@@ -460,7 +458,7 @@ import {
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: braga,
+    chain: cheesecake,
     transport: http(),
 });
 
@@ -519,4 +517,4 @@ window.addEventListener('DOMContentLoaded', () => {
 />
 
 
-In the next step, we'll run the frontend and see the data in action!
+In the next step, you run the frontend and see the data in action.

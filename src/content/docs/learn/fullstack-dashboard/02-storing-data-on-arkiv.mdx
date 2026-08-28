@@ -3,19 +3,15 @@ title: 'Storing Data on Arkiv'
 description: 'Create a Node.js service to fetch crypto data and store it on Arkiv.'
 ---
 
-import { Code, FileTree, Aside } from '@astrojs/starlight/components';
+import { Code, FileTree } from '@astrojs/starlight/components';
 
-In this part, we'll build the Node.js script that acts as our data publisher. It will fetch data from CoinGecko and use the Arkiv SDK to write it to the blockchain.
+In this part, you build the Node.js script that publishes data. This script fetches data from CoinGecko and uses the Arkiv SDK to write it to the blockchain.
 
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
-</Aside>
-
-Open `backend/index.js` and let's build it step by step.
+Open `backend/index.js` and build it step by step.
 
 ### Step 1: Imports and Client Setup
 
-First, we need to import the necessary functions from the Arkiv SDK and set up our wallet client. This client will authenticate us with our private key, allowing us to write data.
+First, import the functions that you need from the Arkiv SDK, then set up the wallet client. This client authenticates you with your private key, so you can write data.
 
 <FileTree>
 
@@ -29,7 +25,7 @@ First, we need to import the necessary functions from the Arkiv SDK and set up o
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { braga } from '@arkiv-network/sdk/chains';
+import { cheesecake } from '@arkiv-network/sdk/chains';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -44,7 +40,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: braga, // We are using the Braga testnet.
+    chain: cheesecake, // Use the Cheesecake testnet.
     transport: http(),
     account: account,
 });
@@ -60,29 +56,21 @@ Run your script to see your wallet address:
 node --env-file backend/.env backend/index.js
 ```
 
-You should see output like: `Backend service connected as: 0x1234...`
+The output looks like this: `Backend service connected as: 0x1234...`
 
 ### Step 2: Get Test GLM
 
-<Aside type="caution">
-The Braga faucet and explorer went offline when Braga was retired on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
-</Aside>
+Before you create entities on Arkiv, you need test GLM to pay for gas fees. Cheesecake uses GLM as its native gas token.
 
-Before we can create entities on Arkiv, we need some test GLM to pay for gas fees. Braga uses GLM as its native gas token. Visit the Braga faucet:
-
-**👉 [https://braga.hoodi.arkiv.network/faucet/](https://braga.hoodi.arkiv.network/faucet/)**
-
-Enter your wallet address (the one displayed in the previous step) and request test GLM. This is completely free and only takes a moment.
-
-You may need to wait a few minutes for the transaction to be processed. You can check your balance using a Braga block explorer: **👉 [https://explorer.braga.hoodi.arkiv.network/](https://explorer.braga.hoodi.arkiv.network/)**
+Cheesecake has no public faucet yet. Ask in the [Arkiv Discord](https://discord.gg/arkiv), and a team member sends test GLM to the address that the previous step printed.
 
 ### Step 3: Fetching Data from CoinGecko
 
-Next, let's add a function to call the CoinGecko API and fetch our cryptocurrency data.
+Next, add a function that calls the CoinGecko API and fetches your cryptocurrency data.
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { braga } from '@arkiv-network/sdk/chains';
+import { cheesecake } from '@arkiv-network/sdk/chains';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
@@ -98,7 +86,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: braga, // We are using the Braga testnet.
+    chain: cheesecake, // Use the Cheesecake testnet.
     transport: http(),
     account: account,
 });
@@ -130,16 +118,16 @@ async function fetchCryptoData() {
 
 ### Step 4: Uploading Data to Arkiv
 
-This is the core of our backend. This function takes all the crypto data and creates entities on Arkiv in a single batch operation using `mutateEntities`.
+This is the core of the backend. This function takes all the crypto data and creates entities on Arkiv in one batch operation with `executeBatch`.
 
-- **Payload**: This is the main data you want to store, structured as JSON.
-- **Attributes**: These are key-value pairs that act like tags or metadata. They are crucial for making your data queryable later.
-- **ExpiresIn**: Entities can be set to automatically expire after a certain time.
+- **Payload**: the main data that you want to store, structured as JSON.
+- **Attributes**: key-value pairs that act as tags or metadata. Attributes make your data queryable later.
+- **expires**: entities can expire automatically after a set time.
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { braga } from '@arkiv-network/sdk/chains';
-import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import { cheesecake } from '@arkiv-network/sdk/chains';
+import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
@@ -155,7 +143,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: braga, // We are using the Braga testnet.
+    chain: cheesecake, // Use the Cheesecake testnet.
     transport: http(),
     account: account,
 });
@@ -204,14 +192,14 @@ async function uploadDataToArkiv(cryptoData) {
                     timestamp: Date.now(),
                 }),
                 contentType: 'application/json',
-                attributes: [
-                    { key: 'token', value: id }, // 'bitcoin', 'ethereum', or 'golem'
-                ],
-                expiresIn: ExpirationTime.fromHours(3), // Data expires after 3 hours.
+                attributes: {
+                    token: id, // 'bitcoin', 'ethereum', or 'golem'
+                },
+                expires: ExpirationTime.fromHours(3), // Data expires after 3 hours.
             };
         });
 
-        const result = await client.mutateEntities({
+        const result = await client.executeBatch({
             creates: createPayloads
         });
 
@@ -232,12 +220,12 @@ async function uploadDataToArkiv(cryptoData) {
 
 ### Step 5: The Main Loop
 
-Finally, let's create a main loop to tie everything together. This function will fetch the data and upload all tokens in a single batch operation.
+Finally, create a main loop that ties everything together. This function fetches the data and uploads all tokens in one batch operation.
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { braga } from '@arkiv-network/sdk/chains';
-import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk/utils';
+import { cheesecake } from '@arkiv-network/sdk/chains';
+import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
@@ -253,7 +241,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: braga, // We are using the Braga testnet.
+    chain: cheesecake, // Use the Cheesecake testnet.
     transport: http(),
     account: account,
 });
@@ -302,14 +290,14 @@ async function uploadDataToArkiv(cryptoData) {
                     timestamp: Date.now(),
                 }),
                 contentType: 'application/json',
-                attributes: [
-                    { key: 'token', value: id }, // 'bitcoin', 'ethereum', or 'golem'
-                ],
-                expiresIn: ExpirationTime.fromHours(3), // Data expires after 3 hours.
+                attributes: {
+                    token: id, // 'bitcoin', 'ethereum', or 'golem'
+                },
+                expires: ExpirationTime.fromHours(3), // Data expires after 3 hours.
             };
         });
 
-        const result = await client.mutateEntities({
+        const result = await client.executeBatch({
             creates: createPayloads
         });
 
@@ -329,7 +317,7 @@ async function runUpdateCycle() {
     const cryptoData = await fetchCryptoData();
 
     if (cryptoData.length > 0) {
-        // Upload all tokens in a single mutateEntities call
+        // Upload all tokens in a single executeBatch call
         await uploadDataToArkiv(cryptoData);
     }
 }
@@ -344,14 +332,10 @@ setInterval(runUpdateCycle, 60000); // 60000 ms = 60 seconds`}
 
 ### Step 6: Run the Backend
 
-<Aside type="caution">
-Running the backend means sending transactions to Braga, which was retired on 12 August 2026. There's no public network until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
-</Aside>
-
-Your backend is complete! Run it from your terminal:
+The backend is complete. Run it from your terminal:
 
 ```bash
 node --env-file backend/.env backend/index.js
 ```
 
-You should see logs confirming your address and the creation of entities. Leave this running. In the next section, we'll build a frontend to see our data.
+The logs show your address and each entity it creates. Leave the script running. In the next section, you build a frontend to see the data.
