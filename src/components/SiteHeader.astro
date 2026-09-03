@@ -1,9 +1,100 @@
 ---
+// Starlight's header, with an optional site-wide banner above it.
+// The banner shows only when SITE_BANNER is set at build time.
+// SITE_BANNER_URL (optional) adds a "Read more" link after the text.
 import Default from "@astrojs/starlight/components/Header.astro";
-import SiteBanner from "./SiteBanner.astro";
+
+const text = (import.meta.env.SITE_BANNER ?? "").trim();
+const url = (import.meta.env.SITE_BANNER_URL ?? "").trim();
+const hasBanner = text.length > 0;
 ---
 
-<SiteBanner />
-<div class="site-nav">
+{
+	hasBanner && (
+		<div class="sl-banner" data-pagefind-ignore>
+			<p>
+				<strong>{text}</strong>
+				{url && (
+					<>
+						{" "}
+						<a href={url}>Read more →</a>
+					</>
+				)}
+			</p>
+		</div>
+	)
+}
+<div class:list={["site-nav", { "with-banner": hasBanner }]}>
 	<Default />
 </div>
+
+<style>
+	@layer starlight.core {
+		.sl-banner {
+			--__sl-banner-text: var(--sl-color-banner-text, var(--sl-color-text-invert));
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			min-height: var(--sl-banner-height);
+			padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+			background-color: var(--sl-color-banner-bg, var(--sl-color-bg-accent));
+			color: var(--__sl-banner-text);
+			line-height: var(--sl-line-height-headings);
+			text-align: center;
+			text-wrap: balance;
+		}
+		.sl-banner a {
+			color: var(--__sl-banner-text);
+		}
+	}
+</style>
+
+{
+	hasBanner && (
+		<style is:global>
+			@layer starlight.core {
+				:root {
+					--sl-nav-row-height: 3.5rem;
+					--sl-banner-height: 3.9rem;
+					--sl-nav-height: calc(var(--sl-nav-row-height) + var(--sl-banner-height));
+				}
+				@media (min-width: 32em) {
+					:root {
+						--sl-banner-height: 2.7rem;
+					}
+				}
+				@media (min-width: 50em) {
+					:root {
+						--sl-nav-row-height: 4rem;
+					}
+				}
+				.page > .header {
+					height: auto;
+					padding: 0;
+				}
+				.site-nav.with-banner {
+					height: var(--sl-nav-row-height);
+					padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+				}
+				/* Keep the room Starlight reserves for the mobile menu button, and centre
+				   that button on the nav row rather than on banner + nav. */
+				[data-has-sidebar] .site-nav.with-banner {
+					padding-inline-end: calc(
+						var(--sl-nav-gap) + var(--sl-nav-pad-x) + var(--sl-menu-button-size)
+					);
+				}
+				starlight-menu-button button {
+					top: calc(
+						var(--sl-banner-height) +
+							(var(--sl-nav-row-height) - var(--sl-menu-button-size)) / 2
+					);
+				}
+				@media (min-width: 50em) {
+					[data-has-sidebar] .site-nav.with-banner {
+						padding-inline-end: var(--sl-nav-pad-x);
+					}
+				}
+			}
+		</style>
+	)
+}

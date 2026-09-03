@@ -22,6 +22,9 @@ jobs:
         run: bun run build
         env:
           SITE_URL: https://docs.arkiv.network
+          # Set SITE_BANNER to show a site-wide notice above the header. Leave empty to hide it.
+          SITE_BANNER: ""
+          SITE_BANNER_URL: ""
           SDK_DOCS_REF: v0.8.0-dev.4
 
       - name: Setup SSH key
