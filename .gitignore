@@ -27,5 +27,3 @@ CLAUDE.md
 .sdk-cache/
 src/content/docs/typescript-sdk/api-reference/
 
-# agentic job state and source clones
-.goal-job/
