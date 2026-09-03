@@ -68,6 +68,7 @@ export default defineConfig({
 						{ label: "Installation", slug: "start-here/installation" },
 						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 						{ label: "Data Explorer", slug: "start-here/data-explorer" },
+						{ label: "API Keys", slug: "start-here/api-keys" },
 					],
 				},
 				{
