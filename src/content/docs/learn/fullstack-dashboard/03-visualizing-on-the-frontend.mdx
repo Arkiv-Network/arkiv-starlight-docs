@@ -327,7 +327,7 @@ export function getCharts() {
 />
 
 <Aside>
-Cheesecake has no public block explorer yet. Each price box shows a short entity key instead of an explorer link.
+Tiramisu has no public block explorer yet. Each price box shows a short entity key instead of an explorer link.
 </Aside>
 
 ### Step 4: Client Setup and Imports
@@ -358,12 +358,12 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { tiramisu } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: http(),
 });
 
@@ -388,12 +388,12 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { tiramisu } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: http(),
 });
 
@@ -444,7 +444,7 @@ if (!USER_ADDRESS || USER_ADDRESS === '0xYourAddressHere') {
 // Import Arkiv SDK for blockchain data access
 import { createPublicClient } from "https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps";
 import { eq } from "https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps";
-import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
+import { tiramisu } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps';
 import { http } from 'https://esm.sh/viem?target=es2022';
 
 // Import chart management functions
@@ -458,7 +458,7 @@ import {
 
 // Public client can only read data, no private key needed
 const client = createPublicClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: http(),
 });
 

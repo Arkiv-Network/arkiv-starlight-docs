@@ -42,8 +42,9 @@ function rewriteIndexLinks() {
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
-		"/start-here/testnet": "/networks/cheesecake/",
+		"/start-here/testnet": "/networks/tiramisu/",
 		"/networks/migrate-from-kaolin": "/networks/older-networks/",
+		"/networks/cheesecake": "/networks/tiramisu/",
 	},
 	markdown: {
 		remarkPlugins: [rewriteIndexLinks],
@@ -72,8 +73,7 @@ export default defineConfig({
 				{
 					label: "Networks",
 					items: [
-						{ label: "Cheesecake", slug: "networks/cheesecake" },
-						{ label: "Braga", slug: "networks/braga" },
+						{ label: "Tiramisu", slug: "networks/tiramisu" },
 						{ label: "Older networks", slug: "networks/older-networks" },
 					],
 				},

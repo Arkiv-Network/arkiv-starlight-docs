@@ -3,7 +3,7 @@ title: 'Prerequisites & Project Setup'
 description: 'Get your environment and project ready for the Arkiv tutorial.'
 ---
 
-import { FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 Before you write code, install the tools in this section and set up the project structure.
 
@@ -11,9 +11,9 @@ Before you write code, install the tools in this section and set up the project 
 
 Make sure that you have these tools on your system:
 
-- **Node.js**: version v20.6.0 or higher. This tutorial uses the `--env-file` flag to load environment variables.
+- **Node.js**: version 22 or higher. Version 24 is the current LTS release. This tutorial uses the `--env-file` flag to load environment variables.
 - **A text editor**: a code editor like VS Code works well.
-- **An Arkiv testnet private key.** To create entities (write data) on Arkiv, you need a wallet. This tutorial uses the public Cheesecake testnet, so no real funds are at risk.
+- **An Arkiv testnet private key.** To create entities (write data) on Arkiv, you need a wallet. This tutorial uses the public Tiramisu testnet, so no real funds are at risk.
 
 If you do not have a private key, generate a new one with this command:
 
@@ -21,7 +21,11 @@ If you do not have a private key, generate a new one with this command:
 node -e "console.log('0x' + require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Copy the output and save it in a safe place. CAUTION: Never share your private key with anyone. Anyone who has it can control your funds and entities.
+Copy the output and save it in a safe place.
+
+<Aside type="caution" title="Never share your private key">
+Anyone who has your private key can control your funds and entities.
+</Aside>
 
 ## 2. Project Setup
 

@@ -13,12 +13,12 @@ All write operations require a wallet client:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
 })
@@ -286,12 +286,12 @@ There are two ways to write concurrently from one wallet:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 import { privateKeyToAccount, nonceManager } from "viem/accounts"
 
 const walletClient = createWalletClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`, {
     nonceManager,
@@ -334,7 +334,7 @@ In browser applications, use MetaMask as the transport instead of a private key:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
 // Request wallet connection
@@ -342,7 +342,7 @@ await window.ethereum.request({ method: 'eth_requestAccounts' })
 
 // Use MetaMask as transport
 const walletClient = createWalletClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: custom(window.ethereum),
 })
 ```

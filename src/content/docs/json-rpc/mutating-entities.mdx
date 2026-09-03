@@ -10,23 +10,23 @@ Every entity mutation goes through a standard Ethereum transaction. It uses `eth
 There is no dedicated `arkiv_*` write method. The node reads Arkiv operations out of a normal transaction, the same way it reads other contract calls.
 
 <Aside type="caution">
-Every mutation targets a fixed protocol address, `0x4400000000000000000000000000000000000044`. This is not the bridge. It is the precompile address for entity operations. This address is the same on every Arkiv chain.
+Send every mutation transaction to a fixed address: `0x4400000000000000000000000000000000000044`. This is the precompile address for entity operations. It is the same on every Arkiv chain.
 
 The calldata encoding for this address is internal to the SDK. It is not part of the published protocol. Do not build a raw transaction by hand. Use the wallet actions of the [TypeScript SDK](/typescript-sdk/mutating-data/). They build, sign, and send the transaction for you.
 </Aside>
 
 ## Wallet actions
 
-Each of these is one call on a `WalletArkivClient`. Each call sends exactly one `eth_sendRawTransaction`:
+These methods come from `@arkiv-network/sdk`. Each one is a call on a `WalletArkivClient`, and each call sends exactly one `eth_sendRawTransaction`. Click a method name to open its API reference:
 
 | Action | What it does |
 |--------|--------------|
-| `createEntity()` | Creates a new entity with a payload, content type, attributes, and an expiry |
-| `patchEntity()` | Sets or unsets individual attributes, or replaces the payload, leaving anything unnamed untouched |
-| `deleteEntity()` | Deletes an entity |
-| `extendEntity()` | Moves an entity's expiry later |
-| `changeOwnership()` | Transfers an entity to a new owner |
-| `executeBatch()` | Applies a combination of creates, patches, deletes, extensions, and ownership changes atomically in one transaction |
+| [`createEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#createentity) | Creates a new entity with a payload, content type, attributes, and an expiry |
+| [`patchEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#patchentity) | Sets or unsets individual attributes, or replaces the payload, leaving anything unnamed untouched |
+| [`deleteEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#deleteentity) | Deletes an entity |
+| [`extendEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#extendentity) | Moves an entity's expiry later |
+| [`changeOwnership()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#changeownership) | Transfers an entity to a new owner |
+| [`executeBatch()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#executebatch) | Applies a combination of creates, patches, deletes, extensions, and ownership changes atomically in one transaction |
 
 See [Mutating Data](/typescript-sdk/mutating-data/) for usage examples of each.
 
@@ -35,7 +35,7 @@ See [Mutating Data](/typescript-sdk/mutating-data/) for usage examples of each.
 `eth_sendRawTransaction` returns a transaction hash immediately. The network does not apply the mutation until a block includes the transaction.
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -48,7 +48,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 Poll for the receipt to make sure that a block includes the transaction:
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",

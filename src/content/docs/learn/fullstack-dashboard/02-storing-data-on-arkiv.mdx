@@ -25,7 +25,7 @@ First, import the functions that you need from the Arkiv SDK, then set up the wa
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { cheesecake } from '@arkiv-network/sdk/chains';
+import { tiramisu } from '@arkiv-network/sdk/chains';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
@@ -40,7 +40,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: cheesecake, // Use the Cheesecake testnet.
+    chain: tiramisu, // Use the Tiramisu testnet.
     transport: http(),
     account: account,
 });
@@ -60,9 +60,9 @@ The output looks like this: `Backend service connected as: 0x1234...`
 
 ### Step 2: Get Test GLM
 
-Before you create entities on Arkiv, you need test GLM to pay for gas fees. Cheesecake uses GLM as its native gas token.
+Before you create entities on Arkiv, you need test GLM to pay for gas fees. Tiramisu uses GLM as its native gas token.
 
-Cheesecake has no public faucet yet. Ask in the [Arkiv Discord](https://discord.gg/arkiv), and a team member sends test GLM to the address that the previous step printed.
+Get test GLM from the [Arkiv faucet](https://hub.arkiv.network/faucet). Use the address that the previous step printed. If the faucet does not work for you, ask in the [Arkiv Discord](https://discord.gg/arkiv).
 
 ### Step 3: Fetching Data from CoinGecko
 
@@ -70,7 +70,7 @@ Next, add a function that calls the CoinGecko API and fetches your cryptocurrenc
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { cheesecake } from '@arkiv-network/sdk/chains';
+import { tiramisu } from '@arkiv-network/sdk/chains';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import axios from 'axios';
@@ -86,7 +86,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: cheesecake, // Use the Cheesecake testnet.
+    chain: tiramisu, // Use the Tiramisu testnet.
     transport: http(),
     account: account,
 });
@@ -118,15 +118,15 @@ async function fetchCryptoData() {
 
 ### Step 4: Uploading Data to Arkiv
 
-This is the core of the backend. This function takes all the crypto data and creates entities on Arkiv in one batch operation with `executeBatch`.
+This is the core of the backend. This function takes all the crypto data and creates entities on Arkiv in one batch operation using the `executeBatch` method.
 
 - **Payload**: the main data that you want to store, structured as JSON.
 - **Attributes**: key-value pairs that act as tags or metadata. Attributes make your data queryable later.
-- **expires**: entities can expire automatically after a set time.
+- **expires**: entities can be configured to expire automatically after a specific time. After the block at which an entity expires, queries do not return it.
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { cheesecake } from '@arkiv-network/sdk/chains';
+import { tiramisu } from '@arkiv-network/sdk/chains';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -143,7 +143,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: cheesecake, // Use the Cheesecake testnet.
+    chain: tiramisu, // Use the Tiramisu testnet.
     transport: http(),
     account: account,
 });
@@ -224,7 +224,7 @@ Finally, create a main loop that ties everything together. This function fetches
 
 <Code
   code={`import { createWalletClient } from '@arkiv-network/sdk';
-import { cheesecake } from '@arkiv-network/sdk/chains';
+import { tiramisu } from '@arkiv-network/sdk/chains';
 import { ExpirationTime, jsonToPayload } from '@arkiv-network/sdk';
 import { http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -241,7 +241,7 @@ const account = privateKeyToAccount(privateKey);
 
 // Create a wallet client to interact with Arkiv.
 const client = createWalletClient({
-    chain: cheesecake, // Use the Cheesecake testnet.
+    chain: tiramisu, // Use the Tiramisu testnet.
     transport: http(),
     account: account,
 });

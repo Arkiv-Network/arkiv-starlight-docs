@@ -11,11 +11,11 @@ You can query entities stored on Arkiv with standard JSON-RPC 2.0 calls. This pa
 
 | Property  | Value                                                |
 | --------- | ----------------------------------------------------- |
-| Chain ID  | `7733102` (`0x75ff6e`)                                |
-| HTTP RPC  | `https://rpc.cheesecake.db-chain.devnet.gobas.me`     |
+| Chain ID  | `7738577` (`0x7614d1`)                                |
+| HTTP RPC  | `https://rpc.tiramisu.db-chain.testnet.arkiv.network`     |
 
 <Aside>
-This is the [Cheesecake testnet](/networks/cheesecake/) endpoint. A block explorer is not published yet. If you need to inspect a transaction, ask in [Discord](https://discord.gg/arkiv).
+This is the [Tiramisu testnet](/networks/tiramisu/) endpoint. A block explorer is not published yet. If you need to inspect a transaction, ask in [Discord](https://discord.gg/arkiv).
 </Aside>
 
 ## Request Format
@@ -23,7 +23,7 @@ This is the [Cheesecake testnet](/networks/cheesecake/) endpoint. A block explor
 All methods use standard JSON-RPC 2.0:
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"METHOD_NAME","params":[]}'
 ```
@@ -42,7 +42,7 @@ This method reads one entity by key, at the tip or as of a past block.
 This method returns every field on the entity. There is no `select` option, because the read already names a single entity. If the key never existed, was deleted, or expired, this method returns `null`.
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"arkiv_getEntity","params":["0x9f2c..."]}'
 ```
@@ -61,6 +61,13 @@ This method queries entities from the indexed store.
 ### Query Syntax
 
 A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-insensitive. A comment starts with `--` and runs to the end of the line.
+
+For example, this query matches every open ticket with a priority of 3 or higher:
+
+```
+-- open tickets, priority 3 or higher
+status = str('open') AND priority >= 3
+```
 
 **Operators:**
 
@@ -183,7 +190,7 @@ The `type` of an attribute decides the JSON encoding of its `value`:
 **By attribute:**
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":1,
@@ -198,7 +205,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 **By owner:**
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":10,
@@ -213,7 +220,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 **Numeric range:**
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":12,
@@ -225,7 +232,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 **Prefix match with negation:**
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":13,
@@ -237,7 +244,7 @@ curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
 **Metadata only (omit payload):**
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0","id":14,
@@ -283,7 +290,7 @@ This method returns the total number of entities that match an optional query, a
 | 0     | object/null | No       | `{ "query"?: string, "block"?: number }`. Defaults to every entity at the tip |
 
 ```bash
-curl https://rpc.cheesecake.db-chain.devnet.gobas.me \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{"jsonrpc":"2.0","id":3,"method":"arkiv_getEntityCount","params":[]}'
 ```

@@ -11,11 +11,11 @@ The `watchEntityEvents` method on the public client lets you listen for entity c
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const client = createPublicClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
 })
 
@@ -173,11 +173,11 @@ Listen for changes to your own entities and log a summary:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const client = createPublicClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
 })
 

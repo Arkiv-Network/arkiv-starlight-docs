@@ -13,10 +13,10 @@ Make sure that you have these tools on your system:
 
 - **Node.js**: version v20.6.0 or higher.
 - **A text editor**: a code editor like VS Code works well.
-- **Test GLM**: test GLM pays for gas on the Cheesecake testnet, the native gas token of Arkiv. The app prompts MetaMask to switch to Cheesecake, or to add it, automatically.
+- **Test GLM**: test GLM pays for gas on the Tiramisu testnet, the native gas token of Arkiv. The app prompts MetaMask to switch to Tiramisu, or to add it, automatically.
 
 <Aside type="tip">
-Cheesecake has no public faucet yet. Ask in the [Arkiv Discord](https://discord.gg/arkiv), and a team member sends you test GLM.
+Get test GLM from the [Arkiv faucet](https://hub.arkiv.network/faucet). If the faucet does not work for you, ask in the [Arkiv Discord](https://discord.gg/arkiv).
 </Aside>
 
 ## 2. Project Setup
@@ -198,20 +198,20 @@ Now build the most important part of this tutorial: the connection to MetaMask. 
 
 ### Step 1: Imports and Chain Switching
 
-First, import the SDK. Then write a helper function that switches MetaMask to the Cheesecake testnet. If MetaMask has not added the chain yet, the function adds it.
+First, import the SDK. Then write a helper function that switches MetaMask to the Tiramisu testnet. If MetaMask has not added the chain yet, the function adds it.
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { cheesecake } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToCheesecakeChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${cheesecake.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -231,10 +231,10 @@ async function switchToCheesecakeChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: cheesecake.name,
-            nativeCurrency: cheesecake.nativeCurrency,
-            rpcUrls: cheesecake.rpcUrls.default.http,
-            // No blockExplorerUrls: Cheesecake has no public block explorer yet.
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
+            // No blockExplorerUrls: Tiramisu has no public block explorer yet.
             // MetaMask makes this field optional, so leave it out.
           },
         ],
@@ -248,7 +248,7 @@ async function switchToCheesecakeChain() {
   title="src/wallet.ts"
 />
 
-The `switchToCheesecakeChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902`, the chain does not exist yet. In that case, the function calls `wallet_addEthereumChain`. This call uses the chain details from the `cheesecake` object of the SDK.
+The `switchToTiramisuChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902`, the chain does not exist yet. In that case, the function calls `wallet_addEthereumChain`. This call uses the chain details from the `tiramisu` object of the SDK.
 
 ### Step 2: Connect Wallet
 
@@ -256,16 +256,16 @@ Next, add the `connectWallet` function. This function switches to the correct ch
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { cheesecake } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToCheesecakeChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${cheesecake.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -285,9 +285,9 @@ async function switchToCheesecakeChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: cheesecake.name,
-            nativeCurrency: cheesecake.nativeCurrency,
-            rpcUrls: cheesecake.rpcUrls.default.http,
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
           },
         ],
       });
@@ -302,7 +302,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToCheesecakeChain();
+  await switchToTiramisuChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -321,16 +321,16 @@ Finally, add the factory function that creates two clients: a public client to r
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { cheesecake } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToCheesecakeChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${cheesecake.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -350,9 +350,9 @@ async function switchToCheesecakeChain() {
         params: [
           {
             chainId: chainIdHex,
-            chainName: cheesecake.name,
-            nativeCurrency: cheesecake.nativeCurrency,
-            rpcUrls: cheesecake.rpcUrls.default.http,
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
           },
         ],
       });
@@ -367,7 +367,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToCheesecakeChain();
+  await switchToTiramisuChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -382,12 +382,12 @@ export function createArkivClients(account?: \`0x\${string}\`) {
   }
 
   const publicClient = createPublicClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: http(),
   });
 
   const walletClient = createWalletClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: custom(window.ethereum),
     account,
   });

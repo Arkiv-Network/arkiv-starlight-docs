@@ -6,7 +6,7 @@ description: Install the Arkiv TypeScript SDK. Create your first entity.
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <Aside type="tip">
-This page connects you to [Cheesecake](/networks/cheesecake/), the current public testnet of Arkiv. You need GLM to pay for transactions. The faucet is not published yet. To get funded, ask in [Discord](https://discord.gg/arkiv).
+This page connects you to [Tiramisu](/networks/tiramisu/), the current public testnet of Arkiv. You need GLM to pay for transactions. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
 </Aside>
 
 Arkiv provides an official TypeScript/JavaScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event watching, and payload encoding.
@@ -36,12 +36,12 @@ WalletClient needs a private key. Use it to create, patch, and delete entities:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
 })
@@ -55,11 +55,11 @@ PublicClient needs no private key. Use it for queries. It is safe for frontend u
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const publicClient = createPublicClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
 })
 ```
@@ -94,25 +94,25 @@ const publicClient = createPublicClient({
    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
    ```
 
-   Arkiv chains use GLM as the native gas token. The faucet for Cheesecake is not published yet. If you need funds, ask in [Discord](https://discord.gg/arkiv).
+   Arkiv chains use GLM as the native gas token. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
 
 3. **Write your first entity**
 
    ```ts title="hello.ts"
    import { createWalletClient, createPublicClient, ExpirationTime } from '@arkiv-network/sdk';
    import { stringToPayload } from '@arkiv-network/sdk/utils';
-   import { cheesecake } from '@arkiv-network/sdk/chains';
+   import { tiramisu } from '@arkiv-network/sdk/chains';
    import { http } from 'viem';
    import { privateKeyToAccount } from 'viem/accounts';
 
    const walletClient = createWalletClient({
-     chain: cheesecake,
+     chain: tiramisu,
      transport: http(),
      account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
    });
 
    const publicClient = createPublicClient({
-     chain: cheesecake,
+     chain: tiramisu,
      transport: http(),
    });
 
@@ -166,6 +166,6 @@ For static HTML/JS pages without a bundler:
 ```js
 import { createPublicClient } from 'https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps'
 import { eq } from 'https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps'
-import { cheesecake } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps'
+import { tiramisu } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps'
 import { http } from 'https://esm.sh/viem?target=es2022'
 ```

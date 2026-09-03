@@ -25,14 +25,14 @@ First, define fetcher functions separate from hooks so they are reusable and tes
 ```ts
 // lib/arkiv-queries.ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { eq } from "@arkiv-network/sdk/query"
 import { http } from "viem"
 
 const PROJECT_ATTRIBUTE = { key: "project", value: "my-app" }
 
 export const publicClient = createPublicClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: http(),
 })
 
@@ -137,7 +137,7 @@ Your project can use [wagmi](https://wagmi.sh), or a wagmi-powered kit such as R
 ```tsx
 import { useAccount, useWalletClient } from "wagmi"
 import { createWalletClient as createArkivWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
 function useArkivWalletClient() {
@@ -147,7 +147,7 @@ function useArkivWalletClient() {
   if (!wagmiWalletClient || !address) return null
 
   return createArkivWalletClient({
-    chain: cheesecake,
+    chain: tiramisu,
     transport: custom(wagmiWalletClient.transport),
     account: address,
   })
@@ -190,34 +190,34 @@ function CreatePostButton() {
 The `transport: custom(wagmiWalletClient.transport)` line is the key. It reuses the wallet connection that wagmi already manages. Users then do not see a second connect prompt.
 </Aside>
 
-### Add the Cheesecake Network to wagmi Config
+### Add the Tiramisu Network to wagmi Config
 
-Register the Arkiv Cheesecake testnet in your wagmi config so wallet switching works:
+Register the Arkiv Tiramisu testnet in your wagmi config so wallet switching works:
 
 ```ts
 // wagmi.ts
 import { http, createConfig } from "wagmi"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [cheesecake],
+  chains: [tiramisu],
   transports: {
-    [cheesecake.id]: http(),
+    [tiramisu.id]: http(),
   },
 })
 ```
 
-If your app supports multiple chains, add `cheesecake` alongside them:
+If your app supports multiple chains, add `tiramisu` alongside them:
 
 ```ts
 import { mainnet } from "wagmi/chains"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 
 export const config = createConfig({
-  chains: [mainnet, cheesecake],
+  chains: [mainnet, tiramisu],
   transports: {
     [mainnet.id]: http(),
-    [cheesecake.id]: http(),
+    [tiramisu.id]: http(),
   },
 })
 ```
@@ -228,18 +228,18 @@ If you do not use wagmi, you can connect MetaMask directly:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { cheesecake } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { custom } from "viem"
 
 // Prompt MetaMask to add the network (no effect if it is already added)
 await window.ethereum.request({
   method: "wallet_addEthereumChain",
   params: [{
-    chainId: `0x${cheesecake.id.toString(16)}`,
-    chainName: cheesecake.name,
-    nativeCurrency: cheesecake.nativeCurrency,
-    rpcUrls: cheesecake.rpcUrls.default.http,
-    // No blockExplorerUrls: Cheesecake has no public explorer yet, and the field is optional.
+    chainId: `0x${tiramisu.id.toString(16)}`,
+    chainName: tiramisu.name,
+    nativeCurrency: tiramisu.nativeCurrency,
+    rpcUrls: tiramisu.rpcUrls.default.http,
+    // No blockExplorerUrls: Tiramisu has no public explorer yet, and the field is optional.
   }],
 })
 
@@ -249,7 +249,7 @@ const [address] = await window.ethereum.request({
 })
 
 const walletClient = createWalletClient({
-  chain: cheesecake,
+  chain: tiramisu,
   transport: custom(window.ethereum),
 })
 ```
