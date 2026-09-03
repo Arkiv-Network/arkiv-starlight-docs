@@ -239,7 +239,7 @@ await window.ethereum.request({
     chainName: tiramisu.name,
     nativeCurrency: tiramisu.nativeCurrency,
     rpcUrls: tiramisu.rpcUrls.default.http,
-    // No blockExplorerUrls: Tiramisu has no public explorer yet, and the field is optional.
+    blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
   }],
 })
 

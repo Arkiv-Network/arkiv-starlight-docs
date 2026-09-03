@@ -234,7 +234,7 @@ async function switchToTiramisuChain() {
             chainName: tiramisu.name,
             nativeCurrency: tiramisu.nativeCurrency,
             rpcUrls: tiramisu.rpcUrls.default.http,
-            // No blockExplorerUrls: Tiramisu has no public block explorer yet.
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
             // MetaMask makes this field optional, so leave it out.
           },
         ],
@@ -288,6 +288,7 @@ async function switchToTiramisuChain() {
             chainName: tiramisu.name,
             nativeCurrency: tiramisu.nativeCurrency,
             rpcUrls: tiramisu.rpcUrls.default.http,
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
           },
         ],
       });
@@ -353,6 +354,7 @@ async function switchToTiramisuChain() {
             chainName: tiramisu.name,
             nativeCurrency: tiramisu.nativeCurrency,
             rpcUrls: tiramisu.rpcUrls.default.http,
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
           },
         ],
       });
