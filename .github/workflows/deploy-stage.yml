@@ -22,7 +22,7 @@ jobs:
         run: bun run build
         env:
           SITE_URL: https://stage.docs.arkiv.network
-          SDK_DOCS_REF: v0.8.0-dev.3
+          SDK_DOCS_REF: v0.8.0-dev.4
 
       - name: Setup SSH key
         run: |
