@@ -5,11 +5,15 @@ description: Use Arkiv's official agent skills to build faster and report issues
 
 import { Aside } from '@astrojs/starlight/components';
 
-Speed up development by installing Arkiv's official agent skills into your AI coding assistant. Each skill gives your agent instant knowledge of Arkiv — the SDK, common patterns, and how to interact with the wider Arkiv ecosystem — so you don't have to copy-paste docs into the chat.
+Arkiv's official agent skills work inside your AI coding assistant. They help you build faster.
 
-## What is a Skill?
+Each skill gives your agent knowledge of Arkiv: the SDK, common patterns, and the wider Arkiv ecosystem. You do not need to copy text from the docs into the chat.
 
-A **skill** is a set of instructions and domain knowledge that you install into your AI coding agent (Claude Code, Cursor, Cline, GitHub Copilot, and others). Once installed, the agent can reference it automatically whenever you ask about a relevant topic. Skills follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) spec, which is portable across runtimes.
+## What a Skill Is
+
+A **skill** is a set of instructions and domain knowledge. You install it into your AI coding agent (Claude Code, Cursor, Cline, GitHub Copilot, and others). After you install a skill, your agent uses it when you ask about a related topic.
+
+Skills follow the [Anthropic Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) spec. This spec works across runtimes.
 
 ## Available skills
 
@@ -17,12 +21,12 @@ Arkiv publishes its skills in a single repository: [`Arkiv-Network/skills`](http
 
 ### `arkiv-best-practices`
 
-Teaches your agent how to build on Arkiv:
+This skill teaches your agent how to build on Arkiv:
 
 - How the Arkiv SDK works (clients, queries, mutations, events)
 - Best practices (project attributes, security, data modeling, error handling)
 - Integration patterns (backend, React, wagmi)
-- Common pitfalls and how to avoid them
+- Common pitfalls and how to prevent them
 
 ```bash
 # npm
@@ -37,7 +41,11 @@ bunx skills add https://github.com/Arkiv-Network/skills --skill arkiv-best-pract
 
 ### `arkiv-feedback`
 
-Walks you through reporting a bug or sharing a feature idea, without leaving your editor. The skill mirrors the official [issue forms](https://github.com/Arkiv-Network/reported-issues/issues/new/choose) on `Arkiv-Network/reported-issues`, asks the right questions, and submits the issue on your behalf via the GitHub CLI. If `gh` isn't installed, it saves a structured draft to disk and points you at the form in your browser.
+This skill walks you through reporting a bug or sharing a feature idea. You do not need to leave your editor.
+
+The skill mirrors the official [issue forms](https://github.com/Arkiv-Network/reported-issues/issues/new/choose) on `Arkiv-Network/reported-issues`. It asks the right questions. Then it submits the issue for you with the GitHub CLI.
+
+If `gh` is not installed, the skill saves a draft to disk. It also shows you the form in your browser.
 
 ```bash
 # npm
@@ -63,17 +71,17 @@ pnpm dlx skills add https://github.com/Arkiv-Network/skills --all
 bunx skills add https://github.com/Arkiv-Network/skills --all
 ```
 
-Pass `-g` (or `--global`) to install at the user level instead of the current project. See `npx skills --help` for the full set of flags — `pnpm dlx` and `bunx` work the same way.
+Pass `-g` (or `--global`) to install the skill at the user level instead of the current project. See `npx skills --help` for the full set of flags. The `pnpm dlx` and `bunx` commands work the same way.
 
 <Aside type="tip">
-The repository is also browsable at [skills.sh/arkiv-network/skills](https://skills.sh/arkiv-network/skills).
+You can also browse the repository at [skills.sh/arkiv-network/skills](https://skills.sh/arkiv-network/skills).
 </Aside>
 
-## What to try
+## Example prompts
 
-Once the skills are installed, open your AI agent and try prompts like:
+Install the skills first. Open your AI agent. Try prompts such as these:
 
 - *"Build a feature that lets users create and list posts stored on Arkiv"*
-- *"Audit my project — am I following Arkiv best practices?"*
+- *"Audit my project. Am I following Arkiv best practices?"*
 - *"Set up a React hook that reads Arkiv entities with TanStack Query"*
-- *"I hit a bug — help me file it on the Arkiv reported-issues repo"*
+- *"I hit a bug. Help me file it on the Arkiv reported-issues repo"*

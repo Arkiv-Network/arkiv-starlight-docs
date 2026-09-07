@@ -5,34 +5,29 @@ description: 'Get your environment and project ready for the Arkiv sketch app tu
 
 import { Code, FileTree, Steps, Tabs, TabItem, Aside } from '@astrojs/starlight/components';
 
-Before we start writing code, let's ensure you have the necessary tools and set up our project structure.
-
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
-</Aside>
+Before you write code, install the tools in this section and set up the project structure.
 
 ## 1. Prerequisites
 
-Make sure you have the following installed on your system:
+Make sure that you have these tools on your system:
 
-- **Node.js**: A recent version, specifically **v20.6.0 or higher**.
-- **A Text Editor**: A code editor like VS Code is highly recommended.
-- **MetaMask**: The [MetaMask browser extension](https://metamask.io/) installed in your browser. This is how users will sign transactions.
-- **Test GLM**: You'll need some test GLM from the [Braga faucet](https://braga.hoodi.arkiv.network/faucet/). Braga uses GLM as its native gas token. The app will prompt MetaMask to switch to the Braga testnet automatically.
+- **Node.js**: version v20.6.0 or higher.
+- **A text editor**: a code editor like VS Code works well.
+- **Test GLM**: test GLM pays for gas on the Tiramisu testnet, the native gas token of Arkiv. The app prompts MetaMask to switch to Tiramisu, or to add it, automatically.
 
-<Aside type="caution">
-The Braga faucet went offline when Braga was retired on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
+<Aside type="tip">
+Get test GLM from the [Arkiv faucet](https://hub.arkiv.network/faucet). If the faucet does not work for you, ask in the [Arkiv Discord](https://discord.gg/arkiv).
 </Aside>
 
 ## 2. Project Setup
 
-We'll use Vite with a vanilla TypeScript template to scaffold the project quickly.
+Use Vite with a vanilla TypeScript template to scaffold the project.
 
 <Tabs syncKey="user-os">
 
 <TabItem label="Linux / macOS" icon="terminal">
 
-Open your terminal and run the following commands:
+Open your terminal and run these commands:
 
 <Steps>
 
@@ -43,13 +38,13 @@ Open your terminal and run the following commands:
     cd arkiv-sketch-app
     ```
 
-2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
+2. **Install dependencies.** Install the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
 
     ```bash
     npm install @arkiv-network/sdk viem p5 @types/p5
     ```
 
-3. **Clean up default files and create our project files:**
+3. **Clean up default files and create your project files:**
 
     ```bash
     rm -rf public src/counter.ts src/typescript.svg src/vite-env.d.ts
@@ -62,7 +57,7 @@ Open your terminal and run the following commands:
 
 <TabItem label="Windows">
 
-Open PowerShell and run the following commands:
+Open PowerShell and run these commands:
 
 <Steps>
 
@@ -73,13 +68,13 @@ Open PowerShell and run the following commands:
     cd arkiv-sketch-app
     ```
 
-2. **Install dependencies:** We need the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
+2. **Install dependencies.** Install the Arkiv SDK for blockchain interaction and `p5` for the drawing canvas.
 
     ```sh
     npm install @arkiv-network/sdk viem p5 @types/p5
     ```
 
-3. **Clean up default files and create our project files:**
+3. **Clean up default files and create your project files:**
 
     ```sh
     Remove-Item -Recurse public, src\counter.ts, src\typescript.svg, src\vite-env.d.ts
@@ -91,7 +86,7 @@ Open PowerShell and run the following commands:
 </TabItem>
 </Tabs>
 
-Your project structure should now look like this:
+Your project structure now looks like this:
 
 <FileTree>
 
@@ -110,7 +105,7 @@ Your project structure should now look like this:
 
 ## 3. Configure Vite for WASM
 
-The Arkiv SDK uses WASM internally, so we need to tell Vite to exclude it from dependency optimization. Create (or replace) `vite.config.ts`:
+The Arkiv SDK uses WASM internally. Tell Vite to exclude the WASM package from dependency optimization. Create or replace `vite.config.ts`:
 
 <FileTree>
 
@@ -136,7 +131,7 @@ export default defineConfig({
 
 ## 4. HTML Structure
 
-Replace the contents of `index.html` with our app's skeleton. We need a header with a connect button, a left panel for the gallery, and a right panel for the drawing canvas.
+Replace the contents of `index.html` with the skeleton of the app. The app needs a header with a connect button, a left panel for the gallery, and a right panel for the drawing canvas.
 
 <FileTree>
 
@@ -187,7 +182,7 @@ Replace the contents of `index.html` with our app's skeleton. We need a header w
 
 ## 5. MetaMask Wallet Integration
 
-Now for the most important part of this tutorial: connecting to MetaMask. Open `src/wallet.ts` and let's build it step by step.
+Now build the most important part of this tutorial: the connection to MetaMask. Open `src/wallet.ts` and build it step by step.
 
 <FileTree>
 
@@ -203,20 +198,20 @@ Now for the most important part of this tutorial: connecting to MetaMask. Open `
 
 ### Step 1: Imports and Chain Switching
 
-First, we import the SDK and create a helper function to switch MetaMask to the Braga testnet. If the chain hasn't been added to MetaMask yet, we add it automatically.
+First, import the SDK. Then write a helper function that switches MetaMask to the Tiramisu testnet. If MetaMask has not added the chain yet, the function adds it.
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { braga } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToBragaChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -230,16 +225,17 @@ async function switchToBragaChain() {
       "code" in error &&
       error.code === 4902
     ) {
-      // Chain not added yet — add it
+      // Chain not added yet: add it
       await window.ethereum.request({
         method: "wallet_addEthereumChain",
         params: [
           {
             chainId: chainIdHex,
-            chainName: braga.name,
-            nativeCurrency: braga.nativeCurrency,
-            rpcUrls: braga.rpcUrls.default.http,
-            blockExplorerUrls: [braga.blockExplorers.default.url],
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
+            // MetaMask makes this field optional, so leave it out.
           },
         ],
       });
@@ -252,24 +248,24 @@ async function switchToBragaChain() {
   title="src/wallet.ts"
 />
 
-The `switchToBragaChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902` (chain not found), it falls back to `wallet_addEthereumChain`, using the chain details from the SDK's `braga` object.
+The `switchToTiramisuChain` function first tries `wallet_switchEthereumChain`. If MetaMask returns error code `4902`, the chain does not exist yet. In that case, the function calls `wallet_addEthereumChain`. This call uses the chain details from the `tiramisu` object of the SDK.
 
 ### Step 2: Connect Wallet
 
-Next, add the `connectWallet` function. This switches to the correct chain and then requests account access from MetaMask.
+Next, add the `connectWallet` function. This function switches to the correct chain, then requests account access from MetaMask.
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { braga } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToBragaChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -283,16 +279,16 @@ async function switchToBragaChain() {
       "code" in error &&
       error.code === 4902
     ) {
-      // Chain not added yet — add it
+      // Chain not added yet: add it
       await window.ethereum.request({
         method: "wallet_addEthereumChain",
         params: [
           {
             chainId: chainIdHex,
-            chainName: braga.name,
-            nativeCurrency: braga.nativeCurrency,
-            rpcUrls: braga.rpcUrls.default.http,
-            blockExplorerUrls: [braga.blockExplorers.default.url],
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
           },
         ],
       });
@@ -307,7 +303,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToBragaChain();
+  await switchToTiramisuChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -322,20 +318,20 @@ export async function connectWallet() {
 
 ### Step 3: Create Arkiv Clients
 
-Finally, add the factory function that creates both a **public client** (for reading data) and a **wallet client** (for writing data). This is exported so other modules can use it.
+Finally, add the factory function that creates two clients: a public client to read data, and a wallet client to write data. Export this function so other modules can use it.
 
 <Code
   code={`import { createPublicClient, createWalletClient } from "@arkiv-network/sdk";
-import { braga } from "@arkiv-network/sdk/chains";
+import { tiramisu } from "@arkiv-network/sdk/chains";
 import { custom, http } from "viem";
 import "viem/window";
 
-async function switchToBragaChain() {
+async function switchToTiramisuChain() {
   if (!window.ethereum) {
     throw new Error("MetaMask not installed");
   }
 
-  const chainIdHex = \`0x\${braga.id.toString(16)}\`;
+  const chainIdHex = \`0x\${tiramisu.id.toString(16)}\`;
 
   try {
     await window.ethereum.request({
@@ -349,16 +345,16 @@ async function switchToBragaChain() {
       "code" in error &&
       error.code === 4902
     ) {
-      // Chain not added yet — add it
+      // Chain not added yet: add it
       await window.ethereum.request({
         method: "wallet_addEthereumChain",
         params: [
           {
             chainId: chainIdHex,
-            chainName: braga.name,
-            nativeCurrency: braga.nativeCurrency,
-            rpcUrls: braga.rpcUrls.default.http,
-            blockExplorerUrls: [braga.blockExplorers.default.url],
+            chainName: tiramisu.name,
+            nativeCurrency: tiramisu.nativeCurrency,
+            rpcUrls: tiramisu.rpcUrls.default.http,
+            blockExplorerUrls: ["https://indexer.tiramisu.db-chain.testnet.arkiv.network"],
           },
         ],
       });
@@ -373,7 +369,7 @@ export async function connectWallet() {
     throw new Error("MetaMask not installed");
   }
 
-  await switchToBragaChain();
+  await switchToTiramisuChain();
 
   const accounts = await window.ethereum.request({
     method: "eth_requestAccounts",
@@ -388,12 +384,12 @@ export function createArkivClients(account?: \`0x\${string}\`) {
   }
 
   const publicClient = createPublicClient({
-    chain: braga,
+    chain: tiramisu,
     transport: http(),
   });
 
   const walletClient = createWalletClient({
-    chain: braga,
+    chain: tiramisu,
     transport: custom(window.ethereum),
     account,
   });
@@ -406,7 +402,7 @@ export function createArkivClients(account?: \`0x\${string}\`) {
 />
 
 <Aside type="tip">
-The key difference from server-side usage: instead of `privateKeyToAccount()` with a private key, we use `custom(window.ethereum)` as the transport. MetaMask handles all the signing.
+Server-side code uses `privateKeyToAccount()` with a private key. Browser code uses `custom(window.ethereum)` as the transport instead. MetaMask handles all the signing.
 </Aside>
 
-Your wallet integration is complete! In the next section, we'll build the data layer for saving and loading sketches.
+The wallet integration is complete. In the next section, you build the data layer that saves and loads sketches.

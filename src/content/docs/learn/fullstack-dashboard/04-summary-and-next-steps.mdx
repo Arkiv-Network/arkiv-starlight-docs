@@ -3,17 +3,11 @@ title: 'Running the App & Next Steps'
 description: 'Launch the full-stack application and see what you can do next.'
 ---
 
-import { Aside } from '@astrojs/starlight/components';
-
-You've built both the backend and frontend. Now it's time to see them work together.
-
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. Running the backend and frontend below needs a live network, so this part is blocked. See the [Braga page](/networks/braga/) for details.
-</Aside>
+You built both the backend and the frontend. Now run them together.
 
 ## 1. Run the Backend
 
-If it's not already running, start your backend script in your terminal. This service must be running to continuously publish new data.
+If the backend is not active yet, start it in your terminal. This service must run continuously to publish new data.
 
 ```bash
 node --env-file .env index.js
@@ -21,7 +15,7 @@ node --env-file .env index.js
 
 ## 2. Serve the Frontend
 
-You can't open `index.html` directly from your file system due to browser security policies (CORS). You must serve it using a local web server. The easiest way is with `npx`.
+Browser security policy (CORS) blocks you from opening `index.html` directly from your file system. Serve it with a local web server instead. The easiest way is with `npx`.
 
 In the `arkiv-dashboard/frontend` directory, run:
 
@@ -29,31 +23,31 @@ In the `arkiv-dashboard/frontend` directory, run:
 npx serve
 ```
 
-This will start a local server and give you a URL, usually `http://localhost:3000`.
+This command starts a local server and gives you a URL, usually `http://localhost:3000`.
 
 ## 3. View Your Dashboard
 
 Open the URL from the previous step in your web browser.
 
-You should see the dashboard! It might take up to 60 seconds for the first data points to appear as your backend fetches and publishes them. After that, the dashboard will update automatically with new data from the Arkiv blockchain.
+The dashboard appears. It can take up to 60 seconds for the first data points to appear, because the backend needs time to fetch and publish them. After that, the dashboard updates automatically with new data from Arkiv.
 
 ## Summary
 
-Congratulations! You have successfully built a full-stack application with Web3 guarantees.
+You built a full-stack application with Web3 guarantees.
 
-- You created a **Node.js backend** that acts as a data publisher, writing real-time information as entities to the Arkiv blockchain.
-- You built a **vanilla JS frontend** that acts as a data consumer, querying the Arkiv blockchain with a public client and visualizing the results.
-- You learned the fundamentals of the Arkiv SDK, including `createWalletClient` for writing, `createPublicClient` for reading, and the query builder for filtering data.
+- You created a Node.js backend that acts as a data publisher, and it writes real-time information as entities to Arkiv.
+- You built a vanilla JS frontend that acts as a data consumer, and it queries Arkiv with a public client and shows the results.
+- You learned the fundamentals of the Arkiv SDK: `createWalletClient` for writing, `createPublicClient` for reading, and the query builder for filtering data.
 
 ## Full Source Code
 
-You can find the complete source code for this tutorial on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/fullstack-tutorial 
+The complete source code for this tutorial is on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/fullstack-tutorial 
 
 ## Next Steps
 
-This project is a great starting point. Here are some ideas to expand on what you've learned:
+This project is a good starting point. Here are some ideas to extend it:
 
-- **Add more tokens:** Modify the backend and frontend to support more cryptocurrencies.
-- **Display more data:** The CoinGecko API provides a wealth of data. Try adding trading volume or 7-day price changes.
-- **More complex queries:** Experiment with Arkiv's query builder to filter data by time ranges or other parameters.
-- **Deploy it:** Deploy the frontend to a static hosting service like Vercel or Netlify so anyone can view your dashboard.
+- **Add more tokens.** Modify the backend and frontend to support more cryptocurrencies.
+- **Show more data.** The CoinGecko API gives a wealth of data. You can add trading volume or 7-day price changes.
+- **Build more complex queries.** Experiment with the query builder of Arkiv to filter data by time range or other parameters.
+- **Deploy it.** Deploy the frontend to a static hosting service like Vercel or Netlify so anyone can view your dashboard.

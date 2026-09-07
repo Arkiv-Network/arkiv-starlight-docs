@@ -1,11 +1,11 @@
 ---
 title: Best Practices
-description: Essential patterns for building production Arkiv applications — project attributes, data modeling, security, and more.
+description: "Essential patterns for building production Arkiv applications: project attributes, data modeling, security, and more."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-A collection of essential patterns and conventions for building reliable, production-ready applications with Arkiv — covering project attributes, data modeling, security, and error handling.
+This page collects essential patterns and conventions for reliable, production-ready Arkiv applications. It covers project attributes, data modeling, security, and error handling.
 
 ## 1. Always Use a Project Attribute
 
@@ -20,20 +20,20 @@ export const PROJECT_ATTRIBUTE = {
 } as const;
 ```
 
-Include it in **every** create/update call and **every** query:
+Include it in **every** create/patch call and **every** query:
 
 ```ts
 import { PROJECT_ATTRIBUTE } from "./lib/arkiv"
 
-// Creating — always include PROJECT_ATTRIBUTE
+// Creating: always include PROJECT_ATTRIBUTE
 const { entityKey } = await walletClient.createEntity({
   payload: jsonToPayload({ title, content }),
   contentType: "application/json",
-  attributes: [PROJECT_ATTRIBUTE, { key: "entityType", value: "post" }],
-  expiresIn: ExpirationTime.fromDays(30),
+  attributes: { [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value, entityType: "post" },
+  expires: ExpirationTime.fromDays(30),
 })
 
-// Querying — always filter by PROJECT_ATTRIBUTE
+// Querying: always filter by PROJECT_ATTRIBUTE
 const result = await publicClient
   .select({ key: true, payload: true })
   .where(
@@ -45,63 +45,63 @@ const result = await publicClient
 ```
 
 <Aside type="danger">
-Without a project attribute, your queries may return data from other projects, and other projects may see yours.
+Without a project attribute, your queries can return data from other projects, and other projects can see yours.
 </Aside>
 
 ## 2. Separate Read and Write Clients
 
-Always use `createPublicClient` for queries. It prevents accidental writes, doesn't require a private key, and is safe for frontend use. Reserve `createWalletClient` for backend services that create, update, or delete entities.
+Always use `createPublicClient` for queries. It prevents accidental writes, does not require a private key, and is safe for frontend use. Reserve `createWalletClient` for backend services that create, patch, or delete entities.
 
 ## 3. Design Attributes for Queryability
 
-Attributes are your indexes. Without the right ones, you'll fetch too much data and filter client-side.
+Attributes are your indexes. Without the right ones, you will fetch too much data and filter client-side.
 
 ```ts
 // Good: attributes map to your query patterns
-attributes: [
-  { key: "type", value: "vote" },           // filter by entity type
-  { key: "proposalKey", value: proposalId }, // link related entities
-  { key: "voter", value: voterAddr },        // filter by user
-  { key: "choice", value: "yes" },           // filter by value
-  { key: "weight", value: 1 },              // numeric for aggregation
-]
+attributes: {
+  type: "vote",              // filter by entity type
+  proposalKey: proposalId,   // link related entities
+  voter: voterAddr,          // filter by user
+  choice: "yes",             // filter by value
+  weight: 1,                 // numeric for aggregation
+}
 ```
 
 ## 4. Use Batch Operations
 
-Individual creates in a loop are slow and expensive. Use `mutateEntities()`:
+Individual creates in a loop are slow and expensive. Use `executeBatch()`:
 
 ```ts
-// Bad — sequential, slow
+// Bad: sequential, slow
 for (const item of items) {
   await walletClient.createEntity(item)
 }
 
-// Also bad — parallel writes from one wallet collide on the transaction nonce
+// Also bad: parallel writes from one wallet collide on the transaction nonce
 await Promise.all(items.map((item) => walletClient.createEntity(item)))
 
-// Good — single batch operation, single transaction
-await walletClient.mutateEntities({
+// Good: single batch operation, single transaction
+await walletClient.executeBatch({
   creates: items.map((item) => ({
     payload: jsonToPayload(item.data),
     contentType: "application/json",
     attributes: item.attributes,
-    expiresIn: ExpirationTime.fromHours(1),
+    expires: ExpirationTime.fromHours(1),
   })),
 })
 ```
 
-If you genuinely need separate concurrent transactions, create the account with viem's `nonceManager` — see [Concurrent Writes and Nonces](/typescript-sdk/mutating-data/#concurrent-writes-and-nonces).
+If you genuinely need separate concurrent transactions, create the account with viem's `nonceManager`: see [Concurrent Writes and Nonces](/typescript-sdk/mutating-data/#concurrent-writes-and-nonces).
 
 ## 5. Write Specific Queries
 
 Broad queries return too much data. Always add multiple filter criteria:
 
 ```ts
-// Bad — returns every note ever
+// Bad: returns every note ever
 await publicClient.select({ key: true }).where(eq("type", "note")).fetch()
 
-// Good — narrows to what you need
+// Good: narrows to what you need
 await publicClient
   .select({ key: true })
   .where(
@@ -112,11 +112,11 @@ await publicClient
   .fetch()
 ```
 
-The same applies to the field selection: `select()` fetches only the fields you name, so ask for what you'll actually use. `select()` with no argument (fetch everything) is convenient while prototyping but wasteful in production.
+The same applies to the field selection: `select()` fetches only the fields you name, so ask for what you will actually use. `select()` with no argument (fetch everything) is convenient while prototyping but wasteful in production.
 
 ## 6. Right-Size Expiration
 
-Match `expiresIn` to actual data lifetime:
+Match `expires` to actual data lifetime:
 
 | Use Case | Duration |
 |----------|----------|
@@ -125,9 +125,11 @@ Match `expiresIn` to actual data lifetime:
 | Temp files | `ExpirationTime.fromHours(24)` |
 | Weekly data | `ExpirationTime.fromDays(7)` |
 
-Don't over-allocate — it costs more and pollutes queries with stale data.
+Do not over-allocate: it costs more and pollutes queries with stale data.
 
 ## 7. Never Expose Private Keys
+
+CAUTION: Do not hardcode a private key in your source code. Anyone who reads the file can spend your funds.
 
 ```ts
 // Always load from environment
@@ -139,7 +141,7 @@ const privateKey = "0x1234..." // DANGEROUS
 
 ## 8. Validate Input Before Storing
 
-Check length and content before creating entities:
+Make sure that the length and content are valid before you create an entity:
 
 ```ts
 function createNote(userInput: string) {
@@ -150,47 +152,52 @@ function createNote(userInput: string) {
   return walletClient.createEntity({
     payload: stringToPayload(sanitized),
     contentType: "text/plain",
-    attributes: [{ key: "type", value: "note" }],
-    expiresIn: ExpirationTime.fromHours(12),
+    attributes: { type: "note" },
+    expires: ExpirationTime.fromHours(12),
   })
 }
 ```
 
 ## 9. Use Numeric Types for Numeric Data
 
-If you'll filter or sort by a value, store it as a number attribute. String attributes only support equality and glob matching.
+To filter or sort by a value, store it as a numeric attribute (`i32`, `u64`, `u256`, or `dec`). String attributes support only `eq()` and `startsWith()`.
 
 ```ts
-// Good: numeric — supports gt(), lt() operators
-{ key: 'priority', value: 5 }
+// Good: numeric, supports gt(), lt() operators
+{ priority: 5 }
 
-// Bad: string — only eq() works
-{ key: 'priority', value: '5' }
+// Bad: string, only eq() and startsWith() work
+{ priority: '5' }
 ```
 
-Numeric attribute values **must be integers** — a float like `19.99` throws an `InvalidAttributeError`. Scale non-integers to a fixed precision instead:
+A bare number defaults to `i32`, and `i32` values **must be integers**: a float like `19.99` throws `InvalidValueError`. Use `dec(...)` from `@arkiv-network/sdk/attr` for genuine decimals, or scale to a fixed precision if the value is more like a count:
 
 ```ts
-// Good: scaled to cents — integer, still supports range queries
-{ key: 'priceCents', value: 1999 }
+import { dec } from "@arkiv-network/sdk/attr"
 
-// Throws InvalidAttributeError
-{ key: 'price', value: 19.99 }
+// Good: a real decimal, full precision, still supports range queries
+{ price: dec("19.99") }
+
+// Also fine: scaled to cents, integer, still supports range queries
+{ priceCents: 1999 }
+
+// Throws InvalidValueError: 19.99 is not a valid i32
+{ price: 19.99 }
 ```
 
 ## 10. Model Related Data with Shared Attributes
 
-Link entities together using a shared attribute key. This is Arkiv's version of foreign keys:
+Link entities together with a shared attribute key. This is Arkiv's version of foreign keys:
 
 ```ts
 // Proposal entity
-attributes: [{ key: "type", value: "proposal" }]
+attributes: { type: "proposal" }
 
 // Vote entities reference the proposal
-attributes: [
-  { key: "type", value: "vote" },
-  { key: "proposalKey", value: proposalEntityKey },
-]
+attributes: {
+  type: "vote",
+  proposalKey: proposalEntityKey,
+}
 
 // Query all votes for a proposal
 await publicClient
@@ -201,8 +208,8 @@ await publicClient
 
 ## 11. Understand $owner vs $creator
 
-- **`$owner`** — The wallet that currently owns the entity. Can change via ownership transfer. Use `.ownedBy()` to check who can modify/delete.
-- **`$creator`** — The wallet that originally created the entity. Immutable. Use `.createdBy()` for tamper-proof source verification.
+- **`$owner`**: the wallet that currently owns the entity. It can change when the owner transfers the entity. Use `.ownedBy()` to check who can modify or delete it.
+- **`$creator`**: the wallet that first created the entity. This field never changes. Use `.createdBy()` for tamper-evident source verification.
 
 ## 12. Filter by Creator for Trusted Data
 
@@ -233,7 +240,7 @@ const trustedPosts = await publicClient
 ```
 
 <Aside type="tip">
-`$creator` is immutable — no one can fake it. Even if someone creates an entity with your project attribute, it won't pass the `.createdBy()` filter.
+`$creator` is immutable: no one can fake it. Even if someone creates an entity with your project attribute, it will not pass the `.createdBy()` filter.
 </Aside>
 
 ## 13. Handle Errors Gracefully
@@ -247,7 +254,7 @@ try {
   // - User rejected the transaction (MetaMask dismissed)
   // - Insufficient funds / gas
   // - Network error (RPC unreachable)
-  // - Entity already expired (for update/extend)
+  // - Entity already deleted or expired (for patch/extend)
   console.error("Transaction failed:", error)
 }
 ```
@@ -279,19 +286,19 @@ function parsePost(entity: any): Post {
 
 ## 15. Model Lists with Relationship Entities
 
-Arkiv attributes are flat key-value pairs — there is no array type. Don't try to encode lists into attributes:
+Arkiv attributes are flat key-value pairs: there is no array type. Do not try to encode lists into attributes:
 
 ```ts
-// BAD — can't query "all profiles with skill frontend"
-attributes: [
-  { key: "skills_0", value: "frontend" },
-  { key: "skills_1", value: "backend" },
-]
+// BAD: cannot query "all profiles with skill frontend"
+attributes: {
+  skills_0: "frontend",
+  skills_1: "backend",
+}
 
-// BAD — can't query individual skills
-attributes: [
-  { key: "skills", value: "frontend, backend, devops" },
-]
+// BAD: cannot query individual skills
+attributes: {
+  skills: "frontend, backend, devops",
+}
 ```
 
 Instead, create separate **relationship entities**:
@@ -301,27 +308,27 @@ Instead, create separate **relationship entities**:
 const { entityKey: profileKey } = await walletClient.createEntity({
   payload: jsonToPayload({ name: "Alice", bio: "Full-stack dev" }),
   contentType: "application/json",
-  attributes: [
-    PROJECT_ATTRIBUTE,
-    { key: "entityType", value: "profile" },
-    { key: "profileId", value: "alice-123" },
-  ],
-  expiresIn: ExpirationTime.fromDays(30),
+  attributes: {
+    [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value,
+    entityType: "profile",
+    profileId: "alice-123",
+  },
+  expires: ExpirationTime.fromDays(30),
 })
 
 // 2. One relationship entity per skill
 const skills = ["frontend", "backend", "devops"]
-await walletClient.mutateEntities({
+await walletClient.executeBatch({
   creates: skills.map((skill) => ({
     payload: jsonToPayload({ profileId: "alice-123", skill }),
     contentType: "application/json",
-    attributes: [
-      PROJECT_ATTRIBUTE,
-      { key: "entityType", value: "profileSkill" },
-      { key: "profileId", value: "alice-123" },
-      { key: "skill", value: skill },
-    ],
-    expiresIn: ExpirationTime.fromDays(30),
+    attributes: {
+      [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value,
+      entityType: "profileSkill",
+      profileId: "alice-123",
+      skill,
+    },
+    expires: ExpirationTime.fromDays(30),
   })),
 })
 
@@ -336,33 +343,30 @@ const frontendDevs = await publicClient
   .fetch()
 ```
 
-## 16. Remember That updateEntity Is a Full Replace
+## 16. Remember That patchEntity Only Changes What You Name
 
-`updateEntity` is a full replace, not a patch: any attribute you don't re-send is removed, and the payload, content type, and expiration are overwritten. To change only some fields, read the entity first and re-send the complete state with your changes applied:
+`patchEntity` is a partial update, not a full replace. Attributes you do not name in `set` or `unset` keep their value. The payload and the content type stay as they are unless you pass new ones. That makes the common "change one field" case simple:
 
 ```ts
-// Bad — wipes every attribute except "status", replaces the payload
-await walletClient.updateEntity({
+// Good: only the named attribute changes, everything else is untouched
+await walletClient.patchEntity({
   entityKey,
-  payload: jsonToPayload({}),
-  contentType: "application/json",
-  attributes: [{ key: "status", value: "done" }],
-  expiresIn: ExpirationTime.fromDays(7),
-})
-
-// Good — read, modify, write back the full entity
-const entity = await publicClient.getEntity(entityKey)
-
-await walletClient.updateEntity({
-  entityKey,
-  payload: entity.payload,
-  contentType: entity.contentType,
-  attributes: [
-    ...entity.attributes.filter((attr) => attr.key !== "status"),
-    { key: "status", value: "done" },
-  ],
-  expiresIn: ExpirationTime.fromDays(7),
+  set: { status: "done" },
 })
 ```
 
-See [Mutating Data](/typescript-sdk/mutating-data/#update-entity) for details.
+For a full replacement, patching is not the right tool. It never removes an attribute you do not name in `unset`. To get a new payload and a clean attribute set, delete the entity and create it again:
+
+```ts
+// Full replacement: delete the old entity, create a new one with the exact state you want
+await walletClient.deleteEntity({ entityKey })
+
+const { entityKey: newEntityKey } = await walletClient.createEntity({
+  payload: jsonToPayload({ title: "New content" }),
+  contentType: "application/json",
+  attributes: { status: "done" },
+  expires: ExpirationTime.fromDays(7),
+})
+```
+
+See [Mutating Data](/typescript-sdk/mutating-data/#patch-entity) for details.

@@ -1,11 +1,11 @@
 ---
 title: Querying Data
-description: Query entities from Arkiv using the TypeScript SDK — field selection, operators, pagination, and filtering.
+description: "Query entities from Arkiv using the TypeScript SDK: field selection, operators, pagination, and filtering."
 ---
 
 import { Aside } from '@astrojs/starlight/components';
 
-Read entities from Arkiv using the TypeScript SDK's public client and its chainable query builder — with support for field selection, filtering, pagination, and payload retrieval.
+This page shows you how to read entities from Arkiv with the public client of the TypeScript SDK. The client gives you a chainable query builder with field selection, filtering, pagination, and payload retrieval.
 
 ## PublicClient Setup
 
@@ -13,18 +13,18 @@ All queries use the read-only public client:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const publicClient = createPublicClient({
-  chain: braga,
+  chain: tiramisu,
   transport: http(),
 })
 ```
 
 ## Building Queries
 
-Use `select()` to declare which entity fields you want returned, then chain filters and execute with `.fetch()`:
+Use `select()` to name the entity fields that you want, then chain filters and run the query with `.fetch()`:
 
 ```ts
 import { eq, gt } from "@arkiv-network/sdk/query"
@@ -40,7 +40,7 @@ console.log('Found:', result.entities.length)
 
 ### Selecting Fields
 
-Pass nothing (or `"*"`) to fetch everything, or pass an object to fetch only specific fields:
+Pass nothing, or `"*"`, to fetch every field. Pass an object to fetch only specific fields:
 
 ```ts
 // All fields
@@ -53,24 +53,24 @@ await publicClient
   .fetch()
 ```
 
-Available fields: `key`, `owner`, `creator`, `contentType`, `payload`, `attributes`, `expiresAtBlock`, `createdAtBlock`, `lastModifiedAtBlock`, `transactionIndexInBlock`, `operationIndexInTransaction`.
+Available fields: `key`, `owner`, `creator`, `createdAt`, `updatedAt`, `expiresAt`, `creationFlags`, `contentType`, `payload`, `attributeSchema`, `attributes`.
 
 <Aside>
-**Select only what you need.** Every selected field is fetched over the network, so requesting data you won't use makes queries slower. Note that every field is opt-in — including `key`.
+Select only what you need. The network sends every selected field, so an unused field makes the query slower. Each field is opt-in, including `key`.
 </Aside>
 
-The result type is inferred from your selection. The `toText()` / `toJson()` payload helpers are available only when you select `payload`.
+The result type comes from your selection. The `toText()` and `toJson()` payload helpers work only when you select `payload`.
 
 ```ts
 const [entity] = (await publicClient.select({ owner: true, payload: true }).fetch()).entities
 
-entity.owner     // ✅ Hex
-entity.toJson()  // ✅ payload was selected
-entity.creator   // ❌ compile error — not selected
+entity.owner     // OK: Hex
+entity.toJson()  // OK: payload was selected
+entity.creator   // Compile error: not selected
 ```
 
 <Aside type="caution">
-Pass the selection **inline**. A selection stored in a variable widens its `true` values to `boolean`, so the result type can't be narrowed. If you need to reuse one, annotate it `as const`:
+Pass the selection inline. A selection stored in a variable widens its `true` values to `boolean`, so the result type loses its precision. To reuse a selection, annotate it `as const`:
 
 ```ts
 const fields = { owner: true, payload: true } as const
@@ -91,23 +91,23 @@ await publicClient.select(fields).where(eq('type', 'note')).fetch()
 
 ### Passing Multiple Conditions
 
-You can chain `.where()` calls, pass several conditions as arguments, or pass an array — all conditions are combined with AND:
+You can chain `.where()` calls, pass several conditions as arguments, or pass an array. Every form combines the conditions with AND:
 
 ```ts
-// Chained — each .where() adds an AND condition
+// Chained: each .where() adds an AND condition
 const result = await publicClient
   .select({ key: true, payload: true })
   .where(eq('type', 'note'))
   .where(gt('priority', 3))
   .fetch()
 
-// Varargs — equivalent to above
+// Varargs: same result as above
 const result = await publicClient
   .select({ key: true, payload: true })
   .where(eq('type', 'note'), gt('priority', 3))
   .fetch()
 
-// Array syntax — also equivalent
+// Array syntax: also the same result
 const result = await publicClient
   .select({ key: true, payload: true })
   .where([eq('type', 'note'), gt('priority', 3)])
@@ -117,22 +117,29 @@ const result = await publicClient
 ## Query Operators
 
 ```ts
-import { eq, gt, lt, gte, lte } from "@arkiv-network/sdk/query"
+import { eq, gt, lt, gte, lte, startsWith, not } from "@arkiv-network/sdk/query"
 
-eq('type', 'note')        // type = "note"
-gt('priority', 3)          // priority > 3
-lt('price', 1000)          // price < 1000
-gte('created', timestamp)  // created >= timestamp
-lte('expiration', limit)   // expiration <= limit
+eq('type', 'note')          // type = "note"
+gt('priority', 3)           // priority > 3
+lt('price', 1000)           // price < 1000
+gte('created', timestamp)   // created >= timestamp
+lte('expiration', limit)    // expiration <= limit
+startsWith('title', 'RFC')  // title starts with "RFC"
 ```
 
+<Aside type="caution" title="Three exported predicates do not work yet">
+The SDK also exports `ne()`, `exists()` and `hasType()`. The node does not implement them at this version. A query that uses one of them fails to parse.
+
+For a not-equal test, write `not(eq('type', 'archived'))` instead. This also matches entities that never set the attribute, because it is the full complement.
+</Aside>
+
 <Aside>
-String attributes only support `eq()`. Numeric attributes support all comparison operators. Always store numbers as numeric attributes if you need range queries.
+String attributes support `eq()` and `startsWith()`. Numeric attributes (`i32`, `u64`, `u256`, `dec`) support every comparison operator. Store numbers as numeric attributes to run range queries.
 </Aside>
 
 ### Combining with and() / or()
 
-Nest conditions with `and()` and `or()`. Both accept the predicates as separate arguments or as a single array:
+Nest conditions with `and()` and `or()`. Both functions accept the predicates as separate arguments, or as a single array:
 
 ```ts
 import { and, or, eq, gt } from "@arkiv-network/sdk/query"
@@ -150,8 +157,8 @@ const result = await publicClient
 
 Every entity has two metadata fields:
 
-- **`$owner`** — The wallet that currently owns the entity. Can change via ownership transfer.
-- **`$creator`** — The wallet that originally created the entity. Immutable — can never change.
+- **`$owner`**: the wallet that currently owns the entity. It can change when the owner transfers the entity.
+- **`$creator`**: the wallet that first created the entity. This field is immutable, so it never changes.
 
 ```ts
 // Filter by current owner
@@ -161,7 +168,7 @@ const owned = await publicClient
   .ownedBy('0xOwnerAddress')
   .fetch()
 
-// Filter by original creator (tamper-proof)
+// Filter by original creator (tamper-evident)
 const created = await publicClient
   .select({ key: true, creator: true, payload: true })
   .where(eq('type', 'note'))
@@ -170,7 +177,7 @@ const created = await publicClient
 ```
 
 <Aside type="tip">
-Use `.createdBy()` when you need a tamper-proof guarantee of who wrote the data (e.g., verifying data came from your trusted backend). Since `$creator` is immutable, it cannot be spoofed after creation.
+Use `.createdBy()` for a tamper-evident guarantee of who wrote the data, for example to make sure that data came from your trusted backend. The `$creator` field is immutable, so no one can spoof it after creation.
 </Aside>
 
 ## Getting a Single Entity
@@ -184,6 +191,8 @@ const entity = await publicClient.getEntity(entityKey)
 const data = entity.toJson()   // JSON payload
 const text = entity.toText()   // Text payload
 ```
+
+`getEntity()` always returns every field populated, so you do not need a selection.
 
 ## Reading Results
 
@@ -201,19 +210,19 @@ for (const entity of result.entities) {
   // Access entity key (key was selected)
   console.log('Key:', entity.key)
 
-  // Access attributes (attributes were selected)
-  for (const attr of entity.attributes) {
-    console.log(`${attr.key}: ${attr.value}`)
+  // Access attributes (attributes were selected): an object keyed by name
+  for (const [name, attribute] of Object.entries(entity.attributes)) {
+    console.log(`${name}: ${attribute.value}`)
   }
 }
 ```
 
 ## Pagination
 
-Arkiv uses cursor-based pagination. Results per page are capped at 200.
+Arkiv uses cursor-based pagination. A page holds at most 200 results.
 
 ```ts
-const result = await publicClient
+let result = await publicClient
   .select({ key: true, payload: true })
   .where(eq('type', 'note'))
   .limit(10)
@@ -221,16 +230,16 @@ const result = await publicClient
 
 console.log('Page 1:', result.entities.length)
 
-// Check for more pages
+// More pages: next() returns a new QueryResult, it does not change this one
 if (result.hasNextPage()) {
-  await result.next()
+  result = await result.next()
   console.log('Page 2:', result.entities.length)
 }
 ```
 
 ## Sorting Results
 
-The network always returns matching entities **newest first**. Ordering by anything else is not supported server-side. To sort by an attribute, fetch the entities and sort them in JavaScript:
+The network always returns matching entities newest first. The server does not support any other order. To sort by an attribute, fetch the entities, then sort them in JavaScript:
 
 ```ts
 const { entities } = await publicClient
@@ -240,20 +249,20 @@ const { entities } = await publicClient
 
 // Read the numeric "priority" attribute off an entity
 const priorityOf = (entity: (typeof entities)[number]) =>
-  Number(entity.attributes.find((attr) => attr.key === 'priority')?.value ?? 0)
+  Number(entity.attributes.priority?.value ?? 0)
 
 // Highest priority first
 entities.sort((a, b) => priorityOf(b) - priorityOf(a))
 ```
 
 <Aside type="caution">
-When sorting client-side, remember that `.limit(n)` caps the results **before** your sort — it gives you the n *newest* matches, not the top n by your attribute. To get a true top n, fetch all matching entities (paginating if needed), then sort and slice.
+`.limit(n)` caps the results before your sort runs. As a result, you get the n newest matches, not the top n by your attribute. For a true top n, fetch all matching entities, paginate if needed, then sort and slice the results.
 </Aside>
 
 <Aside type="caution">
-Older SDK versions exposed `orderBy()` and the `asc()` / `desc()` helpers. They are **deprecated** and have no effect on the returned order - sort client-side instead.
+Older SDK versions had `orderBy()` and the `asc()` and `desc()` helpers. Version 0.8.0 removed them. Sort your results in JavaScript instead.
 </Aside>
 
 :::caution[String pattern matching]
-The protocol supports glob matching on string attributes (`attribute ~ "My_Project_*"`), but the operator is not yet exposed in the TypeScript SDK. If you need pattern matching today, use the [JSON-RPC API](/json-rpc/querying-data/) directly.
+The SDK supports prefix matching on string attributes with `startsWith("name", "prefix")`. The TypeScript SDK does not yet support full glob matching. For that, use the [JSON-RPC API](/json-rpc/querying-data/#query-syntax) directly.
 :::

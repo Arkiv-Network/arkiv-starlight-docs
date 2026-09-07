@@ -5,15 +5,11 @@ description: 'Wire up the p5.js canvas, gallery UI, event handlers, and launch t
 
 import { Code, FileTree, Steps, Aside } from '@astrojs/starlight/components';
 
-In this final part, we'll build the main application file that ties everything together — wallet connection, the p5.js drawing canvas, saving sketches, and rendering the gallery. Then we'll add some styles and run it!
-
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
-</Aside>
+In this final part, you build the main application file. This file connects the wallet, the p5.js drawing canvas, the sketch-saving code, and the gallery. Then you add styles and run the app.
 
 ## 1. Main Application Logic
 
-Open `src/main.ts` and let's build it step by step.
+Open `src/main.ts` and build it step by step.
 
 <FileTree>
 
@@ -29,7 +25,7 @@ Open `src/main.ts` and let's build it step by step.
 
 ### Step 1: Imports and DOM References
 
-First, import our modules from the previous steps and grab references to all the HTML elements we'll be interacting with.
+First, import the modules from the previous steps. Then get a reference to each HTML element that the app uses.
 
 <Code
   code={`import "./style.css";
@@ -55,7 +51,7 @@ const canvasContainer = document.getElementById(
 
 ### Step 2: Wallet Connection Handler
 
-When the user clicks "Connect MetaMask", we call `connectWallet()` from Step 1, display the abbreviated address, and load their existing sketches.
+When the user clicks "Connect MetaMask", the app calls `connectWallet()` from step 1. It then shows the short address and loads the sketches of the user.
 
 <Code
   code={`import "./style.css";
@@ -98,7 +94,7 @@ connectBtn.addEventListener("click", async () => {
 
 ### Step 3: Gallery Rendering
 
-Add the functions that load sketches from Arkiv and render them as image thumbnails with explorer links. Each sketch in the gallery includes a link to verify it on the Arkiv Braga Explorer.
+Add the functions that load sketches from Arkiv and show them as image thumbnails.
 
 <Code
   code={`import "./style.css";
@@ -160,21 +156,23 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
-            \${sketch.id.slice(0, 12)}...
-          </a>
+          <span class="entity-key">\${sketch.id.slice(0, 12)}...</span>
         </div>\`;
     })
     .join("");
 }`}
   lang="ts"
   title="src/main.ts"
-  ins={[34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65]}
+  ins={[34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64]}
 />
+
+<Aside>
+Every sketch in this list is a real Arkiv entity. The short string under each thumbnail is its entity key. This key is how you tell entities apart. To see the full entity, open it in the [Tiramisu explorer](https://indexer.tiramisu.db-chain.testnet.arkiv.network).
+</Aside>
 
 ### Step 4: Drawing Canvas
 
-Set up a p5.js canvas for mouse-based drawing. The canvas fills its container and draws black lines when the mouse is pressed.
+Set up a p5.js canvas for mouse-based drawing. The canvas fills its container. It draws a black line while the user holds the mouse button down.
 
 <Code
   code={`import "./style.css";
@@ -236,9 +234,7 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
-            \${sketch.id.slice(0, 12)}...
-          </a>
+          <span class="entity-key">\${sketch.id.slice(0, 12)}...</span>
         </div>\`;
     })
     .join("");
@@ -262,12 +258,12 @@ const sketchFn = (p: p5) => {
 p5Instance = new p5(sketchFn, canvasContainer);`}
   lang="ts"
   title="src/main.ts"
-  ins={[66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81]}
+  ins={[65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80]}
 />
 
 ### Step 5: Save and Reset Handlers
 
-Finally, add the event handlers for the "Reset" and "Save" buttons. Resetting clears the canvas to white. Saving captures the canvas as an image, stores it on Arkiv via MetaMask, and refreshes the gallery.
+Finally, add the event handlers for the "Reset" and "Save" buttons. The reset handler clears the canvas to white. The save handler captures the canvas as an image, stores it on Arkiv through MetaMask, and refreshes the gallery.
 
 <Code
   code={`import "./style.css";
@@ -329,9 +325,7 @@ function renderSketchList() {
         <div class="sketch-item">
           <img src="\${sketch.imageData}" alt="Sketch" />
           <div class="sketch-info"><small>\${date}</small></div>
-          <a href="https://explorer.braga.hoodi.arkiv.network/entity/\${sketch.id}" target="_blank" class="entity-link">
-            \${sketch.id.slice(0, 12)}...
-          </a>
+          <span class="entity-key">\${sketch.id.slice(0, 12)}...</span>
         </div>\`;
     })
     .join("");
@@ -386,7 +380,7 @@ saveBtn.addEventListener("click", async () => {
 
 ## 2. CSS Styling
 
-Add styles in `src/style.css` to make the app look clean and usable.
+Add styles in `src/style.css` to make the app clean and usable.
 
 <FileTree>
 
@@ -424,16 +418,11 @@ h2 { font-size: 1.2rem; color: #4a5568; margin-bottom: 15px; }
 .sketch-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
 .sketch-item img { width: 100%; border-radius: 4px; }
 .sketch-info { margin-top: 6px; color: #718096; }
-.entity-link { display: inline-block; margin-top: 4px; color: #4299e1; font-size: 0.85rem; text-decoration: none; }
-.entity-link:hover { text-decoration: underline; }
+.entity-key { display: inline-block; margin-top: 4px; color: #718096; font-size: 0.85rem; font-family: monospace; }
 @media (max-width: 768px) { .container { flex-direction: column; } }
 ```
 
 ## 3. Running the App
-
-<Aside type="caution">
-This part needs a live network — connecting MetaMask, sending the save transaction and checking the explorer link all require Braga to be up. Braga was retired on 12 August 2026, and there's no public network until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
-</Aside>
 
 <Steps>
 
@@ -443,34 +432,34 @@ This part needs a live network — connecting MetaMask, sending the save transac
     npm run dev
     ```
 
-    Vite will start a local server, usually at `http://localhost:5173`.
+    Vite starts a local server, usually at `http://localhost:5173`.
 
-2. **Connect MetaMask:** Click "Connect MetaMask" in the app. MetaMask will prompt you to switch to the Braga testnet (or add it if it's not configured yet), then connect your account.
+2. **Connect MetaMask.** Click "Connect MetaMask" in the app. MetaMask prompts you to switch to Tiramisu, or to add it if needed, then connects your account.
 
-3. **Draw and save:** Draw on the canvas with your mouse, then click "Save". MetaMask will ask you to confirm the transaction to store your sketch on Arkiv.
+3. **Draw and save.** Draw on the canvas with your mouse, then click "Save". MetaMask asks you to approve the transaction that stores your sketch on Arkiv.
 
-4. **View your gallery:** After the transaction confirms, your sketch will appear in the "Recent Sketches" panel on the left. Each sketch links to the [Arkiv Braga Explorer](https://explorer.braga.hoodi.arkiv.network/) so you can verify it on-chain.
+4. **View your gallery.** After the network includes the transaction, your sketch appears in the "Recent Sketches" panel on the left.
 
 </Steps>
 
 ## Summary
 
-Congratulations! You have successfully built a browser-based application with Web3 guarantees.
+You built a browser-based application with Web3 guarantees.
 
-- You created a **MetaMask wallet integration** that connects users to Arkiv without requiring them to expose a private key.
-- You built a **p5.js drawing canvas** and stored user-generated artwork as entities on the Arkiv blockchain.
-- You learned how to use `custom(window.ethereum)` as a transport for browser wallet signing, as opposed to server-side `privateKeyToAccount()`.
-- You used the **query builder** to filter entities by owner and attributes, displaying them in a gallery.
+- You created a MetaMask wallet integration that connects users to Arkiv without exposing a private key.
+- You built a p5.js drawing canvas and stored user-generated artwork as entities on Arkiv.
+- You used `custom(window.ethereum)` as a transport for browser wallet signing. Server-side code uses `privateKeyToAccount()` instead.
+- You used the query builder to filter entities by owner and attributes, and to show them in a gallery.
 
 ## Full Source Code
 
-You can find the complete source code for this tutorial on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial
+The complete source code for this tutorial is on GitHub: https://github.com/Arkiv-Network/learn-arkiv/tree/main/tutorial-source-code/metamask-tutorial
 
 ## Next Steps
 
-This project is a great starting point. Here are some ideas to expand on what you've learned:
+This project is a good starting point. Here are some ideas to extend it:
 
-- **Add a color picker and brush size control** to make the drawing tools more expressive.
-- **Implement pagination** for loading more sketches beyond the 9-item limit.
-- **Add the ability to delete your own entities** using `mutateEntities` with the `deletes` option.
-- **Add date range filtering** to browse sketches by time period using Arkiv's query builder.
+- Add a color picker and a brush-size control to make the drawing tools more expressive.
+- Add pagination to load more sketches beyond the 9-item limit.
+- Add a way to delete your own entities with `executeBatch` and its `deletes` option.
+- Add a date-range filter to browse sketches by time period with the query builder of Arkiv.

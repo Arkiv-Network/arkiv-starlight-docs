@@ -1,0 +1,48 @@
+---
+title: Tiramisu
+description: Tiramisu is Arkiv's current public testnet. This page gives the chain ID, RPC endpoints, faucet, and setup steps.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Tiramisu is Arkiv's current public testnet. You can build and test your app against a live network.
+
+## Connect your app
+
+Import the [`tiramisu`](/typescript-sdk/api-reference/chains/variables/tiramisu/) chain from the SDK. Pass the chain to a client:
+
+```ts
+import { createPublicClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+
+const client = createPublicClient({
+  chain: tiramisu,
+  transport: http(),
+})
+```
+
+For the full setup, see [Installation](/start-here/installation/).
+
+## Network reference
+
+| Property          | Value                                                    |
+| ----------------- | -------------------------------------------------------- |
+| Chain ID          | `7738577` (`0x7614d1`)                                   |
+| HTTP RPC          | `https://rpc.tiramisu.db-chain.testnet.arkiv.network`    |
+| WebSocket RPC     | `wss://rpc.tiramisu.db-chain.testnet.arkiv.network`      |
+| Native gas token  | GLM                                                      |
+| Faucet            | [hub.arkiv.network/faucet](https://hub.arkiv.network/faucet) |
+| Explorer          | [indexer.tiramisu.db-chain.testnet.arkiv.network](https://indexer.tiramisu.db-chain.testnet.arkiv.network) |
+
+<Aside type="tip">
+If you use a raw JSON-RPC client instead of the SDK, get the chain ID and RPC URL from the table. Add them to your client settings.
+</Aside>
+
+## Get test GLM
+
+Arkiv uses GLM to pay for transactions. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
+
+## Get help
+
+If requests to the RPC fail, or you have another problem, ask in [Discord](https://discord.gg/arkiv). A team member is usually available.

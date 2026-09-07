@@ -1,17 +1,17 @@
 ---
 title: Installation
-description: Install the Arkiv TypeScript SDK and create your first entity.
+description: Install the Arkiv TypeScript SDK. Create your first entity.
 ---
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026 — see the [Braga page](/networks/braga/) for the full story. You can still install the SDK and read through the code below, but you can't run it against a public network until the next testnet arrives in September 2026. A limited devnet is available in the meantime — ask about access on [Discord](https://discord.gg/arkiv).
+<Aside type="tip">
+This page connects you to [Tiramisu](/networks/tiramisu/), the current public testnet of Arkiv. You need GLM to pay for transactions. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
 </Aside>
 
-Arkiv provides an official TypeScript/JavaScript SDK — [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) — that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event subscriptions, and payload encoding.
+Arkiv provides an official TypeScript/JavaScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event watching, and payload encoding.
 
-The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency**, so install `viem` alongside the SDK.
+The SDK builds on [viem](https://viem.sh). It declares viem as a **peer dependency**. Install `viem` alongside the SDK.
 
 ## Install the SDK
 
@@ -32,34 +32,34 @@ The SDK builds on [viem](https://viem.sh) and declares it as a **peer dependency
 
 ### WalletClient (read/write)
 
-Requires a private key. Use for creating, updating, and deleting entities:
+WalletClient needs a private key. Use it to create, patch, and delete entities:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
-  chain: braga,
+  chain: tiramisu,
   transport: http(),
   account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
 })
 ```
 
-<Aside type="caution">Keep your private key in environment variables. Never hardcode it.</Aside>
+<Aside type="caution">Keep your private key in environment variables. Do not hardcode it.</Aside>
 
 ### PublicClient (read-only)
 
-No private key needed. Use for queries — safe for frontend use:
+PublicClient needs no private key. Use it for queries. It is safe for frontend use:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const publicClient = createPublicClient({
-  chain: braga,
+  chain: tiramisu,
   transport: http(),
 })
 ```
@@ -94,25 +94,25 @@ const publicClient = createPublicClient({
    PRIVATE_KEY=0xYOUR_PRIVATE_KEY_HERE
    ```
 
-   Arkiv chains use GLM as the native gas token. The Braga faucet went offline when Braga was retired on 12 August 2026 — see the [Braga page](/networks/braga/) for what's next.
+   Arkiv chains use GLM as the native gas token. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
 
 3. **Write your first entity**
 
    ```ts title="hello.ts"
-   import { createWalletClient, createPublicClient } from '@arkiv-network/sdk';
+   import { createWalletClient, createPublicClient, ExpirationTime } from '@arkiv-network/sdk';
    import { stringToPayload } from '@arkiv-network/sdk/utils';
-   import { braga } from '@arkiv-network/sdk/chains';
+   import { tiramisu } from '@arkiv-network/sdk/chains';
    import { http } from 'viem';
    import { privateKeyToAccount } from 'viem/accounts';
 
    const walletClient = createWalletClient({
-     chain: braga,
+     chain: tiramisu,
      transport: http(),
      account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
    });
 
    const publicClient = createPublicClient({
-     chain: braga,
+     chain: tiramisu,
      transport: http(),
    });
 
@@ -120,8 +120,8 @@ const publicClient = createPublicClient({
    const { entityKey, txHash } = await walletClient.createEntity({
      payload: stringToPayload('Hello, Arkiv!'),
      contentType: 'text/plain',
-     attributes: [{ key: 'type', value: 'greeting' }],
-     expiresIn: 3600,
+     attributes: { type: 'greeting' },
+     expires: ExpirationTime.fromHours(1),
    });
 
    console.log('Entity created:', entityKey);
@@ -149,16 +149,14 @@ const publicClient = createPublicClient({
      </TabItem>
    </Tabs>
 
-   With Braga retired, this script has nowhere to send its transaction until the next public testnet ships.
-
 </Steps>
 
 <Aside type="tip">
-Most real applications store JSON data. Use `jsonToPayload` instead of `stringToPayload` for structured data — see [Mutating Data](/typescript-sdk/mutating-data/#payload-helpers) for details.
+Most real applications store JSON data. Use `jsonToPayload` instead of `stringToPayload` for structured data. See [Mutating Data](/typescript-sdk/mutating-data/#payload-helpers) for details.
 </Aside>
 
 <Aside>
-All entities in Arkiv are stored in a shared database. Tag your data with a unique project attribute so your queries only return your app's entities. See [Best Practices](/typescript-sdk/best-practices/#1-always-use-a-project-attribute).
+Arkiv stores all entities in a shared database. Tag your data with a unique project attribute. Then your queries return only your app's entities. See [Best Practices](/typescript-sdk/best-practices/#1-always-use-a-project-attribute).
 </Aside>
 
 ## Browser Usage (CDN)
@@ -168,6 +166,6 @@ For static HTML/JS pages without a bundler:
 ```js
 import { createPublicClient } from 'https://esm.sh/@arkiv-network/sdk?target=es2022&bundle-deps'
 import { eq } from 'https://esm.sh/@arkiv-network/sdk/query?target=es2022&bundle-deps'
-import { braga } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps'
+import { tiramisu } from 'https://esm.sh/@arkiv-network/sdk/chains?target=es2022&bundle-deps'
 import { http } from 'https://esm.sh/viem?target=es2022'
 ```
