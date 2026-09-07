@@ -4,10 +4,9 @@ description: Install the Arkiv TypeScript SDK. Create your first entity.
 ---
 
 import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import NetworkNote from '../../../components/NetworkNote.astro';
 
-<Aside type="tip">
-This page connects you to [Tiramisu](/networks/tiramisu/), the current public testnet of Arkiv. You need GLM to pay for transactions. Get test GLM from the [faucet](https://hub.arkiv.network/faucet).
-</Aside>
+<NetworkNote />
 
 Arkiv provides an official TypeScript/JavaScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), that works in Node.js, Bun, and the browser. It handles client creation, queries, mutations, event watching, and payload encoding.
 

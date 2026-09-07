@@ -6,6 +6,9 @@ description: 'Build a dashboard with HTML, CSS, and JS to query Arkiv and displa
 import { Code } from '@astrojs/starlight/components';
 import { FileTree } from '@astrojs/starlight/components';
 import { Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../../components/NetworkNote.astro';
+
+<NetworkNote />
 
 The backend now publishes data. Build the frontend that consumes it. This step uses a public client from the Arkiv SDK, which reads data without a private key.
 
