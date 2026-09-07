@@ -4,6 +4,9 @@ description: 'Create the data layer for saving sketches to Arkiv and querying th
 ---
 
 import { Code, FileTree, Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../../components/NetworkNote.astro';
+
+<NetworkNote />
 
 In this part, you build the data module. This module saves sketches to Arkiv and loads the gallery of the user. It uses two core SDK operations: creating entities, and querying entities by owner.
 

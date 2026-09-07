@@ -1,0 +1,22 @@
+---
+// "This guide targets network X" line for tutorial, quickstart, and SDK pages.
+// One place to edit when the public testnet changes.
+const network = "Tiramisu";
+const networkUrl = "/networks/tiramisu/";
+---
+
+<p class="network-note">
+	This guide targets the {network} testnet. Check{" "}
+	<a href={networkUrl}>Networks</a> for current testnets and faucets.
+</p>
+
+<style>
+	.network-note {
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-2);
+		background: var(--sl-color-blue-low);
+		border-left: 2px solid var(--sl-color-blue);
+		padding: 0.5rem 0.75rem;
+		border-radius: 0.25rem;
+	}
+</style>
