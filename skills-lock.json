@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "arkiv-best-practices": {
+      "source": "Arkiv-Network/skills",
+      "sourceType": "github",
+      "skillPath": "skills/arkiv-best-practices/SKILL.md",
+      "computedHash": "942220bb153f7d6ff229154c163a7c32f2305647158fb628210cec3abc302f8d"
+    },
+    "arkiv-feedback": {
+      "source": "Arkiv-Network/skills",
+      "sourceType": "github",
+      "skillPath": "skills/arkiv-feedback/SKILL.md",
+      "computedHash": "28f39844c6dd9a655b023a4490d5234c656c0d2cadb95522af9b056350acb0e2"
+    }
+  }
+}
