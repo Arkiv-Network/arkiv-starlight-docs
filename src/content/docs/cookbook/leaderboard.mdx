@@ -77,6 +77,11 @@ npm install @arkiv-network/sdk viem
    } from "./arkiv"
 
    export async function submitScore(player: string, name: string, score: number) {
+     // i32 rejects anything that is not a whole number, so check before writing
+     if (!Number.isInteger(score)) {
+       throw new Error(`Score must be a whole number, received ${score}`)
+     }
+
      const { entities } = await publicClient
        .select({ key: true, attributes: { score: true } })
        .where(
@@ -106,8 +111,11 @@ npm install @arkiv-network/sdk viem
 
      if (Number(existing.attributes.score?.value ?? 0) >= score) return
 
+     // Rewrite the payload too, so a player who renamed does not keep the old name
      await walletClient.patchEntity({
        entityKey: existing.key,
+       payload: jsonToPayload({ name }),
+       contentType: "application/json",
        set: { score: i32(score) },
      })
    }
@@ -115,6 +123,10 @@ npm install @arkiv-network/sdk viem
 
    <Aside>
    `i32(...)` stores the score as a 32-bit signed integer, which is what makes it comparable with `gt()` and `lt()`. A bare number defaults to the same type, but naming it is clearer and fails loudly on a non-integer. For a genuine decimal use `dec("4.5")` instead, and for anything that can outgrow two billion, such as a millisecond timestamp, use `u64(...)`.
+   </Aside>
+
+   <Aside type="caution">
+   The read and the write are two separate steps, and nothing reserves the player between them. Two submissions racing for the same new player can both find no entry and both create one, leaving a duplicate whose score never gets patched. Route writes through a single backend, or accept duplicates and collapse them when you rank.
    </Aside>
 
 3. **Read the top ten**
@@ -153,6 +165,10 @@ npm install @arkiv-network/sdk viem
    Do not add `.limit(10)` here. The limit applies before your sort, so you would rank the ten newest entries instead of the ten highest. A page holds at most 200 results: past that, follow `result.next()` and concatenate before sorting.
    </Aside>
 
+   <Aside type="caution">
+   `toJson()` returns `any`, and anyone can write an entity carrying your attributes, so the name above is coerced rather than trusted. For anything you render, parse the payload with a schema library such as zod or valibot.
+   </Aside>
+
 4. **Run it**
 
    ```ts title="main.ts"
@@ -169,40 +185,140 @@ npm install @arkiv-network/sdk viem
 
 </Steps>
 
+## Handling failures
+
+The SDK never retries. Every method throws, so a submission can fail because the value did not fit its type, because the wallet has no gas, or because the endpoint was unreachable.
+
+```ts title="submit-safely.ts"
+import { InvalidValueError } from "@arkiv-network/sdk"
+import { submitScore } from "./submit-score"
+
+try {
+  await submitScore("0x1111111111111111111111111111111111111111", "ada", 4200)
+} catch (error) {
+  if (error instanceof InvalidValueError) {
+    // the score did not fit an i32
+    console.log("Rejected score:", error.message)
+  } else {
+    // rejected transaction, insufficient gas, or an unreachable RPC endpoint
+    throw error
+  }
+}
+```
+
+## Submitting many scores at once
+
+Do not loop over `submitScore` to seed a board, and never fire the writes in parallel. Every write is a transaction, and two in flight from one wallet fetch the same nonce, so one of them is dropped. Send them as a single batch instead:
+
+```ts title="seed-scores.ts"
+import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+import { i32 } from "@arkiv-network/sdk/attr"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  walletClient,
+} from "./arkiv"
+
+const rows = [
+  { player: "0x1111111111111111111111111111111111111111", name: "ada", score: 4200 },
+  { player: "0x2222222222222222222222222222222222222222", name: "linus", score: 3100 },
+]
+
+await walletClient.executeBatch({
+  creates: rows.map((row) => ({
+    payload: jsonToPayload({ name: row.name }),
+    contentType: "application/json",
+    attributes: {
+      [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
+      entityType: "score",
+      player: row.player,
+      score: i32(row.score),
+    },
+    expires: ExpirationTime.fromDays(30),
+  })),
+})
+```
+
 ## Keeping the board honest
 
 Arkiv is a shared public database, so anyone can write an entity carrying your project attribute and your `entityType`. On a leaderboard that means anyone can post themselves a winning score.
 
 If a trusted backend submits every score, filter reads on the creator address as well:
 
-```ts
-const { entities } = await publicClient
-  .select({ payload: true, attributes: true })
-  .where(
-    eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-    eq("entityType", "score"),
-  )
-  .createdBy(YOUR_BACKEND_ADDRESS)
-  .fetch()
+```ts title="trusted-scores.ts"
+import { eq } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
+
+/** The wallet your backend signs score writes with. */
+const BACKEND_ADDRESS = "0x3333333333333333333333333333333333333333" as const
+
+export async function trustedScores() {
+  const { entities } = await publicClient
+    .select({ payload: true, attributes: true })
+    .where(
+      eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+      eq("entityType", "score"),
+    )
+    .createdBy(BACKEND_ADDRESS)
+    .fetch()
+
+  return entities
+}
 ```
 
-`$creator` is set at creation and never changes, so an injected entity cannot fake it. Note that `toJson()` returns `any`, so validate the payload with a schema library before you display it.
+`$creator` is set at creation and never changes, so an injected entity cannot fake it.
 
 ## Filtering the board
 
 Because the score is a numeric attribute, you can narrow the query on the server instead of fetching everything:
 
-```ts
-import { eq, gt } from "@arkiv-network/sdk/query"
+```ts title="high-scores.ts"
 import { i32 } from "@arkiv-network/sdk/attr"
+import { eq, gt } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
 
-// Only players above 1000 points
-.where(
-  eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-  eq("entityType", "score"),
-  gt("score", i32(1000)),
-)
+export async function highScores(minimum = 1000) {
+  const { entities } = await publicClient
+    .select({ payload: true, attributes: true })
+    .where(
+      eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+      eq("entityType", "score"),
+      gt("score", i32(minimum)),
+    )
+    .fetch()
+
+  return entities
+}
 ```
+
+## Keeping the board alive
+
+Scores in this recipe expire after thirty days, so an untouched board empties itself. That is the right default while you are building, but decide what you want before you ship.
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk"
+
+// Push an entry further out, before it expires
+await walletClient.extendEntity({
+  entityKey,
+  expires: ExpirationTime.fromDays(30),
+})
+
+// Or keep an all-time record for good
+expires: ExpirationTime.permanent()
+```
+
+<Aside type="tip">
+Start short and extend. Over-allocating expiry wastes storage fees, and an entity that already expired cannot be brought back.
+</Aside>
 
 ## Next steps
 
