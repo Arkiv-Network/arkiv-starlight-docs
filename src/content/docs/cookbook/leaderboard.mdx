@@ -1,0 +1,351 @@
+---
+title: Leaderboard
+description: Store player scores on Arkiv and read back a top-ten leaderboard with the TypeScript SDK.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+In this guide, you will learn how to create entities on Arkiv to store player scores and read back a top-ten leaderboard.
+
+This guide will show:
+- how to store a user's score as an attribute that can be filtered
+- how submitting a user's score creates an entity
+- how updating a user's score patches the entity
+- how to fetch every scores and sort them to display like a leaderboard
+
+## Prerequisites
+
+- [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) installed
+- [`viem`](https://www.npmjs.com/package/viem) installed
+- a wallet funded with testnet tokens from the [faucet](/networks/tiramisu/)
+- an [API key](/start-here/api-keys/) for the Tiramisu RPC endpoint
+
+```bash
+npm install @arkiv-network/sdk viem
+```
+
+## Create & Submit a Score
+
+<Steps>
+
+1. **Set up the clients**
+
+   We will first setup two clients:
+    - one `publicClient` for read-only queries
+    - one `walletClient` for write operations
+
+   The project attribute below scopes every entity you will create to your app only.
+
+   ```ts title="arkiv.ts"
+   import { createPublicClient, createWalletClient } from "@arkiv-network/sdk"
+   import { tiramisu } from "@arkiv-network/sdk/chains"
+   import { http } from "viem"
+   import { privateKeyToAccount } from "viem/accounts"
+
+   // Attribute name used to filter this project's entities.
+   export const PROJECT_ATTRIBUTE_NAME = "projectId" as const
+
+   // Replace with a globally unique string for your own app.
+   export const PROJECT_ATTRIBUTE_VALUE = "leaderboard-demo-7x9k" as const
+
+   const rpcUrl = `https://rpc.tiramisu.db-chain.testnet.arkiv.network/${process.env.ARKIV_API_KEY}`
+
+   export const publicClient = createPublicClient({
+     chain: tiramisu,
+     transport: http(rpcUrl),
+   })
+
+   export const walletClient = createWalletClient({
+     chain: tiramisu,
+     transport: http(rpcUrl),
+     account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
+   })
+   ```
+
+   <Aside type="caution">Always ensure to store sensitive information - such as the private key in this example - in environment variables.</Aside>
+
+   <Aside type="tip">
+   Anonymous access to the RPC endpoint is rate limited. Register a project on the [API keys page](/start-here/api-keys/) and pass the key in the RPC URL, as a `X-API-KEY` header, or as a bearer token.
+   </Aside>
+
+2. **Submit a score**
+
+   ```ts title="submit-score.ts"
+   import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+   import { i32 } from "@arkiv-network/sdk/attr"
+   import { eq } from "@arkiv-network/sdk/query"
+   import {
+     PROJECT_ATTRIBUTE_NAME,
+     PROJECT_ATTRIBUTE_VALUE,
+     publicClient,
+     walletClient,
+   } from "./arkiv"
+
+   export async function submitScore(player: string, name: string, score: number) {
+     // i32 rejects anything that is not a whole number, so check before writing
+     if (!Number.isInteger(score)) {
+       throw new Error(`Score must be a whole number, received ${score}`)
+     }
+
+    // Look for an existing entry for the player.
+     const { entities } = await publicClient
+       .select({ key: true, attributes: { score: true } })
+       .where(
+         eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+         eq("entityType", "score"),
+         eq("player", player),
+       )
+       .limit(1)
+       .fetch()
+
+     const existing = entities[0]
+
+     if (!existing) {
+      // Create one if there is none
+       await walletClient.createEntity({
+         payload: jsonToPayload({ name }),
+         contentType: "application/json",
+         attributes: {
+           [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
+           entityType: "score",
+           player,
+           score: i32(score),
+         },
+         expires: ExpirationTime.fromDays(30),
+       })
+       return
+     }
+
+     if (Number(existing.attributes.score?.value ?? 0) >= score) return
+
+    // Patch it if the new score is higher
+     // Rewrite the payload too, so a player who renamed does not keep the old name
+     await walletClient.patchEntity({
+       entityKey: existing.key,
+       payload: jsonToPayload({ name }),
+       contentType: "application/json",
+       set: { score: i32(score) },
+     })
+   }
+   ```
+
+   <Aside>
+   `i32(...)` stores the score as a 32-bit signed integer, which is what makes it comparable with `gt()` and `lt()`. A bare number defaults to the same type, but naming it is clearer and fails loudly on a non-integer. For a genuine decimal use `dec("4.5")` instead, and for anything that can outgrow two billion, such as a millisecond timestamp, use `u64(...)`.
+   </Aside>
+
+   <Aside type="caution">
+   The read and the write are two separate steps, and nothing reserves the player between them. Two submissions racing for the same new player can both find no entry and both create one, leaving a duplicate whose score never gets patched. Route writes through a single backend, or accept duplicates and collapse them when you rank.
+   </Aside>
+
+3. **Read the top ten**
+
+   Arkiv always returns matches newest first, and there is no server-side sort. Fetch every score entity, then rank them in JavaScript.
+
+   ```ts title="top-scores.ts"
+   import { eq } from "@arkiv-network/sdk/query"
+   import {
+     PROJECT_ATTRIBUTE_NAME,
+     PROJECT_ATTRIBUTE_VALUE,
+     publicClient,
+   } from "./arkiv"
+
+   export async function topScores(count = 10) {
+     const { entities } = await publicClient
+       .select({ payload: true, attributes: true })
+       .where(
+         eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+         eq("entityType", "score"),
+       )
+       .fetch()
+
+     return entities
+       .map((entity) => ({
+         name: String(entity.toJson().name ?? "anonymous"),
+         player: String(entity.attributes.player?.value),
+         score: Number(entity.attributes.score?.value ?? 0),
+       }))
+       .sort((a, b) => b.score - a.score)
+       .slice(0, count)
+   }
+   ```
+
+   <Aside type="caution">
+   Do not add `.limit(10)` here. The limit applies before your sort, so you would rank the ten newest entries instead of the ten highest. A page holds at most 200 results: past that, follow `result.next()` and concatenate before sorting.
+   </Aside>
+
+   <Aside type="caution">
+   `toJson()` returns `any`, and anyone can write an entity carrying your attributes, so the name above is coerced rather than trusted. For anything you render, parse the payload with a schema library such as zod or valibot.
+   </Aside>
+
+4. **Run it**
+
+   ```ts title="main.ts"
+   import { submitScore } from "./submit-score"
+   import { topScores } from "./top-scores"
+
+   await submitScore("0x1111111111111111111111111111111111111111", "ada", 4200)
+   await submitScore("0x2222222222222222222222222222222222222222", "linus", 3100)
+
+   for (const [rank, row] of (await topScores()).entries()) {
+     console.log(`${rank + 1}. ${row.name} - ${row.score}`)
+   }
+   ```
+
+</Steps>
+
+## Query examples
+
+### Filtering from legitimate entity creators
+
+Arkiv is a shared public database, so anyone can write an entity carrying your project attribute and your `entityType`. 
+
+For a leaderboard that means anyone can post themselves a winning score.
+
+If a trusted backend submits every score, filter reads on the creator address as well:
+
+```ts title="trusted-scores.ts"
+import { eq } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
+
+/** The wallet your backend signs score writes with. */
+const BACKEND_ADDRESS = "0x3333333333333333333333333333333333333333" as const
+
+export async function trustedScores() {
+  const { entities } = await publicClient
+    .select({ payload: true, attributes: true })
+    .where(
+      eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+      eq("entityType", "score"),
+    )
+    .createdBy(BACKEND_ADDRESS)
+    .fetch()
+
+  return entities
+}
+```
+
+`$creator` is set at creation and never changes, so an injected entity cannot fake it.
+
+### Filtering by scores
+
+Because the score is a numeric attribute, you can narrow the query on the server instead of fetching everything:
+
+```ts title="high-scores.ts"
+import { i32 } from "@arkiv-network/sdk/attr"
+import { eq, gt } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
+
+export async function highScores(minimum = 1000) {
+  const { entities } = await publicClient
+    .select({ payload: true, attributes: true })
+    .where(
+      eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+      eq("entityType", "score"),
+      gt("score", i32(minimum)),
+    )
+    .fetch()
+
+  return entities
+}
+```
+
+
+
+## Additional examples
+
+### Submitting many scores at once
+
+Use the function [`executeBatch`](/typescript-sdk/api-reference/main/functions/createwalletclient/#executebatch) to submit many scores at once.
+
+
+
+```ts title="seed-scores.ts"
+import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+import { i32 } from "@arkiv-network/sdk/attr"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  walletClient,
+} from "./arkiv"
+
+const rows = [
+  { player: "0x1111111111111111111111111111111111111111", name: "ada", score: 4200 },
+  { player: "0x2222222222222222222222222222222222222222", name: "linus", score: 3100 },
+]
+
+await walletClient.executeBatch({
+  creates: rows.map((row) => ({
+    payload: jsonToPayload({ name: row.name }),
+    contentType: "application/json",
+    attributes: {
+      [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
+      entityType: "score",
+      player: row.player,
+      score: i32(row.score),
+    },
+    expires: ExpirationTime.fromDays(30),
+  })),
+})
+```
+
+<Aside type="caution">
+Do not loop over `createEntity(...)`, as this will fire writes in parallel. 
+Every write is a transaction, and two writes in parallel from one wallet fetch the same nonce, so one of them will be dropped.
+This is why you should use [`executeBatch(...)`](/typescript-sdk/api-reference/main/functions/createwalletclient/#executebatch) function instead.
+</Aside>
+
+### Extend scores before expiry
+
+Scores in this recipe expire after thirty days, so an untouched board empties itself. That is the right default while you are building, but decide what you want before you ship.
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk"
+
+// Push an entry further out, before it expires
+await walletClient.extendEntity({
+  entityKey,
+  expires: ExpirationTime.fromDays(30),
+})
+
+// Or keep an all-time record for good
+expires: ExpirationTime.permanent()
+```
+
+<Aside type="tip">
+Start short and extend. Over-allocating expiry wastes storage fees, and an entity that already expired cannot be brought back.
+</Aside>
+
+### Handling failures
+
+The SDK never retries. Every method throws, so a submission can fail because the value did not fit its type, because the wallet has no gas, or because the endpoint was unreachable.
+
+```ts title="submit-safely.ts"
+import { InvalidValueError } from "@arkiv-network/sdk"
+import { submitScore } from "./submit-score"
+
+try {
+  await submitScore("0x1111111111111111111111111111111111111111", "ada", 4200)
+} catch (error) {
+  if (error instanceof InvalidValueError) {
+    // the score did not fit an i32
+    console.log("Rejected score:", error.message)
+  } else {
+    // rejected transaction, insufficient gas, or an unreachable RPC endpoint
+    throw error
+  }
+}
+```
+
+## Next steps
+
+- Add a `season` attribute so you can query one season at a time.
+- Store per-run history as separate entities with a shorter expiry, and keep only the best score permanently.
+- See [Best Practices](/typescript-sdk/best-practices/) for data modeling and [Querying Data](/typescript-sdk/querying-data/) for the full query API.

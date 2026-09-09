@@ -96,6 +96,7 @@ export default defineConfig({
 					label: "Cookbook",
 					items: [
 						{ label: "User Profiles", slug: "cookbook/user-profiles" },
+						{ label: "Leaderboard", slug: "cookbook/leaderboard" },
 					],
 				},
 				{
