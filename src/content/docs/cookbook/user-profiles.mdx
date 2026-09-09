@@ -11,14 +11,15 @@ You will learn what to store in the entity's **attributes** vs in the entity's *
 
 | Field Type     | Description               | What we will store                     |
 |----------------|---------------------------|-----------------------------------------|
-| [**Attributes**](/start-here/fundamentals/#entities) | queryable filters         | user’s handle and wallet address        |
-| [**Payload**](/start-here/fundamentals/#entities)    | free-form fields          | user’s display name and bio    |
+| [**Attributes**](/start-here/fundamentals/#entities) | queryable filters         | user's handle and wallet address        |
+| [**Payload**](/start-here/fundamentals/#entities)    | free-form fields          | user's display name and bio    |
 
 ## Prerequisites
 
 - [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) installed
 - [`viem`](https://www.npmjs.com/package/viem) installed
 - a wallet funded with testnet tokens from the [faucet](/networks/tiramisu/)
+- an [API key](/start-here/api-keys/) for the Tiramisu RPC endpoint
 
 ```bash
 npm install @arkiv-network/sdk viem
@@ -33,8 +34,8 @@ npm install @arkiv-network/sdk viem
    We will first setup two clients:
     - one `publicClient` for read-only queries
     - one `walletClient` for write operations
-  
-   The `PROJECT` constant below scopes every entity you will create to your app. Since Arkiv is a shared public database, this is to prevent queries from returning other projects' profiles, if these projects use the same entity structure.
+
+   The project attribute below scopes every entity you will create to your app. Since Arkiv is a shared public database, this is to prevent queries from returning other projects' profiles, if these projects use the same entity structure.
 
    ```ts title="arkiv.ts"
    import { createPublicClient, createWalletClient } from "@arkiv-network/sdk"
@@ -42,27 +43,36 @@ npm install @arkiv-network/sdk viem
    import { http } from "viem"
    import { privateKeyToAccount } from "viem/accounts"
 
-   // Replace with a globally unique string for your own app
-   export const PROJECT_ID = "your-app-project-id" as const
+   /** Attribute name used to filter this project's entities. */
+   export const PROJECT_ATTRIBUTE_NAME = "projectId" as const
+
+   /** Replace with a globally unique string for your own app. */
+   export const PROJECT_ATTRIBUTE_VALUE = "your-app-project-id" as const
+
+   const rpcUrl = `${tiramisu.rpcUrls.default.http[0]}/${process.env.ARKIV_API_KEY}`
 
    export const publicClient = createPublicClient({
      chain: tiramisu,
-     transport: http(),
+     transport: http(rpcUrl),
    })
 
    export const walletClient = createWalletClient({
      chain: tiramisu,
-     transport: http(),
+     transport: http(rpcUrl),
      account: privateKeyToAccount(process.env.PRIVATE_KEY as `0x${string}`),
    })
    ```
 
-   <Aside type="caution">Always ensure to store sensitive informations - such as private key in this example - in environment variables.</Aside>
+   <Aside type="caution">Always ensure to store sensitive information - such as the private key in this example - in environment variables.</Aside>
+
+   <Aside type="tip">
+   Anonymous access to the RPC endpoint is rate limited. Register a project on the [API keys page](/start-here/api-keys/) and pass the key in the RPC URL, as a `X-API-KEY` header, or as a bearer token.
+   </Aside>
 
 2. **Define the profile shape**
 
-   ```ts
-   type Profile = {
+   ```ts title="profile.ts"
+   export type Profile = {
      handle: string      // attribute: unique, used for lookups
      wallet: string      // attribute: used for lookups
      displayName: string // payload
@@ -74,42 +84,42 @@ npm install @arkiv-network/sdk viem
 
    ```ts title="create-profile.ts"
    import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
-   import { PROJECT_ID, walletClient } from "./arkiv"
-   
-   type Profile = {
-     handle: string      // attribute: unique, used for lookups
-     wallet: string      // attribute: used for lookups
-     displayName: string // payload
-     bio: string         // payload
-   }
+   import { u64 } from "@arkiv-network/sdk/attr"
+   import {
+     PROJECT_ATTRIBUTE_NAME,
+     PROJECT_ATTRIBUTE_VALUE,
+     walletClient,
+   } from "./arkiv"
+   import type { Profile } from "./profile"
 
    export async function createProfile(profile: Profile) {
      const { entityKey } = await walletClient.createEntity({
        contentType: "application/json",
        attributes: {
-         projectId: PROJECT_ID,
+         [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
          entityType: "profile",
          handle: profile.handle,
          wallet: profile.wallet,
-         updated: Math.floor(Date.now() / 1000),
+         updated: u64(Date.now()),
        },
        payload: jsonToPayload({
          displayName: profile.displayName,
          bio: profile.bio,
-       })
+       }),
+       expires: ExpirationTime.fromDays(30),
      })
 
      return entityKey
    }
 
-    const profileEntityKey = await createProfile({
+   const profileEntityKey = await createProfile({
      handle: "ada",
      wallet: "0x1111111111111111111111111111111111111111",
      displayName: "Ada Lovelace",
      bio: "Writes notes on engines.",
-   });
+   })
 
-   console.log("User profile created successfully! Profile entity key:", profileEntityKey);
+   console.log("User profile created successfully! Profile entity key:", profileEntityKey)
    ```
 
    In the code example above, we are saving a new profile info to Arkiv using the [`createEntity`](/typescript-sdk/api-reference/main/functions/createwalletclient/#createentity) function from the Arkiv SDK
@@ -126,7 +136,11 @@ npm install @arkiv-network/sdk viem
    - the user's bio
 
    <Aside>
-   `updated` is stored in **seconds**, not milliseconds. A bare number becomes an `i32`, and a millisecond timestamp overflows that range. Seconds fit, and stay comparable with `gt()` and `lt()`.
+   `updated` is wrapped in `u64(...)` from `@arkiv-network/sdk/attr`. A bare number defaults to an `i32`, and a millisecond timestamp is far too large for that range, so it would throw `InvalidValueError`. `u64` is the width the protocol counts in, and it stays comparable with `gt()` and `lt()`.
+   </Aside>
+
+   <Aside type="caution">
+   Every entity needs an `expires`. It is a required parameter, and there is no default. Start short and call `extendEntity` when you need more time, because over-allocating wastes storage fees.
    </Aside>
 
 </Steps>
@@ -139,148 +153,191 @@ Below are some examples of how to query user profiles and use Arkiv filtering ca
 See more advanced examples for the [`select()`](/typescript-sdk/api-reference/main/type-aliases/publicarkivactions/#select) function to see how to retrieve only specific fields from the entity.
 </Aside>
 
+Every query below filters on both the project attribute and `entityType`. The project attribute alone is not enough, because your app writes other kinds of entities under the same project.
+
 ### Look up a profile by handle or address
 
-   ```ts title="search-profile.ts"
-   import { eq } from "@arkiv-network/sdk/query"
-   import { PROJECT, publicClient } from "./arkiv"
+```ts title="search-profile.ts"
+import { eq } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
+import type { Profile } from "./profile"
 
-   export async function getProfile(handle: string) {
-     const { entities } = await publicClient
-       .select("*")
-       .where(
-         eq(PROJECT.key, PROJECT.value),
-         eq("entityType", "profile"),
-         eq("handle", handle),
-       )
-       .limit(1)
-       .fetch()
+export async function getProfile(handle: string) {
+  const { entities } = await publicClient
+    .select({ key: true, payload: true, attributes: true })
+    .where(
+      eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+      eq("entityType", "profile"),
+      eq("handle", handle),
+    )
+    .limit(1)
+    .fetch()
 
-     const entity = entities[0]
-     if (!entity) return null
+  const entity = entities[0]
+  if (!entity) return null
 
-     return {
-       key: entity.key,
-       handle,
-       wallet: String(entity.attributes.wallet?.value),
-       ...entity.toJson(),
-     }
-   }
-   ```
+  const { displayName, bio } = entity.toJson() as Pick<Profile, "displayName" | "bio">
 
-   Swap `eq("handle", handle)` for `eq("wallet", address)` to look the same profile up by wallet address instead.
+  return {
+    key: entity.key,
+    handle,
+    wallet: String(entity.attributes.wallet?.value),
+    displayName,
+    bio,
+  }
+}
+```
 
-   <Aside type="tip">
-   You can also specify what you want to retrieve from the `select()` function. For instance:
-   
-   if you want to retrieve only the user's attributes 
-   
+Swap `eq("handle", handle)` for `eq("wallet", address)` to look the same profile up by wallet address instead.
 
-   ```ts
-   select({ attributes: true })
-   ```
+<Aside type="caution">
+`toJson()` returns `any`, so the cast above buys you editor types but checks nothing at runtime. Anyone can write an entity carrying your project attribute, so for a payload you did not write yourself, parse it with a schema library such as zod or valibot instead of casting.
+</Aside>
 
-   or only the user's keys.
+<Aside type="tip">
+You can also specify what you want to retrieve from the `select()` function. Every field is opt-in, including `key`, and the network only sends what you name. For instance, to retrieve only the attributes:
 
-   ```ts
-   select({ key: true })
-   ```
-   </Aside> 
+```ts
+select({ attributes: true })
+```
+
+or only the keys:
+
+```ts
+select({ key: true })
+```
+</Aside>
 
 ### Search profiles starting with a specific handle prefix
 
 String attributes support prefix matching. You can also use `limit(number)` to limit the number of results you want to get returned.
 
-```ts title="search-profile.ts"
+```ts title="search-profiles-by-prefix.ts"
 import { eq, startsWith } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
 
 const { entities: results } = await publicClient
   .select({ key: true, payload: true, attributes: true })
   .where(
-    eq("projectId", "<your-app-project-id>"), // Replace with your app's project id
+    eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
     eq("entityType", "profile"),
     startsWith("handle", "ad"),
   )
   .limit(20)
   .fetch()
 
-console.log("Entity search results:", results);
+console.log("Entity search results:", results)
 ```
 
-### Get all profiles handles
+### Get all profile handles
+
+Ask for a single attribute instead of the whole entity. `attributes` accepts a map of names, so the network never sends the payloads you are not going to read.
 
 ```ts title="get-all-profile-handles.ts"
-import { eq, startsWith } from "@arkiv-network/sdk/query"
+import { eq } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
 
-const { entities: allProfileEntities } = await publicClient
-  .select("*")
+const { entities } = await publicClient
+  .select({ attributes: { handle: true } })
   .where(
-    eq("projectId", "<your-app-project-id>"),
+    eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+    eq("entityType", "profile"),
   )
-  .limit(20)
+  .limit(100)
   .fetch()
 
-console.log("All profile entities result:", allProfileEntities);
+const handles = entities.map((entity) => String(entity.attributes.handle?.value))
+
+console.log("All profile handles:", handles)
 ```
 
 ### Get all profiles for this app
 
-String attributes support prefix matching. You can also use `limit(number)` to limit the number of results you want to get returned.
+A page holds at most 200 results, so follow the cursor when you want the whole set.
 
 ```ts title="get-all-profiles.ts"
-import { eq, startsWith } from "@arkiv-network/sdk/query"
+import { eq } from "@arkiv-network/sdk/query"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  publicClient,
+} from "./arkiv"
 
-const { entities: allProfileEntities } = await publicClient
-  .select("*")
+let page = await publicClient
+  .select({ key: true, payload: true, attributes: true })
   .where(
-    eq("projectId", "<your-app-project-id>"), // Replace with your app's project id
+    eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
+    eq("entityType", "profile"),
   )
-  .limit(100) // Limit to 100 results if you want to do pagination
+  .limit(100)
   .fetch()
 
-console.log("All profile entities result:", allProfileEntities);
+const allProfiles = [...page.entities]
+
+while (page.hasNextPage()) {
+  page = await page.next()
+  allProfiles.push(...page.entities)
+}
+
+console.log("All profile entities result:", allProfiles.length)
 ```
 
 <Aside type="caution">
 Handle uniqueness is your app's job. Arkiv does not enforce it. Check with `getProfile()` before creating, and treat the query as advisory since another writer can create the same handle in between.
 </Aside>
 
+<Aside type="tip">
+If a trusted backend writes every profile, add `.createdBy(yourBackendAddress)` to these queries. `$creator` is set at creation and never changes, so nobody can write an entity that fakes it and slip a fake profile into your results.
+</Aside>
 
 ## Update a profile
 
-   Use the [`patchEntity`](/typescript-sdk/api-reference/main/functions/createwalletclient/#patchentity) function from the Arkiv SDK to update an entity.
-   
-   You can specify only the fields or attributes you want to update. Fields you do not name keep their current value (so you never have to read the profile first)
+Use the [`patchEntity`](/typescript-sdk/api-reference/main/functions/createwalletclient/#patchentity) function from the Arkiv SDK to update an entity.
 
-   ```ts title="update-profile.ts"
-   import { jsonToPayload } from "@arkiv-network/sdk"
-   import { walletClient } from "./arkiv"
-   import { getProfile } from "./get-profile"
+You can specify only the fields or attributes you want to update. Fields you do not name keep their current value (so you never have to read the profile first)
 
-   const profile = await getProfile("ada")
-   if (!profile) throw new Error(`No entity found for profile handle "ada"`)
+```ts title="update-profile.ts"
+import { jsonToPayload } from "@arkiv-network/sdk"
+import { u64 } from "@arkiv-network/sdk/attr"
+import { walletClient } from "./arkiv"
+import { getProfile } from "./search-profile"
 
-   // Update Ada's wallet address
-   const newWalletAddress = "0x1010101010101010101010101010101010101010"
+const profile = await getProfile("ada")
+if (!profile) throw new Error(`No entity found for profile handle "ada"`)
 
-  // Update the payload but keep the current displayed name
-  const { displayName } = profile;
-  const updatedBio = "Born in 1815, Ada Lovelace is considered to be the first computer programmer."
+// Update Ada's wallet address
+const newWalletAddress = "0x1010101010101010101010101010101010101010"
 
-  await walletClient.patchEntity({
-    entityKey: profile.key,
-    payload: jsonToPayload({ displayName, bio: updatedBio }),
-    contentType: "application/json",
-    set: { updated: Math.floor(Date.now() / 1000), wallet: newWalletAddress },
-  })
-  ```
+// Update the payload but keep the current displayed name
+const { displayName } = profile
+const updatedBio = "Born in 1815, Ada Lovelace is considered to be the first computer programmer."
 
-   <Aside>
-   The payload is replaced whole, not merged. Attributes are merged. That is why `displayName` is passed through here while the attributes you do not name stay untouched.
-   </Aside>
+await walletClient.patchEntity({
+  entityKey: profile.key,
+  payload: jsonToPayload({ displayName, bio: updatedBio }),
+  contentType: "application/json",
+  set: { updated: u64(Date.now()), wallet: newWalletAddress },
+})
+```
+
+<Aside>
+The payload is replaced whole, not merged. Attributes are merged. That is why `displayName` is passed through here while the attributes you do not name stay untouched.
+</Aside>
 
 ## Next steps
 
 - Call [`extendEntity`](/typescript-sdk/api-reference/main/functions/createwalletclient/#extendentity) on a schedule to keep active profiles alive past their expiry.
-- Filter reads with `.createdBy(yourBackendAddress)` so nobody can inject fake profiles into your app. See [Best Practices](/typescript-sdk/best-practices/).
+- Validate payloads with a schema library before trusting them. See [Best Practices](/typescript-sdk/best-practices/).
 - Link other entities to a profile with a shared `handle` attribute, Arkiv's version of a foreign key.
