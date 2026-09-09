@@ -4,13 +4,14 @@ description: Store player scores on Arkiv and read back a top-ten leaderboard wi
 ---
 
 import { Aside, Steps } from '@astrojs/starlight/components';
-import NetworkNote from '../../../components/NetworkNote.astro';
 
-<NetworkNote />
+In this guide, you will learn how to create entities on Arkiv to store player scores and read back a top-ten leaderboard.
 
-A leaderboard keeps one entity per player, holding that player's best score. Submitting a score creates the entity the first time and patches it afterwards. Reading the board fetches every score entity and sorts it.
-
-The score lives in an **attribute**, not in the payload, because attributes are what you can filter and compare on. The payload only carries the display name.
+This guide will show:
+- how to store a user's score as an attribute that can be filtered
+- how submitting a user's score creates an entity
+- how updating a user's score patches the entity
+- how to fetch every scores and sort them to display like a leaderboard
 
 ## Prerequisites
 
@@ -23,11 +24,17 @@ The score lives in an **attribute**, not in the payload, because attributes are 
 npm install @arkiv-network/sdk viem
 ```
 
+## Create & Submit a Score
+
 <Steps>
 
 1. **Set up the clients**
 
-   One read-only client for queries, one wallet client for writes. The project attribute scopes every entity to this app, so your queries never pick up another project's data.
+   We will first setup two clients:
+    - one `publicClient` for read-only queries
+    - one `walletClient` for write operations
+
+   The project attribute below scopes every entity you will create to your app only.
 
    ```ts title="arkiv.ts"
    import { createPublicClient, createWalletClient } from "@arkiv-network/sdk"
@@ -35,10 +42,10 @@ npm install @arkiv-network/sdk viem
    import { http } from "viem"
    import { privateKeyToAccount } from "viem/accounts"
 
-   /** Attribute name used to filter this project's entities. */
+   // Attribute name used to filter this project's entities.
    export const PROJECT_ATTRIBUTE_NAME = "projectId" as const
 
-   /** Replace with a globally unique string for your own app. */
+   // Replace with a globally unique string for your own app.
    export const PROJECT_ATTRIBUTE_VALUE = "leaderboard-demo-7x9k" as const
 
    const rpcUrl = `https://rpc.tiramisu.db-chain.testnet.arkiv.network/${process.env.ARKIV_API_KEY}`
@@ -55,15 +62,13 @@ npm install @arkiv-network/sdk viem
    })
    ```
 
-   <Aside type="caution">Read the private key from an environment variable. Never hardcode it.</Aside>
+   <Aside type="caution">Always ensure to store sensitive information - such as the private key in this example - in environment variables.</Aside>
 
    <Aside type="tip">
    Anonymous access to the RPC endpoint is rate limited. Register a project on the [API keys page](/start-here/api-keys/) and pass the key in the RPC URL, as a `X-API-KEY` header, or as a bearer token.
    </Aside>
 
 2. **Submit a score**
-
-   Look for an existing entry for the player. Create one if there is none, patch it if the new score is higher, and do nothing otherwise.
 
    ```ts title="submit-score.ts"
    import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
@@ -82,6 +87,7 @@ npm install @arkiv-network/sdk viem
        throw new Error(`Score must be a whole number, received ${score}`)
      }
 
+    // Look for an existing entry for the player.
      const { entities } = await publicClient
        .select({ key: true, attributes: { score: true } })
        .where(
@@ -95,6 +101,7 @@ npm install @arkiv-network/sdk viem
      const existing = entities[0]
 
      if (!existing) {
+      // Create one if there is none
        await walletClient.createEntity({
          payload: jsonToPayload({ name }),
          contentType: "application/json",
@@ -111,6 +118,7 @@ npm install @arkiv-network/sdk viem
 
      if (Number(existing.attributes.score?.value ?? 0) >= score) return
 
+    // Patch it if the new score is higher
      // Rewrite the payload too, so a player who renamed does not keep the old name
      await walletClient.patchEntity({
        entityKey: existing.key,
@@ -185,63 +193,13 @@ npm install @arkiv-network/sdk viem
 
 </Steps>
 
-## Handling failures
+## Query examples
 
-The SDK never retries. Every method throws, so a submission can fail because the value did not fit its type, because the wallet has no gas, or because the endpoint was unreachable.
+### Filtering from legitimate entity creators
 
-```ts title="submit-safely.ts"
-import { InvalidValueError } from "@arkiv-network/sdk"
-import { submitScore } from "./submit-score"
+Arkiv is a shared public database, so anyone can write an entity carrying your project attribute and your `entityType`. 
 
-try {
-  await submitScore("0x1111111111111111111111111111111111111111", "ada", 4200)
-} catch (error) {
-  if (error instanceof InvalidValueError) {
-    // the score did not fit an i32
-    console.log("Rejected score:", error.message)
-  } else {
-    // rejected transaction, insufficient gas, or an unreachable RPC endpoint
-    throw error
-  }
-}
-```
-
-## Submitting many scores at once
-
-Do not loop over `submitScore` to seed a board, and never fire the writes in parallel. Every write is a transaction, and two in flight from one wallet fetch the same nonce, so one of them is dropped. Send them as a single batch instead:
-
-```ts title="seed-scores.ts"
-import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
-import { i32 } from "@arkiv-network/sdk/attr"
-import {
-  PROJECT_ATTRIBUTE_NAME,
-  PROJECT_ATTRIBUTE_VALUE,
-  walletClient,
-} from "./arkiv"
-
-const rows = [
-  { player: "0x1111111111111111111111111111111111111111", name: "ada", score: 4200 },
-  { player: "0x2222222222222222222222222222222222222222", name: "linus", score: 3100 },
-]
-
-await walletClient.executeBatch({
-  creates: rows.map((row) => ({
-    payload: jsonToPayload({ name: row.name }),
-    contentType: "application/json",
-    attributes: {
-      [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
-      entityType: "score",
-      player: row.player,
-      score: i32(row.score),
-    },
-    expires: ExpirationTime.fromDays(30),
-  })),
-})
-```
-
-## Keeping the board honest
-
-Arkiv is a shared public database, so anyone can write an entity carrying your project attribute and your `entityType`. On a leaderboard that means anyone can post themselves a winning score.
+For a leaderboard that means anyone can post themselves a winning score.
 
 If a trusted backend submits every score, filter reads on the creator address as well:
 
@@ -272,7 +230,7 @@ export async function trustedScores() {
 
 `$creator` is set at creation and never changes, so an injected entity cannot fake it.
 
-## Filtering the board
+### Filtering by scores
 
 Because the score is a numeric attribute, you can narrow the query on the server instead of fetching everything:
 
@@ -299,7 +257,52 @@ export async function highScores(minimum = 1000) {
 }
 ```
 
-## Keeping the board alive
+
+
+## Additional examples
+
+### Submitting many scores at once
+
+Use the function [`executeBatch`](/typescript-sdk/api-reference/main/functions/createwalletclient/#executebatch) to submit many scores at once.
+
+
+
+```ts title="seed-scores.ts"
+import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+import { i32 } from "@arkiv-network/sdk/attr"
+import {
+  PROJECT_ATTRIBUTE_NAME,
+  PROJECT_ATTRIBUTE_VALUE,
+  walletClient,
+} from "./arkiv"
+
+const rows = [
+  { player: "0x1111111111111111111111111111111111111111", name: "ada", score: 4200 },
+  { player: "0x2222222222222222222222222222222222222222", name: "linus", score: 3100 },
+]
+
+await walletClient.executeBatch({
+  creates: rows.map((row) => ({
+    payload: jsonToPayload({ name: row.name }),
+    contentType: "application/json",
+    attributes: {
+      [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
+      entityType: "score",
+      player: row.player,
+      score: i32(row.score),
+    },
+    expires: ExpirationTime.fromDays(30),
+  })),
+})
+```
+
+<Aside type="caution">
+Do not loop over `createEntity(...)`, as this will fire writes in parallel. 
+Every write is a transaction, and two writes in parallel from one wallet fetch the same nonce, so one of them will be dropped.
+This is why you should use [`executeBatch(...)`](/typescript-sdk/api-reference/main/functions/createwalletclient/#executebatch) function instead.
+</Aside>
+
+### Extend scores before expiry
 
 Scores in this recipe expire after thirty days, so an untouched board empties itself. That is the right default while you are building, but decide what you want before you ship.
 
@@ -319,6 +322,27 @@ expires: ExpirationTime.permanent()
 <Aside type="tip">
 Start short and extend. Over-allocating expiry wastes storage fees, and an entity that already expired cannot be brought back.
 </Aside>
+
+### Handling failures
+
+The SDK never retries. Every method throws, so a submission can fail because the value did not fit its type, because the wallet has no gas, or because the endpoint was unreachable.
+
+```ts title="submit-safely.ts"
+import { InvalidValueError } from "@arkiv-network/sdk"
+import { submitScore } from "./submit-score"
+
+try {
+  await submitScore("0x1111111111111111111111111111111111111111", "ada", 4200)
+} catch (error) {
+  if (error instanceof InvalidValueError) {
+    // the score did not fit an i32
+    console.log("Rejected score:", error.message)
+  } else {
+    // rejected transaction, insufficient gas, or an unreachable RPC endpoint
+    throw error
+  }
+}
+```
 
 ## Next steps
 
