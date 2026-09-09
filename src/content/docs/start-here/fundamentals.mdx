@@ -1,145 +1,193 @@
 ---
 title: Fundamentals
-description: What Arkiv is, how it works, and the core concepts you need to know.
+description: What Arkiv is, how a DB-Chain works under the hood, and the core concepts you need before you write code.
 ---
 
 import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
 
-Arkiv is a universal data layer that brings queryable, time-scoped storage to Ethereum. Store, query, and manage data with built-in expiration and attribute systems.
+Arkiv is a Web3 database. It stores your data as entities that you can query by indexed attributes, that your wallet owns, and that expire when you say so. You talk to it with the same tools you use for Ethereum: a wallet, a transaction, and a JSON-RPC endpoint.
 
-## Why Arkiv?
+## Why the status quo hurts
 
-<Card title="Instant Queries" icon="magnifier">
-  SQL-like queries with attributes, indexed data retrieval, no external indexing required.
-</Card>
-<Card title="Cost-Efficient" icon="approve-check-circle">
-  Pay only for storage duration. Automatic data pruning — no permanent storage fees.
-</Card>
-<Card title="Ethereum-Native" icon="star">
-  Built on Ethereum infrastructure. Fully transparent, tamper-proof, and compatible with existing Web3 tools.
-</Card>
-<Card title="Developer-Friendly" icon="pencil">
-  Simple CRUD operations and a TypeScript SDK with full type safety.
-</Card>
+For years, builders had to choose. Web2 is fast and convenient, until it locks you in, goes down, or shuts you out. Web3 hands you ownership, then makes you pay for it in speed, simplicity, and cost.
+
+- **Live data is everywhere.** DeFi, AI, gaming, and IoT all depend on queryable data. That data sits in centralized databases that nobody in the app owns.
+- **Stuck in indexer hell.** Builders re-index, or trust someone else's server, for truth that is already written on-chain.
+- **You pay forever.** Most Web3 solutions never expire data from their query layer. It bloats over time, and you pay for it.
+
+| | Web2 | Web3 | Arkiv |
+| --- | --- | --- | --- |
+| UX | Battle tested | Bad | Great |
+| Integrity | Centralized | Tamper-proof | Tamper-proof |
+| Ownership | False ownership | Wallet-owned | Wallet-owned |
+| Queries | Queryable | Not easily queryable | Queryable |
+| Lifetime | Time-scoped | Permanent | Time-scoped |
+
+Arkiv is the layer for owned, queryable data, with Web3 guarantees.
+
+## Four principles
+
+<CardGrid>
+  <Card title="Queryable" icon="magnifier">
+    Filter and paginate records through indexed attributes with a Web2-like query language. No external indexer.
+  </Card>
+  <Card title="Time-scoped" icon="approve-check-circle">
+    Every entity has an expiration block. When it arrives, the entity leaves the query surface. You pay for the lifetime you choose.
+  </Card>
+  <Card title="Tamper-proof" icon="star">
+    Every write is a signed Ethereum transaction. State is committed with a keccak Merkle-Patricia trie, so any change is evident.
+  </Card>
+  <Card title="Wallet-owned" icon="pencil">
+    Only the owner wallet can update, extend, transfer, or delete an entity.
+  </Card>
+</CardGrid>
+
+## The data lifecycle
+
+1. **Write.** Store data as an entity with queryable custom attributes. The write is an Ethereum-style transaction to a DB-Chain.
+2. **Own.** Your wallet controls the entity. Update it, transfer it, or delete it.
+3. **Query.** Retrieve entities with Arkiv's query language, served over JSON-RPC.
+4. **Expire.** Set an expiration time for your data. Extend it if it is still needed.
 
 ## Architecture
 
-Arkiv uses a three-layer architecture:
+Arkiv is an Ethereum-aligned DB-Chain. It looks and feels like a database: CRUD and indexed queries over RPC, with programmable expiration.
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  YOUR APP                                           │
-│  TypeScript SDK  ·  JSON-RPC                        │
-└────────────────────────┬────────────────────────────┘
-                         │  read / write
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│  LAYER 3 — DB-CHAINS                                │
-│  High-performance CRUD, indexed queries,            │
-│  programmable expiration                            │
-└────────────────────────┬────────────────────────────┘
-                         │  coordination
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│  LAYER 2 — ARKIV COORDINATION LAYER                 │
-│  DB-chain registry,                                 │
-│  deterministic query resolution                     │
-└────────────────────────┬────────────────────────────┘
-                         │  settlement
-                         ▼
-┌─────────────────────────────────────────────────────┐
-│  LAYER 1 — ETHEREUM MAINNET                         │
-│  Proof verification, commitments,                   │
-│  ultimate source of truth                           │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│  YOUR APP                                                │
+│  TypeScript SDK  ·  JSON-RPC  ·  any Ethereum wallet     │
+└───────────────┬──────────────────────────┬───────────────┘
+                │ eth_sendRawTransaction   │ arkiv_query
+                ▼                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  ARKIV DB-CHAIN                                          │
+│  Sequencer produces blocks (2 s block time)              │
+│  Arkiv DB engine replaces the EVM: entities, attributes, │
+│  indexes, expiry, ownership                              │
+│  State root: keccak-MPT, readable with eth_getProof      │
+│  Watchers replicate the chain and serve reads            │
+└───────────────┬──────────────────────────────────────────┘
+                │ GLM deposits (relayer)
+                ▼
+┌──────────────────────────────────────────────────────────┐
+│  ETHEREUM                                                │
+│  Source of GLM. Arkiv commits its records here for       │
+│  durable archival, so data stays recoverable and         │
+│  tamper-proof even if every Arkiv node disappears.       │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Core Concepts
+### A chain with a database engine instead of the EVM
+
+A DB-Chain runs on an Ethereum execution client with the EVM interpreter removed. In its place sits the Arkiv DB engine. The engine validates, decodes, and applies database operations, and it prices them by the storage work they cause.
+
+- **No smart contracts, by construction.** A transaction is accepted only if its `to` address is a known Arkiv operation address. Every other transaction reverts. No bytecode is deployed, not even at genesis.
+- **Ethereum's dialect, kept.** Transactions, receipts, logs, gas, and JSON-RPC all keep the Ethereum shape. Your wallet and your tooling already know how to talk to Arkiv.
+- **Two RPC namespaces on one endpoint.** `eth_*` for transactions, receipts, balances, and proofs. `arkiv_*` for queries and entity views.
+
+### Powered by GLM
+
+You pay for data operations in GLM. On testnets, the [faucet](https://hub.arkiv.network/faucet) gives you test GLM.
+
+## Core concepts
 
 ### Entities
 
-An entity is a data record on Arkiv. Every entity contains:
+An entity is a data record on Arkiv. It has:
 
-- **Payload** — The actual data (JSON, text, binary)
-- **Attributes** — Key-value pairs for querying (string or numeric)
-- **ExpiresIn** — Automatic expiration measured in seconds
-- **Content Type** — MIME type of the payload
+- **Payload**: the data (JSON, text, binary), up to 128 KiB, with a MIME content type.
+- **Attributes**: typed key-value pairs for querying.
+- **Expiration block**: every entity expires. Set it when you create the entity.
+
+The protocol also keeps system attributes on every entity: `$owner`, `$creator`, `$createdAt`, `$updatedAt`, and `$expiresAt`. You can query them. You cannot set them.
+
+### Operations
+
+| SDK method | Who | What |
+| --- | --- | --- |
+| `createEntity()` | any funded wallet | Create an entity with attributes and a lifetime |
+| `patchEntity()` | owner | Set or unset attributes, or replace the payload |
+| `extendEntity()` | owner | Move the expiration later. Never earlier |
+| `changeOwnership()` | owner | Hand the entity to another wallet |
+| `deleteEntity()` | owner | Remove the entity at once |
+
+One transaction can carry many operations. They apply as one atomic batch. If one fails, none apply.
+
+Entity keys are derived by the protocol from your wallet, a nonce, and a random salt. Nobody can guess your next key. You can compute it yourself before you send the transaction with `predictEntityKey()`.
 
 ### Attributes
 
-Attributes are the backbone of querying. The type you choose determines what query operators are available:
+The type you give a value decides which query operators work on it. Typed helpers come from `@arkiv-network/sdk/attr`. A plain string needs no helper:
 
 ```ts
-// String attributes — support eq(), glob matching (~)
-{ key: 'type', value: 'note' }
-{ key: 'status', value: 'active' }
+import { i32 } from "@arkiv-network/sdk/attr";
 
-// Numeric attributes — support eq(), gt(), lt(), gte(), lte() range queries
-{ key: 'priority', value: 5 }
-{ key: 'created', value: Date.now() }
+{ type: "note" }        // str: eq() and startsWith()
+{ priority: i32(5) }    // i32, u64, u256, dec: eq() and range (gt, lt, gte, lte)
+{ active: true }        // bool, addr, key, bytes32: eq() only
 ```
 
 <Aside type="caution">
-If you store a number as a string (`{ key: 'priority', value: '5' }`), you lose the ability to do range queries with `gt()`, `lt()`, etc. Always use numeric values for attributes you plan to filter by range.
+A number stored as a string cannot be range-queried. A bare number is an `i32` and must be an integer. Use `dec("1.5")` for decimals.
 </Aside>
 
-<Aside type="caution">
-Numeric attribute values must be **integers** — a float like `1.5` throws an `InvalidAttributeError`. Scale non-integers to a fixed precision instead (e.g. store `1.5` as `1500` and divide on read).
-</Aside>
+### Expiration
 
-### ExpiresIn
-
-Every entity has a lifespan expressed in **seconds**. Use the `ExpirationTime` helper to convert human-readable durations:
+Arkiv measures time in blocks. One block is 2 seconds. Build a lifetime with `ExpirationTime` and pass it as `expires`:
 
 ```ts
-import { ExpirationTime } from "@arkiv-network/sdk/utils";
+import { ExpirationTime } from "@arkiv-network/sdk";
 
-ExpirationTime.fromMinutes(30)  // 1800 seconds
-ExpirationTime.fromHours(1)     // 3600 seconds
-ExpirationTime.fromHours(12)    // 43200 seconds
-ExpirationTime.fromDays(7)      // 604800 seconds
+ExpirationTime.fromHours(12)
+ExpirationTime.fromDays(7)
+ExpirationTime.atBlock(1_200_000n)
 ```
 
-<Aside>
-Entities can be extended before they expire using `extendEntity()`. Over-allocating expiration wastes storage fees — start short and extend if needed.
-</Aside>
+From the expiration block on, the entity is gone from every query and rejects every operation. There is no event for this. If you mirror Arkiv data off-chain, track `$expiresAt` yourself.
 
-<Aside type="caution">
-Arkiv measures expiration in whole blocks (1 block = 2 seconds), so `expiresIn` must be a **positive integer and a multiple of 2** — otherwise the SDK throws an `InvalidExpirationError`.
-</Aside>
+Start with a short lifetime to save on fees. Extend it later if you still need the data.
 
-### Query Language
+### Query language
 
-SQL-like syntax for filtering entities:
+A query is a boolean expression. No `SELECT`, no `WHERE`:
 
 ```sql
-type = "note" && priority > 3 && created > 1672531200
+type = str('note') AND priority > i32(3)
 ```
 
-Supported operators: `&&` (AND), `||` (OR), `!` (NOT), `=`, `!=`, `<`, `>`, `<=`, `>=`, `~` (glob match).
+Operators: `AND`, `OR`, `NOT`, `=`, `<`, `>`, `<=`, `>=`, `STARTSWITH`. Tag every value with its type, except bare booleans and bare `i32` numbers. Use `*` to match every entity. There is no `!=` yet. Write `NOT (attr = value)`.
+
+Full syntax reference: [Query syntax](/json-rpc/querying-data/#query-syntax).
 
 ### Clients
 
-Two client types exist:
+- **WalletClient** (read/write): needs a private key or a wallet connection. Use it to create, patch, and delete entities.
+- **PublicClient** (read-only): needs no private key. Use it for queries. It is safe for frontend use.
 
-1. **WalletClient** (read/write) — Requires a private key or wallet connection. Use for creating, updating, deleting entities.
-2. **PublicClient** (read-only) — No private key needed. Use for queries. Safe for frontend use.
+## What you can query
 
-## What You Can Query
+The query builder of the SDK does more than basic filtering. Before you write a manual workaround, see what it already provides:
 
-The SDK's query builder supports more than basic filtering. Before you reach for manual workarounds, check what's built in:
-
-- **Field selection** — fetch only the entity fields you need with `select({ key: true, payload: true })`; the result type is narrowed to exactly those fields
-- **Newest-first results** — matching entities always come back newest first; for any other order, sort in JavaScript
-- **Pagination** — cursor-based, up to 200 results per page with `hasNextPage()` / `next()`
-- **Entity count** — get a count without fetching entities via `getEntityCount()`
-- **Owner & creator filters** — `.ownedBy()` and `.createdBy()` for wallet-level filtering
+- **Field selection**: fetch only the entity fields you need with `select({ key: true, payload: true })`. The result type narrows to exactly those fields.
+- **Newest-first results**: matching entities always come back newest first. To sort them differently, sort the results in JavaScript.
+- **Pagination**: page through results with `hasNextPage()` and `next()`. Each page holds up to 200 results.
+- **Entity count**: get a count without fetching entities. Call `getEntityCount()`.
+- **Owner and creator filters**: use `.ownedBy()` and `.createdBy()` to filter by wallet.
 
 Full reference: [Querying Data](/typescript-sdk/querying-data/)
 
-## Use Cases
+## Use cases
 
-- **Temporary Data Storage** — Session data with automatic expiration, cross-device clipboards, cached API responses.
-- **Event & Analytics** — Application logs with cleanup, user activity tracking, temporary metrics.
-- **File & Media** — Image metadata with expiration, document versioning, chunked file storage.
-- **Full-Stack Applications** — Dashboards, collaborative tools, browser-based dApps with wallet signing.
+- **Temporary data storage**: session data with automatic expiration, cross-device clipboards, cached API responses.
+- **Events and analytics**: application logs with cleanup, user activity tracking, temporary metrics.
+- **Files and media**: image metadata with expiration, document versioning, chunked file storage.
+- **Full-stack applications**: dashboards, collaborative tools, browser-based dApps with wallet signing.
+
+## Start building
+
+No advanced blockchain knowledge required. Use the SDK to create and query your data like you would with a Web2 database.
+
+1. [Install the TypeScript SDK](/start-here/installation/) and create your first entity.
+2. [Get test GLM](https://hub.arkiv.network/faucet) on [Tiramisu](/networks/tiramisu/).
+3. [Teach your AI tools Arkiv](/start-here/agent-skill/) with the agent skill and MCP server.

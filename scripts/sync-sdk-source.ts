@@ -4,7 +4,9 @@
 // time.
 //
 // Env vars:
-//   SDK_DOCS_REF       — git ref to check out (default: "develop"). CI sets "main" for prod.
+//   SDK_DOCS_REF       git ref to check out. Default "develop", the SDK branch
+//                      that cuts the dev releases. Staging tracks it too.
+//                      Production pins a release tag in deploy-prod.yml.
 //   SDK_DOCS_REFRESH=1 — wipe the cached clone and re-clone fresh.
 
 import { spawnSync } from "node:child_process";

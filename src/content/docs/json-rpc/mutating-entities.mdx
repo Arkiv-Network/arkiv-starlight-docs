@@ -1,186 +1,336 @@
 ---
 title: Mutating Entities
-description: Create, update, delete, extend, and transfer entities via raw Ethereum transactions.
+description: Create, patch, delete, extend, and transfer entities with raw Ethereum transactions. This page documents the calldata format, the attribute encoding, the events, and the revert errors.
 ---
 
 import { Aside, Steps } from '@astrojs/starlight/components';
 
-All entity mutations are sent as standard Ethereum transactions to a special Arkiv address. The transaction `data` field carries an encoded payload that describes one or more operations.
+All entity mutations are sent as standard Ethereum transactions to a fixed Arkiv address. The transaction `data` field is a normal ABI-encoded call to one function, `execute`. That call carries one or more operations.
 
 | Property | Value |
 |----------|-------|
-| Arkiv Address | `0x00000000000000000000000000000061726b6976` |
+| Arkiv Address | `0x4400000000000000000000000000000000000044` |
 | Block Time | 2 seconds |
 | Transaction Value | 0 (no native token transferred) |
 
+The address is a protocol precompile. It is the same on every Arkiv chain. There is no dedicated `arkiv_*` write method. The node reads Arkiv operations out of a normal transaction, the same way it reads other contract calls.
+
 <Aside>
-Most developers should use the [TypeScript SDK](/typescript-sdk/mutating-data/) instead of raw transactions. This page documents the low-level protocol for advanced use cases.
+Most developers should use the [TypeScript SDK](/typescript-sdk/mutating-data/) instead of raw transactions. This page documents the low-level protocol for advanced use cases. The [wallet actions](#wallet-actions-in-the-sdk) table at the end maps each operation to its SDK method.
 </Aside>
 
-## Payload Structure
+## Calldata Structure
 
-The transaction data is a 5-element array:
+The transaction data is an ABI-encoded call to `execute`:
 
-```
-[
-  creates,            // index 0
-  updates,            // index 1
-  deletes,            // index 2
-  extensions,         // index 3
-  ownershipChanges    // index 4
-]
+```solidity
+function execute((uint8 operation, bytes operationData)[] ops) external returns (bytes32[] keys);
 ```
 
-Each element is an array of operations of that type.
+| Field | Type | Description |
+|-------|------|-------------|
+| `operation` | `uint8` | The operation tag. See the table below. |
+| `operationData` | `bytes` | `abi.encode` of the struct that the tag selects. |
+
+The function selector is `0x49650044`. A transaction is an ordered, atomic batch. All operations apply, or none do. Operation *n+1* sees the effects of operation *n*. Each applied operation emits one event.
+
+| Tag | Operation |
+|-----|-----------|
+| `1` | [Create](#create-tag-1) |
+| `2` | [Patch](#patch-tag-2) |
+| `3` | [Extend Expiry](#extend-expiry-tag-3) |
+| `4` | [Transfer Ownership](#transfer-ownership-tag-4) |
+| `5` | [Delete](#delete-tag-5) |
+
+Any other tag reverts with `InvalidOpType`.
 
 ## Operation Formats
 
-### Create (index 0)
+Each `operationData` is the standard ABI encoding of one struct. The structs below use Solidity tuple notation.
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | expiresInBlocks | number | `ceil(seconds / 2)` |
-| 1 | contentType | string | MIME type |
-| 2 | payload | string | Entity content |
-| 3 | stringAttributes | `[[key, value], ...]` | String-typed attributes |
-| 4 | numberAttributes | `[[key, value], ...]` | Number-typed attributes |
+### Create (tag 1)
 
-### Update (index 1)
+```solidity
+(uint128 salt, uint64 expiresAt, uint64 minLifetime, uint8 creationFlags, Attribute[] attributes)
+```
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | contentType | string | MIME type |
-| 2 | expiresInBlocks | number | `ceil(seconds / 2)` |
-| 3 | payload | string | Entity content |
-| 4 | stringAttributes | `[[key, value], ...]` | String-typed attributes |
-| 5 | numberAttributes | `[[key, value], ...]` | Number-typed attributes |
+| Field | Type | Description |
+|-------|------|-------------|
+| `salt` | `uint128` | Random input to the entity key. `0` opts out of salting. See [Entity Keys](#entity-keys). |
+| `expiresAt` | `uint64` | Absolute expiry block, or `0`. See [Expiry](#expiry). |
+| `minLifetime` | `uint64` | Minimum lifetime in blocks, or `0`. See [Expiry](#expiry). |
+| `creationFlags` | `uint8` | Immutable entity properties. See [Creation Flags](#creation-flags). |
+| `attributes` | `Attribute[]` | The attributes, the payload, and the content type. See [Attributes](#attributes). |
+
+The engine derives the entity key. The transaction does not carry one.
+
+### Patch (tag 2)
+
+```solidity
+(bytes32 entityKey, Attribute[] mutations)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `bytes32` | The key of the entity to change. |
+| `mutations` | `Attribute[]` | Attributes to set, and tombstones for attributes to unset. |
+
+A patch changes only the attributes it names. Every other attribute stays as it is. A patch with an empty `mutations` list reverts with `EmptyMutations`.
 
 <Aside type="caution">
-The field ordering differs from Create. In Update, `entityKey` comes first, and `contentType` and `expiresInBlocks` are swapped.
+A patch does not touch the expiry. To move the expiry, send an Extend Expiry operation in the same batch.
 </Aside>
 
-### Delete (index 2)
+### Extend Expiry (tag 3)
 
-Each delete entry is just the entity key as a `0x`-prefixed hex string.
+```solidity
+(bytes32 entityKey, uint64 expiresAt, uint64 minLifetime)
+```
 
-### Extend (index 3)
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `bytes32` | The key of the entity to extend. |
+| `expiresAt` | `uint64` | Absolute expiry block, or `0`. See [Expiry](#expiry). |
+| `minLifetime` | `uint64` | Minimum lifetime in blocks, or `0`. See [Expiry](#expiry). |
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | expiresInBlocks | number | `ceil(additionalSeconds / 2)` |
+The new expiry must be later than the current one. A shorter expiry reverts with `ExpiryNotExtended`.
 
-### Change Ownership (index 4)
+### Transfer Ownership (tag 4)
 
-| Index | Field | Type | Description |
-|-------|-------|------|-------------|
-| 0 | entityKey | hex string | `0x`-prefixed entity key |
-| 1 | newOwner | hex string | `0x`-prefixed address of the new owner |
+```solidity
+(bytes32 entityKey, address newOwner)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `bytes32` | The key of the entity to transfer. |
+| `newOwner` | `address` | The new owner. Not the zero address, and not the current owner. |
+
+### Delete (tag 5)
+
+```solidity
+(bytes32 entityKey)
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `entityKey` | `bytes32` | The key of the entity to delete. |
 
 ## Attributes
 
-Attributes are split into two arrays by value type:
+An attribute is a triple:
 
-- **String attributes** — `[["category", "documentation"], ["version", "1.0"]]`
-- **Number attributes** — `[["priority", 5], ["count", 100]]`
+```solidity
+struct Attribute { bytes32 name; uint8 typeId; bytes value; }
+```
 
-<Aside>
-A number attribute with value `0` is encoded as an empty byte string (`0x`), which is distinct from the hex encoding of `0` as a number (`0x00`).
-</Aside>
+### Names
+
+The `name` is an `Ident32`: an ASCII string, left-aligned in 32 bytes and padded with zero bytes. The grammar is a letter, then letters, digits, `.`, `-`, or `_`. Names are case-sensitive. The query language reserves some words, for example `and`, `not`, `str`, and `u64`. The node rejects those as attribute names.
+
+Names that start with `$` are system attributes. You can write two of them:
+
+| Name | Type | Description |
+|------|------|-------------|
+| `$payload` | `bytes` (7) | The entity content. Up to 128 KiB. |
+| `$contentType` | `str` (8) | The MIME type of the payload. Lowercase only. |
+
+The wire format has no dedicated payload field. The payload is one attribute among the others. Any other `$` name reverts with `SystemAttributeNotWritable`.
+
+### Types
+
+| `typeId` | Type | Value encoding |
+|----------|------|----------------|
+| `0` | tombstone | Zero-length. Unsets the attribute. Legal only in a patch. |
+| `1` | `bool` | 32 bytes: `0` or `1`. |
+| `2` | `i32` | 32 bytes, sign-extended. |
+| `3` | `u64` | 32 bytes, right-aligned. |
+| `4` | `u256` | 32 bytes. |
+| `5` | `dec` | 32 bytes: the decimal as a signed integer of scaled units. |
+| `6` | `bytes32` | 32 bytes. |
+| `7` | `bytes` | Raw bytes, variable length. |
+| `8` | `str` | Raw UTF-8 bytes, variable length. |
+| `9` | `addr` | 32 bytes, right-aligned. |
+| `10` | `key` | 32 bytes: an entity key. |
+
+Word types use the encoding that Solidity uses for a single word. A word that is not exactly 32 bytes, or a `bool` word that is not `0` or `1`, reverts with `InvalidValueType`.
+
+### Rules
+
+- **Order.** The list must be strictly ascending by the `bytes32` name. Two attributes with the same name, or a list out of order, revert with `AttributesNotSorted`. The engine hashes attributes in this order into the state root.
+- **Count.** One operation carries at most 32 attributes. The system attributes count. More revert with `TooManyAttributes`.
+- **Tombstones.** In a patch, `typeId` `0` with an empty `value` unsets the attribute. A tombstone in a create reverts with `TombstoneInCreate`. A tombstone with a value reverts with `TombstoneValueNotEmpty`.
+
+## Expiry
+
+Create and Extend Expiry carry the same two fields. The engine resolves them to one block height:
+
+```
+expiry = max(expiresAt, currentBlock + minLifetime)
+```
+
+| You want | `expiresAt` | `minLifetime` |
+|----------|-------------|---------------|
+| A lifetime, for example 30 days | `0` | `seconds / 2` |
+| An absolute deadline | the block height | `0` |
+| A deadline, but at least a lifetime | the block height | `seconds / 2` |
+
+`currentBlock` is the block that includes the transaction. Durations convert to blocks at the nominal 2-second block time, so a lifetime in days is approximate. The resolved expiry must be after `currentBlock`. If it is not, the operation reverts with `ExpiryDeadOnArrival`.
+
+## Creation Flags
+
+The `creationFlags` byte is a bit field. The flags are fixed at creation. No operation changes them later.
+
+| Bit | Flag | Description |
+|-----|------|-------------|
+| `0` | read-only | The attributes and payload can never change. Only extend, transfer, and delete are allowed. |
+| `1` | permissionless extension | Any account can extend the expiry, not only the owner. |
+| `2` to `7` | reserved | Must be zero. Otherwise the operation reverts with `ReservedCreationFlags`. |
+
+## Entity Keys
+
+The engine derives the key of a new entity:
+
+```
+entityKey = keccak256(abi.encodePacked(uint256 chainId, address arkiv, address owner, uint64 nonce, uint128 salt))
+```
+
+| Input | Description |
+|-------|-------------|
+| `chainId` | The chain ID. |
+| `arkiv` | The Arkiv address, `0x4400000000000000000000000000000000000044`. |
+| `owner` | The account that sends the transaction. |
+| `nonce` | The owner's entity nonce. Each create in a batch consumes one, so the *n*th create uses `nonce + n`. |
+| `salt` | The `salt` field of the create. |
+
+The nonce is separate from the Ethereum transaction nonce. Read it with an `eth_call` to the same address:
+
+```solidity
+function entityNonce(address owner) external view returns (uint64);
+```
+
+```bash
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
+  -H "content-type: application/json" \
+  -d '{
+    "jsonrpc":"2.0",
+    "id":1,
+    "method":"eth_call",
+    "params":[{
+      "to":"0x4400000000000000000000000000000000000044",
+      "data":"0x36917bfd000000000000000000000000'"${OWNER#0x}"'"
+    },"latest"]
+  }'
+```
+
+With the nonce, you can predict the key before the transaction lands. A later operation in the same batch can then reference the new entity. A random salt keeps the key unpredictable to anyone but the creator.
 
 ## Encoding Pipeline
 
-The payload goes through four stages before inclusion in a transaction:
+The calldata goes through three stages:
 
 <Steps>
 
-1. **Human-readable JSON** — Start with a JSON array matching the 5-element structure.
+1. **Encode the attributes** — Convert every name to a padded `bytes32`. Encode every value as its type requires. Sort the triples by name.
 
-2. **Hex-encode all leaf values** — Convert every leaf to a `0x`-prefixed hex string. Strings become hex-encoded UTF-8, numbers become hex-encoded integers, and `0` becomes `"0x"`.
+2. **Encode each operation** — `abi.encode` the struct for the operation. Pair the result with its tag.
 
-3. **RLP-encode** — The nested hex structure is [RLP-encoded](https://ethereum.org/en/developers/docs/data-structures-and-encoding/rlp/) into a flat byte sequence.
-
-4. **Brotli-compress** — The RLP bytes are compressed with [Brotli](https://github.com/google/brotli). The output is hex-encoded with a `0x` prefix.
+3. **Encode the call** — `abi.encode` the `execute` call with the list of `(operation, operationData)` pairs. Prefix the selector `0x49650044`.
 
 </Steps>
 
+Any ABI library does this. The example below uses [viem](https://viem.sh). Foundry's `cast calldata` and `cast abi-encode` work too.
+
 ## Example: Creating an Entity
 
-Goal: Create an entity with payload `{"message": "Hello from Arkiv"}`, content type `application/json`, 30-day expiration, string and number attributes.
+Goal: Create an entity with payload `{"message": "Hello from Arkiv"}`, content type `application/json`, a 30-day lifetime, and two attributes: `category` as `str` and `count` as `u64`.
 
-### Step 1 — Build the JSON payload
+### Step 1 — Encode the attributes
 
-```json
-[
-  [
-    [
-      1296000,
-      "application/json",
-      "{\"message\":\"Hello from Arkiv\"}",
-      [["category", "example"], ["version", "1.0"]],
-      [["priority", 0], ["count", 100]]
-    ]
-  ],
-  [],
-  [],
-  [],
-  []
+Four attributes, sorted by their `bytes32` name. `$` sorts before letters, and `category` sorts before `count`.
+
+| Name | `bytes32` name | `typeId` | `value` |
+|------|----------------|----------|---------|
+| `$contentType` | `0x24636f6e74656e7454797065` + zero padding | `8` | `0x6170706c69636174696f6e2f6a736f6e` |
+| `$payload` | `0x247061796c6f6164` + zero padding | `7` | `0x7b226d657373616765223a2248656c6c6f2066726f6d2041726b6976227d` |
+| `category` | `0x63617465676f7279` + zero padding | `8` | `0x6578616d706c65` |
+| `count` | `0x636f756e74` + zero padding | `3` | `0x00…0064` (32 bytes) |
+
+### Step 2 — Encode the operation
+
+A 30-day lifetime is `30 * 24 * 3600 / 2 = 1296000` blocks. This example uses a fixed salt of `0x1234` so the result is reproducible. Use a random salt in production.
+
+```ts
+import { encodeAbiParameters, parseAbiParameters, stringToBytes, toHex } from "viem"
+
+const attribute = "(bytes32 name, uint8 typeId, bytes value)[]"
+const createStruct = parseAbiParameters(
+  `(uint128 salt, uint64 expiresAt, uint64 minLifetime, uint8 creationFlags, ${attribute} attributes)`,
+)
+
+const name = (s: string) => toHex(s, { size: 32 })
+const attributes = [
+  { name: name("$contentType"), typeId: 8, value: toHex(stringToBytes("application/json")) },
+  { name: name("$payload"), typeId: 7, value: toHex(stringToBytes('{"message":"Hello from Arkiv"}')) },
+  { name: name("category"), typeId: 8, value: toHex(stringToBytes("example")) },
+  { name: name("count"), typeId: 3, value: toHex(100n, { size: 32 }) },
 ]
+
+const operationData = encodeAbiParameters(createStruct, [
+  { salt: 0x1234n, expiresAt: 0n, minLifetime: 1_296_000n, creationFlags: 0, attributes },
+])
 ```
 
-### Step 2 — Hex-encode leaf values
+### Step 3 — Encode the call
 
-```json
-[
-  [
-    [
-      "0x13c680",
-      "0x6170706c69636174696f6e2f6a736f6e",
-      "0x7b226d657373616765223a2248656c6c6f2066726f6d2041726b6976227d",
-      [
-        ["0x63617465676f7279", "0x6578616d706c65"],
-        ["0x76657273696f6e", "0x312e30"]
-      ],
-      [
-        ["0x7072696f72697479", "0x"],
-        ["0x636f756e74", "0x64"]
-      ]
-    ]
-  ],
-  [],
-  [],
-  [],
-  []
-]
+```ts
+import { encodeFunctionData, parseAbi } from "viem"
+
+const abi = parseAbi([
+  "function execute((uint8 operation, bytes operationData)[] ops) external returns (bytes32[] keys)",
+])
+
+const data = encodeFunctionData({
+  abi,
+  functionName: "execute",
+  args: [[{ operation: 1, operationData }]],
+})
 ```
 
-### Step 3 — RLP-encode
+The result starts with the selector, then the offset to the `ops` array, then its length of `1`:
 
-```bash
-rlp encode '<hex-encoded-json>'
+```
+0x49650044
+  0000000000000000000000000000000000000000000000000000000000000020
+  0000000000000000000000000000000000000000000000000000000000000001
+  ...
 ```
 
-### Step 4 — Brotli-compress and hex-encode
+<details>
+<summary>Full calldata for this example</summary>
 
-```bash
-echo "$RLP_HEX" | sed 's/^0x//' | xxd -r -p | brotli | xxd -p | tr -d '\n' | sed 's/^/0x/'
+```
+0x496500440000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000003e0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000012340000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013c680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000026024636f6e74656e745479706500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000106170706c69636174696f6e2f6a736f6e00000000000000000000000000000000247061796c6f616400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000001e7b226d657373616765223a2248656c6c6f2066726f6d2041726b6976227d000063617465676f72790000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000076578616d706c6500000000000000000000000000000000000000000000000000636f756e740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000064
 ```
 
-This final hex string is the transaction `data` field.
+</details>
+
+This hex string is the transaction `data` field.
 
 ## Signing and Sending
 
 | Field | Value |
 |-------|-------|
-| `to` | `0x00000000000000000000000000000061726b6976` |
+| `to` | `0x4400000000000000000000000000000000000044` |
 | `value` | `0` |
-| `data` | the Brotli-compressed hex payload |
+| `data` | the ABI-encoded `execute` call |
+
+Sign the transaction for chain ID `7738577` with any Ethereum signer.
 
 ### Broadcasting
 
 ```bash
-curl -s https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -190,10 +340,12 @@ curl -s https://braga.hoodi.arkiv.network/rpc \
   }'
 ```
 
+`eth_sendRawTransaction` returns a transaction hash immediately. The network does not apply the mutation until a block includes the transaction.
+
 ### Polling for the Receipt
 
 ```bash
-curl -s https://braga.hoodi.arkiv.network/rpc \
+curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -H "content-type: application/json" \
   -d '{
     "jsonrpc":"2.0",
@@ -203,26 +355,87 @@ curl -s https://braga.hoodi.arkiv.network/rpc \
   }'
 ```
 
-The receipt's `logs` contain the entity keys for each operation.
+The receipt's `logs` contain one [event](#events) per applied operation. A receipt does not carry the return value of `execute`, so read the entity keys from the logs, or [predict them](#entity-keys).
 
 ## Batch Operations
 
-All five operation types can be combined in a single transaction:
+All five operation types can be combined in one `execute` call, in any order:
 
-```json
-[
-  [[1296000, "application/json", "{\"name\":\"Entity A\"}", [["type","alpha"]], []]],
-  [["0xabc...", "application/json", 2592000, "{\"name\":\"Updated B\"}", [["type","beta"]], []]],
-  ["0xdef..."],
-  [["0x123...", 3888000]],
-  [["0x456...", "0x789..."]]
-]
+```ts
+const data = encodeFunctionData({
+  abi,
+  functionName: "execute",
+  args: [[
+    { operation: 1, operationData: createData },
+    { operation: 2, operationData: patchData },
+    { operation: 5, operationData: deleteData },
+    { operation: 3, operationData: extendData },
+    { operation: 4, operationData: transferData },
+  ]],
+})
 ```
+
+The batch is atomic. If one operation reverts, the whole transaction reverts. An empty batch reverts with `EmptyBatch`.
 
 ### Transaction Receipt Log Order
 
-When parsing logs from a batch transaction, events are emitted in this order:
+The engine emits events in application order, which is the order of the operations in the batch. The SDK orders a batch as creates, patches, deletes, extensions, ownership changes. The protocol does not require that order.
 
-1. Creates
-2. Deletes
-3. Updates
+## Events
+
+The Arkiv address emits one event per applied operation:
+
+| Operation | Event |
+|-----------|-------|
+| Create | `EntityCreated(bytes32 indexed entityKey, address indexed owner, uint64 expiresAt, uint8 creationFlags)` |
+| Patch | `EntityPatched(bytes32 indexed entityKey, address indexed owner)` |
+| Extend Expiry | `ExpiryExtended(bytes32 indexed entityKey, address indexed owner, uint64 expiresAt)` |
+| Transfer Ownership | `OwnershipTransferred(bytes32 indexed entityKey, address indexed previousOwner, address indexed newOwner)` |
+| Delete | `EntityDeleted(bytes32 indexed entityKey, address indexed owner)` |
+
+`expiresAt` in `EntityCreated` and `ExpiryExtended` is the resolved expiry block. Filter logs by the Arkiv address, because a transaction can also carry logs from other contracts.
+
+There is no dedicated `arkiv_subscribe*` method. Watching these events rides on the standard `eth_getLogs` and `eth_subscribe` methods, the same way other contract events do. The SDK wraps this in `watchEntityEvents()`. See [Live Events](/typescript-sdk/live-events/).
+
+## Errors
+
+A failed operation reverts with a custom error. The revert data is ABI-encoded, so `eth_call` and `eth_estimateGas` return it.
+
+| Error | When |
+|-------|------|
+| `EmptyBatch()` | The `ops` list is empty. |
+| `InvalidOpType(uint8 operation)` | The tag is not 1 to 5. |
+| `NonCanonicalOperationData(uint8 operation)` | The `operationData` is not the canonical ABI encoding of its struct. |
+| `AttributesNotSorted()` | The attribute list is not strictly ascending by name. |
+| `TooManyAttributes(uint256 count, uint256 maxCount)` | More than 32 attributes in one operation. |
+| `EmptyMutations(bytes32 entityKey)` | A patch with no mutations. |
+| `TombstoneInCreate(bytes32 name)` | A tombstone in a create. |
+| `TombstoneValueNotEmpty(bytes32 name)` | A tombstone with a value. |
+| `SystemAttributeNotWritable(bytes32 name)` | A `$` name other than `$payload` or `$contentType`. |
+| `InvalidValueType(bytes32 name, uint8 typeId)` | An unknown `typeId`, or a value that does not fit its type. |
+| `Ident32Empty()` | An empty attribute name. |
+| `Ident32InvalidByte(uint256 position, bytes1 value)` | A byte outside the name grammar. |
+| `EntityNotFound(bytes32 entityKey)` | The entity does not exist. |
+| `EntityExpired(bytes32 entityKey, uint64 expiresAt)` | The entity has expired. |
+| `NotOwner(bytes32 entityKey, address caller, address owner)` | The sender does not own the entity. |
+| `ReadOnlyEntity(bytes32 entityKey)` | A patch on a read-only entity. |
+| `ReservedCreationFlags(uint8 creationFlags)` | A reserved flag bit is set. |
+| `ExpiryDeadOnArrival(uint64 target, uint64 currentBlock)` | The resolved expiry is not after the current block. |
+| `ExpiryNotExtended(bytes32 entityKey, uint64 newExpiresAt, uint64 currentExpiresAt)` | The new expiry is not later than the current one. |
+| `TransferToZeroAddress(bytes32 entityKey)` | Transfer to the zero address. |
+| `TransferToSelf(bytes32 entityKey)` | Transfer to the current owner. |
+
+## Wallet Actions in the SDK
+
+These methods come from `@arkiv-network/sdk`. Each one is a call on a `WalletArkivClient`, and each call sends exactly one `execute` transaction. Click a method name to open its API reference:
+
+| Action | Operation | What it does |
+|--------|-----------|--------------|
+| [`createEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#createentity) | Create | Creates a new entity with a payload, content type, attributes, and an expiry |
+| [`patchEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#patchentity) | Patch | Sets or unsets individual attributes, or replaces the payload, leaving anything unnamed untouched |
+| [`deleteEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#deleteentity) | Delete | Deletes an entity |
+| [`extendEntity()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#extendentity) | Extend Expiry | Moves an entity's expiry later |
+| [`changeOwnership()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#changeownership) | Transfer Ownership | Transfers an entity to a new owner |
+| [`executeBatch()`](/typescript-sdk/api-reference/main/type-aliases/walletarkivactions/#executebatch) | Batch | Applies a combination of the above atomically in one transaction |
+
+See [Mutating Data](/typescript-sdk/mutating-data/) for usage examples of each.

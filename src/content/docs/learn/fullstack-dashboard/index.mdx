@@ -3,34 +3,28 @@ title: 'Introduction: What You Will Build'
 description: 'An overview of the real-time crypto dashboard tutorial using Arkiv.'
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../../components/NetworkNote.astro';
 
-Welcome to this step-by-step guide on building a full-stack, real-time cryptocurrency dashboard using Arkiv as a universal data layer.
+<NetworkNote />
 
-<Aside type="caution">
-**This tutorial needs a live network.** Braga was retired at 23:59 CET on 12 August 2026, and there's no public network to build on until a new testnet ships in September 2026. That means no faucet and no live RPC — so the backend can't publish data, and the frontend won't have anything to read.
 
-You can still read through the whole thing to learn how the backend/frontend split works and how the Arkiv SDK reads and writes data. The code is correct — you're just missing a network to run it against. See the [Braga page](/networks/braga/) for the full story.
-</Aside>
+This guide shows you how to build a full-stack, real-time cryptocurrency dashboard. The dashboard uses Arkiv as a universal data layer.
 
 ## The Goal
 
-The goal of this tutorial is to demonstrate how to use Arkiv for a common real-world use case: periodically storing time-sensitive data on the blockchain and then reading that data to power a live frontend application.
+This tutorial shows you a common use case for Arkiv. It stores time-sensitive data at intervals. It then reads that data to power a live front-end application.
 
-We will build a complete application consisting of two main parts:
+This application has two main parts:
 
-1. **A Node.js Backend Service:** This script will run continuously, fetching the latest market data for Bitcoin (BTC), Ethereum (ETH), and Golem (GLM) from the CoinGecko API every 60 seconds. It will then use the Arkiv SDK to store this data on the Braga testnet.
-
-2. **A Frontend Dashboard:** A simple HTML, CSS, and JavaScript application that queries the Arkiv blockchain to get the data published by our backend. It will then visualize this data in a clean, user-friendly dashboard using the Chart.js library.
+1. **A Node.js backend service.** This script runs continuously. Every 60 seconds, it fetches the latest market data for Bitcoin (BTC), Ethereum (ETH), and Golem (GLM) from the CoinGecko API. It then uses the Arkiv SDK to store this data on the Tiramisu testnet.
+2. **A frontend dashboard.** This HTML, CSS, and JavaScript application queries Arkiv for the data that the backend publishes. It shows this data in a dashboard with the Chart.js library.
 
 ### The Final Product
 
-By the end of this tutorial, you will have a dashboard that displays:
+By the end of this tutorial, your dashboard shows:
 
-- The latest prices of BTC, ETH, and GLM
-- Price changes over time, updated every minute
-- Overview of the market capitalization for each cryptocurrency
+- The latest prices of BTC, ETH, and GLM.
+- Price changes over time, updated every minute.
+- An overview of the market capitalization for each cryptocurrency.
 
-Check out a live demo of the final application [here](https://arkiv-network.github.io/learn-arkiv/_demos/fullstack-tutorial/).
-
-This guide is designed to be a hands-on learning experience. We'll break down each step, explain the code, and show you how to connect all the pieces. Let's get started!
+This guide gives you a hands-on learning experience. Each step explains the code and shows you how the pieces connect. Start with the setup step.

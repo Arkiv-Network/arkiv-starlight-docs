@@ -4,30 +4,23 @@ description: 'Create the data layer for saving sketches to Arkiv and querying th
 ---
 
 import { Code, FileTree, Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../../components/NetworkNote.astro';
 
-In this part, we'll build the data module that handles saving sketches to Arkiv and loading the user's gallery. It demonstrates the two core SDK operations: **creating entities** and **querying entities by owner**.
+<NetworkNote />
 
-<Aside type="caution">
-Braga was retired at 23:59 CET on 12 August 2026, and there's no public network until the new testnet ships in September 2026. You can read through this step and see how the code works, but you won't be able to run it against a live network. See the [Braga page](/networks/braga/) for details.
-</Aside>
+In this part, you build the data module. This module saves sketches to Arkiv and loads the gallery of the user. It uses two core SDK operations: creating entities, and querying entities by owner.
 
-Open `src/sketch.ts` and let's build it step by step.
+Open `src/sketch.ts` and build it step by step.
 
 ## Get Test GLM
 
-<Aside type="caution">
-The Braga faucet went offline when Braga was retired on 12 August 2026, so this step is blocked until the new testnet ships in September 2026. See the [Braga page](/networks/braga/).
-</Aside>
+Before you create entities on Arkiv, your MetaMask wallet needs test GLM to pay for gas fees. Tiramisu uses GLM as its native gas token.
 
-Before we can create entities on Arkiv, your MetaMask wallet needs some test GLM to pay for gas fees. Braga uses GLM as its native gas token. Visit the Braga faucet:
-
-**👉 [https://braga.hoodi.arkiv.network/faucet/](https://braga.hoodi.arkiv.network/faucet/)**
-
-Enter your MetaMask wallet address and request test GLM. This is completely free and only takes a moment.
+Get test GLM from the [Arkiv faucet](https://hub.arkiv.network/faucet). If the faucet does not work for you, ask in the [Arkiv Discord](https://discord.gg/arkiv).
 
 ### Step 1: Imports and Types
 
-First, we import the query helpers, our wallet module from Step 1, and the SDK utilities. We also define a `Sketch` interface to type our data.
+First, import the query helpers, the wallet module from step 1, and the SDK utilities. Then define a `Sketch` interface to type your data.
 
 <FileTree>
 
@@ -43,8 +36,9 @@ First, we import the query helpers, our wallet module from Step 1, and the SDK u
 
 <Code
   code={`import { eq } from "@arkiv-network/sdk/query";
+import { u64 } from "@arkiv-network/sdk/attr";
 import { createArkivClients } from "./wallet";
-import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk";
 
 export interface Sketch {
   id: string;
@@ -57,16 +51,17 @@ export interface Sketch {
 
 ### Step 2: Saving a Sketch
 
-When the user clicks "Save", we capture the canvas as a PNG data URL and store it as an Arkiv entity. This function creates a wallet client using `custom(window.ethereum)` — meaning MetaMask will pop up a confirmation dialog for the user to sign the transaction.
+When the user clicks "Save", the app captures the canvas as a PNG data URL and stores it as an Arkiv entity. This function creates a wallet client with `custom(window.ethereum)`. MetaMask shows a confirmation dialog so the user can sign the transaction.
 
-- **Payload**: The sketch image data and a timestamp, stored as JSON.
-- **Attributes**: `type: "sketch"` and a `timestamp` value, which we'll use for querying and sorting later.
-- **ExpiresIn**: Sketches are set to expire after 365 days.
+- **Payload**: the sketch image data and a timestamp, stored as JSON.
+- **Attributes**: `type: "sketch"` and a `timestamp` value. You use these later for querying and sorting.
+- **expires**: sketches expire after 365 days.
 
 <Code
   code={`import { eq } from "@arkiv-network/sdk/query";
+import { u64 } from "@arkiv-network/sdk/attr";
 import { createArkivClients } from "./wallet";
-import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk";
 
 export interface Sketch {
   id: string;
@@ -86,18 +81,19 @@ export async function saveSketch(
       timestamp: Date.now(),
     }),
     contentType: "application/json",
-    attributes: [
-      { key: "type", value: "sketch" },
-      { key: "timestamp", value: Date.now() },
-    ],
-    expiresIn: ExpirationTime.fromDays(365),
+    attributes: {
+      type: "sketch",
+      // Date.now() is milliseconds since epoch, too large for i32. Use u64 instead.
+      timestamp: u64(Date.now()),
+    },
+    expires: ExpirationTime.fromDays(365),
   });
 
   return entityKey;
 }`}
   lang="ts"
   title="src/sketch.ts"
-  ins={[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]}
+  ins={[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]}
 />
 
 <Aside>
@@ -106,12 +102,13 @@ Each save triggers a MetaMask confirmation popup. The entity is created on-chain
 
 ### Step 3: Loading the Gallery
 
-Now add the query function that fetches all sketches owned by the connected wallet, sorted by newest first. This uses a **public client** — no wallet signature is needed for read-only queries.
+Now add the query function that fetches all sketches owned by the connected wallet, sorted with the newest sketch first. This function uses a public client, so it needs no wallet signature.
 
 <Code
   code={`import { eq } from "@arkiv-network/sdk/query";
+import { u64 } from "@arkiv-network/sdk/attr";
 import { createArkivClients } from "./wallet";
-import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk/utils";
+import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk";
 
 export interface Sketch {
   id: string;
@@ -131,11 +128,11 @@ export async function saveSketch(
       timestamp: Date.now(),
     }),
     contentType: "application/json",
-    attributes: [
-      { key: "type", value: "sketch" },
-      { key: "timestamp", value: Date.now() },
-    ],
-    expiresIn: ExpirationTime.fromDays(365),
+    attributes: {
+      type: "sketch",
+      timestamp: u64(Date.now()),
+    },
+    expires: ExpirationTime.fromDays(365),
   });
 
   return entityKey;
@@ -182,13 +179,13 @@ export async function loadSketches(userAddress: string): Promise<Sketch[]> {
   ins={[32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66]}
 />
 
-Let's break down the query:
+This is what the query does:
 
-- `.select({ key: true, payload: true })` — declares which entity fields to fetch: the key and the full payload data (our image)
-- `.where(eq("type", "sketch"))` — filters entities to only those with a `type` attribute equal to `"sketch"`
-- `.ownedBy(userAddress)` — restricts results to entities created by this wallet
-- `.limit(9)` — caps the gallery at 9 items
+- `.select({ key: true, payload: true })`: names the fields to fetch, the key and the full payload data of the image.
+- `.where(eq("type", "sketch"))`: keeps only entities where the `type` attribute equals `"sketch"`.
+- `.ownedBy(userAddress)`: keeps only entities that this wallet created.
+- `.limit(9)`: caps the gallery at 9 items.
 
-Each entity is then parsed from JSON. We use `.filter()` to safely discard any entities that don't have a valid `imageData` field.
+Each entity is then parsed from JSON. The `.filter()` call drops any entity without a valid `imageData` field. Arkiv does not sort results on the server. As a result, the code sorts the gallery by timestamp itself, with the newest sketch first.
 
-Your data layer is complete! In the next section, we'll wire everything together with the drawing canvas and UI.
+The data layer is complete. In the next section, you connect the drawing canvas and the user interface.

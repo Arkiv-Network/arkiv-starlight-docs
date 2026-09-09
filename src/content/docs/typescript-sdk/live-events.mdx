@@ -1,142 +1,173 @@
 ---
 title: Live Events
-description: Subscribe to real-time entity events using the Arkiv TypeScript SDK.
+description: Watch real-time entity events with the Arkiv TypeScript SDK.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../components/NetworkNote.astro';
 
+<NetworkNote />
 
-The `subscribeEntityEvents` method on the public client lets you listen for entity changes in real time. It polls the chain for new events and fires callbacks when entities are created, updated, deleted, expired, or have their expiration extended.
+The `watchEntityEvents` method on the public client lets you listen for entity changes in real time. It polls the chain for new events. When an entity is created, patched, deleted, extended, or handed to a new owner, it calls the handlers you pass.
 
 ## Basic Usage
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const client = createPublicClient({
-  chain: braga,
+  chain: tiramisu,
   transport: http(),
 })
 
-const unsubscribe = await client.subscribeEntityEvents({
+const unwatch = client.watchEntityEvents({
   onEntityCreated: (event) => {
     console.log("Entity created:", event.entityKey)
   },
-  onEntityUpdated: (event) => {
-    console.log("Entity updated:", event.entityKey)
+  onEntityPatched: (event) => {
+    console.log("Entity patched:", event.entityKey)
   },
   onEntityDeleted: (event) => {
     console.log("Entity deleted:", event.entityKey)
   },
-  onEntityExpired: (event) => {
-    console.log("Entity expired:", event.entityKey)
+  onExpiryExtended: (event) => {
+    console.log("Expiry extended:", event.entityKey)
   },
-  onEntityExpiresInExtended: (event) => {
-    console.log("Entity extended:", event.entityKey)
+  onOwnershipTransferred: (event) => {
+    console.log("Ownership transferred:", event.entityKey)
   },
   onError: (error) => {
-    console.error("Subscription error:", error)
+    console.error("Watch error:", error)
   },
 })
 
 // Later, stop listening:
-unsubscribe()
+unwatch()
 ```
 
-<Aside>All event handlers are optional. Subscribe only to the events you care about.</Aside>
+<Aside>
+All event handlers are optional. Watch only the events you care about.
+</Aside>
+
+<Aside type="caution">
+`watchEntityEvents` returns the unwatch function directly: it is not a promise, so do not `await` it.
+</Aside>
 
 ## Parameters
 
-`subscribeEntityEvents` takes the event handlers object, plus two optional arguments:
+`watchEntityEvents` takes one object with the event handlers plus a couple of optional settings:
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| Event handlers | `object` | Object with callback functions (see below) |
-| `pollingInterval` | `number` | Polling interval in milliseconds (optional) |
-| `fromBlock` | `bigint` | Block number to start listening from (optional) |
+| Event handlers | see below | One callback per event type, all optional |
+| `onEvent` | `(event: EntityEvent) => void` | Every event, whatever its type, runs before the per-event handler |
+| `onError` | `(error: Error) => void` | Transport failures, undecodable logs, or a handler that throws. Defaults to `console.error`. |
+| `fromBlock` | `bigint` | Replay from this block before following the head. Defaults to the head. |
+| `pollingInterval` | `number` | How often to poll, in milliseconds. Defaults to half a block. |
 
 ### Event Handlers
 
 | Handler | Event Type | Fires When |
 |---------|-----------|------------|
-| `onEntityCreated` | `OnEntityCreatedEvent` | A new entity is created |
-| `onEntityUpdated` | `OnEntityUpdatedEvent` | An entity's payload or attributes change |
-| `onEntityDeleted` | `OnEntityDeletedEvent` | An entity is deleted by its owner |
-| `onEntityExpired` | `OnEntityExpiredEvent` | An entity's expiration time is reached |
-| `onEntityExpiresInExtended` | `OnEntityExpiresInExtendedEvent` | An entity's expiration is extended |
-| `onError` | `Error` | An error occurs during polling |
+| `onEntityCreated` | `EntityCreatedEvent` | A new entity is created |
+| `onEntityPatched` | `EntityPatchedEvent` | An entity's attributes or payload change |
+| `onExpiryExtended` | `ExpiryExtendedEvent` | An entity's expiry moves further out |
+| `onOwnershipTransferred` | `OwnershipTransferredEvent` | An entity changes owner |
+| `onEntityDeleted` | `EntityDeletedEvent` | An entity is deleted by its owner, before its expiry |
+
+<Aside type="caution">
+An entity that reaches its expiration date fires no event. Expiration is not an operation the engine applies, so nothing fires. To find out whether an entity is gone, query for it. You can also call `getEntity()` and handle `NoEntityFoundError`.
+</Aside>
+
+Every event carries `blockNumber`, `transactionHash` and `logIndex`, which together give you the order the operations were applied in.
 
 ## Event Types
 
-### OnEntityCreatedEvent
+### EntityCreatedEvent
 
 ```ts
 {
-  entityKey: Hex       // Key of the new entity
-  owner: Hex           // Address of the entity owner
-  expirationBlock: number  // Block when the entity expires
-  cost: bigint         // Storage cost of the operation
+  type: "EntityCreated"
+  entityKey: Hex
+  owner: Address
+  expiresAt: bigint          // block the entity is set to expire at
+  creationFlags: { readonly: boolean; permissionlessExtension: boolean }
+  blockNumber: bigint
+  transactionHash: Hex
+  logIndex: number
 }
 ```
 
-### OnEntityUpdatedEvent
+### EntityPatchedEvent
 
 ```ts
 {
-  entityKey: Hex       // Key of the updated entity
-  owner: Hex           // Address of the entity owner
-  oldExpirationBlock: number  // Previous expiration block
-  newExpirationBlock: number  // New expiration block
-  cost: bigint         // Storage cost of the operation
+  type: "EntityPatched"
+  entityKey: Hex
+  owner: Address
+  blockNumber: bigint
+  transactionHash: Hex
+  logIndex: number
 }
 ```
 
-### OnEntityDeletedEvent
+The event only says an entity's attributes or payload changed, not what changed. Call `getEntity()` to read the new state.
+
+### ExpiryExtendedEvent
 
 ```ts
 {
-  entityKey: Hex       // Key of the deleted entity
-  owner: Hex           // Address of the entity owner
+  type: "ExpiryExtended"
+  entityKey: Hex
+  owner: Address              // the entity's owner, not necessarily who extended it
+  expiresAt: bigint           // the new expiry block
+  blockNumber: bigint
+  transactionHash: Hex
+  logIndex: number
 }
 ```
 
-### OnEntityExpiredEvent
+### OwnershipTransferredEvent
 
 ```ts
 {
-  entityKey: Hex       // Key of the expired entity
-  owner: Hex           // Address of the entity owner
+  type: "OwnershipTransferred"
+  entityKey: Hex
+  previousOwner: Address
+  newOwner: Address
+  blockNumber: bigint
+  transactionHash: Hex
+  logIndex: number
 }
 ```
 
-### OnEntityExpiresInExtendedEvent
+### EntityDeletedEvent
 
 ```ts
 {
-  entityKey: Hex       // Key of the extended entity
-  owner: Hex           // Address of the entity owner
-  oldExpirationBlock: number  // Previous expiration block
-  newExpirationBlock: number  // New expiration block
-  cost: bigint         // Storage cost of the operation
+  type: "EntityDeleted"
+  entityKey: Hex
+  owner: Address
+  blockNumber: bigint
+  transactionHash: Hex
+  logIndex: number
 }
 ```
 
-## Polling from a Specific Block
+## Watching from a Specific Block
 
-Use `fromBlock` to replay events starting from a past block:
+Use `fromBlock` to replay events. The replay starts from a past block:
 
 ```ts
-const unsubscribe = await client.subscribeEntityEvents(
-  {
-    onEntityCreated: (event) => {
-      console.log("Created:", event.entityKey, "at cost:", event.cost)
-    },
+const unwatch = client.watchEntityEvents({
+  onEntityCreated: (event) => {
+    console.log("Created:", event.entityKey, "at block", event.blockNumber)
   },
-  5000,  // poll every 5 seconds
-  100n,  // start from block 100
-)
+  fromBlock: 100n,
+  pollingInterval: 5000, // poll every 5 seconds
+})
 ```
 
 ## Practical Example
@@ -145,30 +176,25 @@ Listen for changes to your own entities and log a summary:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { braga } from "@arkiv-network/sdk/chains"
+import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const client = createPublicClient({
-  chain: braga,
+  chain: tiramisu,
   transport: http(),
 })
 
 const MY_ADDRESS = "0xYourAddress..."
 
-const unsubscribe = await client.subscribeEntityEvents({
+const unwatch = client.watchEntityEvents({
   onEntityCreated: (event) => {
     if (event.owner === MY_ADDRESS) {
-      console.log(`New entity ${event.entityKey} expires at block ${event.expirationBlock}`)
+      console.log(`New entity ${event.entityKey} expires at block ${event.expiresAt}`)
     }
   },
   onEntityDeleted: (event) => {
     if (event.owner === MY_ADDRESS) {
       console.log(`Entity ${event.entityKey} was deleted`)
-    }
-  },
-  onEntityExpired: (event) => {
-    if (event.owner === MY_ADDRESS) {
-      console.log(`Entity ${event.entityKey} has expired`)
     }
   },
   onError: (error) => {
@@ -178,11 +204,11 @@ const unsubscribe = await client.subscribeEntityEvents({
 
 // Clean up on exit
 process.on("SIGINT", () => {
-  unsubscribe()
+  unwatch()
   process.exit()
 })
 ```
 
 <Aside type="tip">
-Always call the returned `unsubscribe()` function when you no longer need events — this stops polling and frees resources.
+When you no longer need events, call the returned `unwatch()` function. This stops the polling and frees resources.
 </Aside>

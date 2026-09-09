@@ -1,0 +1,107 @@
+---
+title: Access Keys
+description: Get an Arkiv access key from the Arkiv Hub to raise the rate limits on your RPC calls, and learn how to send it, watch your quota, and lock it down.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+An access key raises the rate limits on your calls to the Arkiv RPC. You get keys from the [Arkiv Hub](https://hub.arkiv.network/api-keys).
+
+- You get one key per wallet on each network.
+- A key works on one network only. You choose the network when you create the key.
+- Each key has a monthly quota, measured in cost units.
+
+You do not need a key to try Arkiv. The public RPC works without one, at the default rate limit.
+
+## Get a key
+
+<Steps>
+
+1. Open [hub.arkiv.network/api-keys](https://hub.arkiv.network/api-keys).
+
+2. Connect your wallet and sign the sign-in message. The signature proves that you own the wallet. It does not send a transaction.
+
+3. Complete your registration if the Hub asks for it.
+
+4. Select the network. For the current public testnet, select **Tiramisu**.
+
+5. Give your project a name, solve the captcha, and select **Generate**.
+
+</Steps>
+
+The Hub shows your key on the page. Copy it with the copy button.
+
+## Send the key with your requests
+
+The RPC accepts the key in three forms. Use the one that fits your client.
+
+| Form | How |
+| ---- | --- |
+| In the path | Append the key to the RPC URL: `https://rpc.tiramisu.db-chain.testnet.arkiv.network/<key>` |
+| `X-API-KEY` header | `X-API-KEY: <key>` |
+| Bearer token | `Authorization: Bearer <key>` |
+
+### HTTP
+
+```bash
+curl --json '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
+  -H "X-API-KEY: <key>" \
+  https://rpc.tiramisu.db-chain.testnet.arkiv.network
+```
+
+### WebSocket
+
+The WebSocket endpoint accepts the key in the path or in the `X-API-KEY` header.
+
+```bash
+wscat -c wss://rpc.tiramisu.db-chain.testnet.arkiv.network/<key> \
+  -x '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
+  -w 1
+```
+
+### TypeScript SDK
+
+Put the key in the transport URL:
+
+```ts
+import { createPublicClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+
+const publicClient = createPublicClient({
+  chain: tiramisu,
+  transport: http("https://rpc.tiramisu.db-chain.testnet.arkiv.network/<key>"),
+})
+
+const blockNumber = await publicClient.getBlockNumber()
+```
+
+<Aside type="caution" title="Keep the key out of the browser">
+Anyone can read a key from the network requests of your website and use it to spend your quota. For production, call the Arkiv RPC from your backend, where the key stays secret. There you can also lock the key to your server IP.
+</Aside>
+
+## Watch your quota
+
+The **Usage** tab on the Hub shows the cost units you used this month, the RPC calls and requests made, and the date the quota resets. The counts can lag a few minutes behind live traffic.
+
+When you reach the quota, the RPC can reject calls on that key. The Hub shows a warning when this happens.
+
+If you need more, select **Request more quota** on the Usage tab and give a short reason. For very large quotas, use **Request even higher quota** to contact the team.
+
+## Lock the key down
+
+The Hub has two allowlists. Both are empty by default, which allows requests from anywhere.
+
+- **Origins.** List the websites that can use the key from a browser. Non-browser clients can forge the `Origin` header, so treat this as attribution, not access control.
+- **IP allowlist.** List the exact server IPs that can use the key. No CIDR ranges. Requests from other IPs are rejected, so this is real access control.
+
+## Regenerate or delete a key
+
+Both actions are on the key header in the Hub.
+
+- **Regenerate** gives you a new key. The old key stops working at once. Update your integrations before you regenerate.
+- **Delete** removes the key. This is permanent, but you can generate a new key afterwards.
+
+## Get help
+
+If your calls are rejected and you are not over quota, ask in [Discord](https://discord.gg/arkiv).

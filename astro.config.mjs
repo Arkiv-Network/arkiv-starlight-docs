@@ -42,8 +42,10 @@ function rewriteIndexLinks() {
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
-		"/start-here/testnet": "/networks/braga/",
+		"/start-here/testnet": "/networks/tiramisu/",
 		"/networks/migrate-from-kaolin": "/networks/older-networks/",
+		"/networks/cheesecake": "/networks/tiramisu/",
+		"/start-here/api-keys": "/start-here/access-keys/",
 	},
 	markdown: {
 		remarkPlugins: [rewriteIndexLinks],
@@ -67,12 +69,13 @@ export default defineConfig({
 						{ label: "Installation", slug: "start-here/installation" },
 						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 						{ label: "Data Explorer", slug: "start-here/data-explorer" },
+						{ label: "Access Keys", slug: "start-here/access-keys" },
 					],
 				},
 				{
 					label: "Networks",
 					items: [
-						{ label: "Braga", slug: "networks/braga" },
+						{ label: "Tiramisu", slug: "networks/tiramisu" },
 						{ label: "Older networks", slug: "networks/older-networks" },
 					],
 				},

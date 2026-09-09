@@ -1,6 +1,6 @@
 ---
 title: Welcome to Arkiv
-description: Everything you need to build with Arkiv — the universal data layer for Ethereum.
+description: Everything you need to build with Arkiv, the universal data layer for Ethereum.
 template: splash
 hero:
   title: ''
@@ -12,8 +12,8 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
 <div class="hero-landing">
   <div class="hero-logo">[ ARKIV ]</div>
   <p class="hero-tagline">
-    Build applications with queryable, time-scoped, and tamper-proof data on Ethereum.<br />
-    Get started with DB-chains in minutes.
+    Build applications with queryable, time-scoped, and tamper-evident data on Ethereum.<br />
+    Get started with DB-chains.
   </p>
   <div class="hero-links">
     <LinkButton variant="primary" icon='right-arrow' href="/start-here/fundamentals/">Get Started</LinkButton>
@@ -25,20 +25,44 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
 <div class="quickstart-layout">
   <div class="testnet-card">
     <div class="testnet-header">
-      <span class="testnet-name">NETWORK STATUS</span>
+      <span class="testnet-name">TIRAMISU DB-CHAIN</span>
       <a href="https://status.arkiv.network/" class="testnet-status" target="_blank" rel="noopener">Status Page</a>
     </div>
-    <p class="testnet-note">
-      The Braga testnet was retired at 23:59 CET on 12 August 2026. There's no public network to connect to right now — the faucet, block explorer and RPC endpoints are all offline.
-    </p>
-    <p class="testnet-note">
-      A limited devnet is running through August 2026. Ask about access on <a href="https://discord.gg/arkiv" target="_blank" rel="noopener">Discord</a>. The next public testnet is coming in September 2026.
-    </p>
+    <div class="testnet-grid">
+      <div class="testnet-field">
+        <span class="testnet-label">NETWORK ID</span>
+        <div class="testnet-value">
+          <code>7738577</code>
+          <button type="button" class="copy-btn" data-copy="7738577" aria-label="Copy network id" title="Copy"><svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+        </div>
+      </div>
+      <div class="testnet-field">
+        <span class="testnet-label">RPC URL</span>
+        <div class="testnet-value">
+          <code>https://rpc.tiramisu.db-chain.testnet.arkiv.network</code>
+          <button type="button" class="copy-btn" data-copy="https://rpc.tiramisu.db-chain.testnet.arkiv.network" aria-label="Copy rpc url" title="Copy"><svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+        </div>
+      </div>
+      <div class="testnet-field">
+        <span class="testnet-label">WEBSOCKET</span>
+        <div class="testnet-value">
+          <code>wss://rpc.tiramisu.db-chain.testnet.arkiv.network</code>
+          <button type="button" class="copy-btn" data-copy="wss://rpc.tiramisu.db-chain.testnet.arkiv.network" aria-label="Copy websocket" title="Copy"><svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><svg class="check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="testnet-actions">
+      <a href="https://tiramisu.explorer.arkiv.network" target="_blank" rel="noopener">Block Explorer</a>
+      <a href="https://data.arkiv.network?utm_source=docs&utm_medium=referral&utm_campaign=data-explorer&utm_content=quickstart-button" target="_blank" rel="noopener">Entity Explorer</a>
+      <button id="add-tiramisu-btn" type="button" data-umami-event="add-tiramisu-to-wallet">Add Network to Wallet</button>
+      <a href="https://hub.arkiv.network/faucet" target="_blank" rel="noopener">Get Test Tokens</a>
+      <a href="https://hub.arkiv.network/api-keys" target="_blank" rel="noopener" data-umami-event="get-api-key">Get Access Key</a>
+    </div>
   </div>
   <div class="quickstart-cards">
     <div class="qs-card">
       <div class="qs-card-title">JavaScript / TypeScript</div>
-      <p>Build web applications and backends with our comprehensive JS/TS SDK.</p>
+      <p>Build web applications and backends with the JS/TS SDK.</p>
       <a href="/start-here/installation/">Get Started with JS/TS →</a>
     </div>
     <div class="qs-card">
@@ -47,9 +71,9 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
       <a href="/json-rpc/querying-data/">View API Docs →</a>
     </div>
     <div class="qs-card">
-      <div class="qs-card-title">Litepaper</div>
-      <p>Why a universal data layer for Ethereum, and how Arkiv is built to deliver it.</p>
-      <a href="https://arkiv.network/pdf/ARKIV_Litepaper.pdf" target="_blank" rel="noopener">Read the Litepaper →</a>
+      <div class="qs-card-title">Arkiv Hub</div>
+      <p>The home base for builders: faucet, MCP access, and network tools in one place.</p>
+      <a href="https://hub.arkiv.network" target="_blank" rel="noopener">Go to Arkiv Hub →</a>
     </div>
   </div>
 </div>
@@ -64,6 +88,14 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
   }
   .sl-markdown-content {
     margin-top: 0 !important;
+  }
+  /* The splash page has no pagination or edit links, so drop the empty
+     footer and the bottom padding that would otherwise force a scroll. */
+  .main-pane footer {
+    display: none;
+  }
+  .content-panel {
+    padding-bottom: 0 !important;
   }
   .hero-landing {
     text-align: center;
@@ -97,7 +129,6 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    margin-bottom: 2rem;
   }
   @media (min-width: 860px) {
     .quickstart-layout {
@@ -184,16 +215,126 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
     color: var(--color-arkiv-orange);
     border-color: var(--color-arkiv-orange);
   }
-  .testnet-note {
-    font-size: 0.85rem;
-    line-height: 1.6;
+  .testnet-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .testnet-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .testnet-label {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: var(--sl-color-gray-3);
-    margin: 0 0 1rem;
   }
-  .testnet-note:last-child {
-    margin-bottom: 0;
+  .testnet-value {
+    display: flex;
+    align-items: stretch;
+    background: var(--sl-color-gray-6, rgba(0,0,0,0.2));
+    border-radius: 2px;
   }
-  .testnet-note a {
+  .testnet-field code {
+    font-size: 0.75rem;
+    word-break: break-all;
+    background: transparent;
+    padding: 0.35rem 0.5rem;
+    flex: 1;
+  }
+  .copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.6rem;
+    margin-left: auto;
+    border: 0;
+    background: transparent;
+    color: var(--sl-color-gray-3);
+    cursor: pointer;
+  }
+  .copy-btn:hover {
+    color: var(--color-arkiv-orange);
+  }
+  .copy-btn .check-icon {
+    display: none;
+  }
+  .copy-btn.copied .copy-icon {
+    display: none;
+  }
+  .copy-btn.copied .check-icon {
+    display: block;
+    color: var(--color-arkiv-orange);
+  }
+  .testnet-field code a {
+    color: inherit;
+    text-decoration: none;
+    pointer-events: none;
+  }
+  .testnet-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    border-top: 1px solid var(--sl-color-gray-5);
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+  }
+  .testnet-actions a,
+  .testnet-actions button {
+    font-family: "BrutalType", ui-sans-serif, system-ui, sans-serif;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.04em;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background: transparent;
+    text-decoration: none;
+    color: var(--sl-color-white);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .testnet-actions a:hover,
+  .testnet-actions button:hover {
+    border-color: var(--color-arkiv-orange);
     color: var(--color-arkiv-orange);
   }
 `}</style>
+
+<script>
+{`
+  document.querySelectorAll('.copy-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy);
+        btn.classList.add('copied');
+        setTimeout(() => btn.classList.remove('copied'), 1500);
+      } catch (err) {
+        console.error('Copy failed:', err);
+      }
+    });
+  });
+  document.getElementById('add-tiramisu-btn')?.addEventListener('click', async () => {
+    if (!window.ethereum) {
+      alert('Please install MetaMask or another Web3 wallet.');
+      return;
+    }
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: '0x7614d1',
+          chainName: 'Arkiv Tiramisu Testnet',
+          nativeCurrency: { name: 'Golem', symbol: 'GLM', decimals: 18 },
+          rpcUrls: ['https://rpc.tiramisu.db-chain.testnet.arkiv.network'],
+          blockExplorerUrls: ['https://tiramisu.explorer.arkiv.network/']
+        }]
+      });
+    } catch (err) {
+      console.error('Failed to add network:', err);
+    }
+  });
+`}
+</script>
