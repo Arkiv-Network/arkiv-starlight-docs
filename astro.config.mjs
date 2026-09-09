@@ -94,6 +94,12 @@ export default defineConfig({
 					],
 				},
 				{
+					label: "Cookbook",
+					items: [
+						{ label: "User Profiles", slug: "cookbook/user-profiles" },
+					],
+				},
+				{
 					label: "Learn by Doing",
 					items: [
 						{
