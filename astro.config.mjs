@@ -45,6 +45,7 @@ export default defineConfig({
 		"/start-here/testnet": "/networks/tiramisu/",
 		"/networks/migrate-from-kaolin": "/networks/older-networks/",
 		"/networks/cheesecake": "/networks/tiramisu/",
+		"/start-here/api-keys": "/start-here/access-keys/",
 	},
 	markdown: {
 		remarkPlugins: [rewriteIndexLinks],
@@ -68,7 +69,7 @@ export default defineConfig({
 						{ label: "Installation", slug: "start-here/installation" },
 						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 						{ label: "Data Explorer", slug: "start-here/data-explorer" },
-						{ label: "API Keys", slug: "start-here/api-keys" },
+						{ label: "Access Keys", slug: "start-here/access-keys" },
 					],
 				},
 				{
