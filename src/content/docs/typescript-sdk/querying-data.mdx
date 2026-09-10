@@ -1,6 +1,6 @@
 ---
-title: Querying Data
-description: "Query entities from Arkiv using the TypeScript SDK: field selection, operators, pagination, and filtering."
+title: Querying data
+description: Read entities from Arkiv with the TypeScript SDK. Select fields, filter with typed predicates, paginate, sort, and read past blocks.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -8,11 +8,11 @@ import NetworkNote from '../../../components/NetworkNote.astro';
 
 <NetworkNote />
 
-This page shows you how to read entities from Arkiv with the public client of the TypeScript SDK. The client gives you a chainable query builder with field selection, filtering, pagination, and payload retrieval.
+This page shows you how to read entities with the public client of the TypeScript SDK. It covers fetching one entity by key, building a `select()` query with typed predicates, reading the typed results, paginating, sorting, and reading a past block. Reads cost no gas and need no wallet.
 
-## PublicClient Setup
+## Set up a public client
 
-All queries use the read-only public client:
+A public client reads from the chain and never signs anything, so it needs no private key and is safe to ship to a browser:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
@@ -25,247 +25,391 @@ const publicClient = createPublicClient({
 })
 ```
 
-## Building Queries
+`http()` with no URL uses the public RPC endpoint of the chain, which is heavily rate limited and meant for a first try. Get a free [access key](/start-here/access-keys/) from the Arkiv Hub and put it in the transport URL before you build anything real. Keep that key on a server, because anyone who opens your website can read it from the network requests.
 
-Use `select()` to name the entity fields that you want, then chain filters and run the query with `.fetch()`:
+## Read one entity by key
 
-```ts
-import { eq, gt } from "@arkiv-network/sdk/query"
-
-const result = await publicClient
-  .select({ key: true, payload: true, attributes: true })
-  .where(eq('type', 'note'), gt('created', Date.now() - 86400000))
-  .limit(10)
-  .fetch()
-
-console.log('Found:', result.entities.length)
-```
-
-### Selecting Fields
-
-Pass nothing, or `"*"`, to fetch every field. Pass an object to fetch only specific fields:
-
-```ts
-// All fields
-await publicClient.select().where(eq('type', 'note')).fetch()
-
-// Only the fields you need
-await publicClient
-  .select({ key: true, owner: true, payload: true })
-  .where(eq('type', 'note'))
-  .fetch()
-```
-
-Available fields: `key`, `owner`, `creator`, `createdAt`, `updatedAt`, `expiresAt`, `creationFlags`, `contentType`, `payload`, `attributeSchema`, `attributes`.
-
-<Aside>
-Select only what you need. The network sends every selected field, so an unused field makes the query slower. Each field is opt-in, including `key`.
-</Aside>
-
-The result type comes from your selection. The `toText()` and `toJson()` payload helpers work only when you select `payload`.
-
-```ts
-const [entity] = (await publicClient.select({ owner: true, payload: true }).fetch()).entities
-
-entity.owner     // OK: Hex
-entity.toJson()  // OK: payload was selected
-entity.creator   // Compile error: not selected
-```
-
-<Aside type="caution">
-Pass the selection inline. A selection stored in a variable widens its `true` values to `boolean`, so the result type loses its precision. To reuse a selection, annotate it `as const`:
-
-```ts
-const fields = { owner: true, payload: true } as const
-await publicClient.select(fields).where(eq('type', 'note')).fetch()
-```
-</Aside>
-
-
-### Query Builder Methods
-
-| Method | Description |
-|--------|-------------|
-| `.where(...conditions)` | Add filter conditions (chainable) |
-| `.ownedBy(address)` | Filter by current owner |
-| `.createdBy(address)` | Filter by original creator (immutable) |
-| `.limit(n)` | Limit number of results |
-| `.fetch()` | Execute the query |
-
-### Passing Multiple Conditions
-
-You can chain `.where()` calls, pass several conditions as arguments, or pass an array. Every form combines the conditions with AND:
-
-```ts
-// Chained: each .where() adds an AND condition
-const result = await publicClient
-  .select({ key: true, payload: true })
-  .where(eq('type', 'note'))
-  .where(gt('priority', 3))
-  .fetch()
-
-// Varargs: same result as above
-const result = await publicClient
-  .select({ key: true, payload: true })
-  .where(eq('type', 'note'), gt('priority', 3))
-  .fetch()
-
-// Array syntax: also the same result
-const result = await publicClient
-  .select({ key: true, payload: true })
-  .where([eq('type', 'note'), gt('priority', 3)])
-  .fetch()
-```
-
-## Query Operators
-
-```ts
-import { eq, gt, lt, gte, lte, startsWith, not } from "@arkiv-network/sdk/query"
-
-eq('type', 'note')          // type = "note"
-gt('priority', 3)           // priority > 3
-lt('price', 1000)           // price < 1000
-gte('created', timestamp)   // created >= timestamp
-lte('expiration', limit)    // expiration <= limit
-startsWith('title', 'RFC')  // title starts with "RFC"
-```
-
-<Aside type="caution" title="Three exported predicates do not work yet">
-The SDK also exports `ne()`, `exists()` and `hasType()`. The node does not implement them at this version. A query that uses one of them fails to parse.
-
-For a not-equal test, write `not(eq('type', 'archived'))` instead. This also matches entities that never set the attribute, because it is the full complement.
-</Aside>
-
-<Aside>
-String attributes support `eq()` and `startsWith()`. Numeric attributes (`i32`, `u64`, `u256`, `dec`) support every comparison operator. Store numbers as numeric attributes to run range queries.
-</Aside>
-
-### Combining with and() / or()
-
-Nest conditions with `and()` and `or()`. Both functions accept the predicates as separate arguments, or as a single array:
-
-```ts
-import { and, or, eq, gt } from "@arkiv-network/sdk/query"
-
-// type = "note" AND (priority > 3 OR pinned = "true")
-const result = await publicClient
-  .select({ key: true, payload: true })
-  .where(eq('type', 'note'), or(gt('priority', 3), eq('pinned', 'true')))
-  .fetch()
-
-// Array form works too: or([gt('priority', 3), eq('pinned', 'true')])
-```
-
-## Filtering by Owner and Creator
-
-Every entity has two metadata fields:
-
-- **`$owner`**: the wallet that currently owns the entity. It can change when the owner transfers the entity.
-- **`$creator`**: the wallet that first created the entity. This field is immutable, so it never changes.
-
-```ts
-// Filter by current owner
-const owned = await publicClient
-  .select({ key: true, owner: true, payload: true })
-  .where(eq('type', 'note'))
-  .ownedBy('0xOwnerAddress')
-  .fetch()
-
-// Filter by original creator (tamper-evident)
-const created = await publicClient
-  .select({ key: true, creator: true, payload: true })
-  .where(eq('type', 'note'))
-  .createdBy('0xCreatorAddress')
-  .fetch()
-```
-
-<Aside type="tip">
-Use `.createdBy()` for a tamper-evident guarantee of who wrote the data, for example to make sure that data came from your trusted backend. The `$creator` field is immutable, so no one can spoof it after creation.
-</Aside>
-
-## Getting a Single Entity
-
-Retrieve a specific entity by key:
+When you already hold an entity key, `getEntity()` returns the entity with every field populated:
 
 ```ts
 const entity = await publicClient.getEntity(entityKey)
 
-// Parse the payload
-const data = entity.toJson()   // JSON payload
-const text = entity.toText()   // Text payload
+entity.owner                     // checksummed address
+entity.expiresAt                 // bigint block height
+entity.attributes.status.value   // typed attribute value
+entity.toJson()                  // payload parsed as JSON
 ```
 
-`getEntity()` always returns every field populated, so you do not need a selection.
+The method throws `NoEntityFoundError` when no live entity has that key: it never existed, was deleted, or expired.
 
-## Reading Results
+## Build a query
+
+Every query has the same shape: name the fields you want with `select()`, add filters, then run it with `fetch()`:
 
 ```ts
-const result = await publicClient
+import { i32, str } from "@arkiv-network/sdk/attr"
+import { eq, gte } from "@arkiv-network/sdk/query"
+
+const page = await publicClient
   .select({ key: true, payload: true, attributes: true })
-  .where(eq('type', 'note'))
+  .where(eq("project", str("my_project")), eq("type", str("note")))
+  .where(gte("priority", i32(3)))
+  .limit(50)
   .fetch()
 
-for (const entity of result.entities) {
-  // Access payload (payload was selected)
-  const data = entity.toJson()
-  console.log(data.title, data.content)
+for (const note of page.entities) {
+  console.log(note.key, note.attributes.priority.value, note.toJson())
+}
+```
 
-  // Access entity key (key was selected)
-  console.log('Key:', entity.key)
+<Aside>
+A query needs at least one filter.
+</Aside>
 
-  // Access attributes (attributes were selected): an object keyed by name
-  for (const [name, attribute] of Object.entries(entity.attributes)) {
-    console.log(`${name}: ${attribute.value}`)
+### Choose the fields to return
+
+Pass `select()` an object with the fields you want set to `true`. Every field is opt-in, including `key`, and the network sends only what you name:
+
+| Field | Type | What it holds |
+| --- | --- | --- |
+| `key` | `Hex` | The 32-byte entity key |
+| `owner` | `Hex` | The wallet that owns the entity now. Changes on transfer |
+| `creator` | `Hex` | The wallet that created the entity. Never changes |
+| `createdAt` | `bigint` | The block the entity was created in |
+| `updatedAt` | `bigint` | The block of the last patch |
+| `expiresAt` | `bigint` | The block the entity expires at |
+| `creationFlags` | `ResolvedCreationFlags` | `readonly`, `permissionlessExtension`, and the raw byte |
+| `contentType` | `string` | The MIME type of the payload |
+| `payload` | `Uint8Array` | The raw payload bytes |
+| `attributeSchema` | `AttributeSchema` | Attribute names mapped to their type tags, without values |
+| `attributes` | `Attributes` | Attribute names mapped to a typed value |
+
+Call `select()` with no argument, or with `"*"`, to fetch all eleven fields. That is convenient while you explore and wasteful in production, because the payload alone can be 128 KiB per entity.
+
+`attributes` also takes a map of names, which fetches only those attributes and skips the rest:
+
+```ts
+const page = await publicClient
+  .select({ key: true, attributes: { status: true, priority: true } })
+  .where(eq("project", str("my_project")))
+  .fetch()
+```
+
+`attributeSchema` returns names and types without values, which is enough to learn the shape of unfamiliar data before you transfer it.
+
+### Read the typed result
+
+The result type follows your selection. A field you did not select is a compile error rather than `undefined`, and the payload helpers appear only when you selected `payload`:
+
+```ts
+const page = await publicClient
+  .select({ owner: true, payload: true })
+  .where(eq("project", str("my_project")))
+  .fetch()
+
+const [first] = page.entities
+first.owner      // Hex
+first.toJson()   // available because payload was selected
+first.creator    // compile error: not selected
+```
+
+<Aside type="caution" title="Pass the selection inline, or freeze it">
+A selection stored in a variable widens its `true` values to `boolean`, and the result type falls back to the full entity with every field optional. Add `as const` to keep the narrowing:
+
+```ts
+const fields = { key: true, payload: true } as const
+
+await publicClient.select(fields).where(eq("type", str("note"))).fetch()
+```
+</Aside>
+
+### Filter with predicates
+
+Import the predicates from `@arkiv-network/sdk/query`. Each one takes an attribute name and a value, and renders to one clause of the query language that the node parses:
+
+| Predicate | Renders as | Works on |
+| --- | --- | --- |
+| `eq(name, value)` | `name = value` | every type |
+| `gt(name, value)` | `name > value` | `i32`, `u64`, `u256`, `dec` |
+| `gte(name, value)` | `name >= value` | `i32`, `u64`, `u256`, `dec` |
+| `lt(name, value)` | `name < value` | `i32`, `u64`, `u256`, `dec` |
+| `lte(name, value)` | `name <= value` | `i32`, `u64`, `u256`, `dec` |
+| `startsWith(name, prefix)` | `name STARTSWITH str('prefix')` | `str` |
+| `not(expression)` | `NOT (…)` | any expression |
+| `and(…expressions)` | `a AND b` | any expressions |
+| `or(…expressions)` | `a OR b` | any expressions |
+
+#### Every predicate asserts a type
+
+A value in a predicate carries a type tag, and the tag is part of the match. `eq("level", i32(10))` matches an entity whose `level` is an `i32` holding 10. It does not match a `level` stored as `u64(10)` or as `str("10")`. A type mismatch is not an error: the query runs and returns nothing.
+
+Build the value with the same constructor you used to store it. A `dec` predicate finds `dec` attributes and nothing else:
+
+```ts
+import { dec, u64 } from "@arkiv-network/sdk/attr"
+
+gt("created_at_ms", u64(Date.now() - 86_400_000))   // matches u64 attributes
+gte("rating", dec("4.5"))                         // matches dec attributes
+```
+
+The SDK also accepts a bare JavaScript value in a predicate, but a constructor is highly recommended to avoid a type mismatch with the stored attribute. [Choose an attribute type](/typescript-sdk/mutating-data/#choose-an-attribute-type) on the Mutating data page lists every type, what it accepts, and when to use it.
+
+#### Predicates the network does not support yet
+
+<Aside type="caution" title="Part of the SDK, not yet part of the network">
+The SDK exports `ne()`, `exists()` and `hasType()`, but the current network implementation does not support them. A query that uses one is rejected. This page will be updated when the network catches up.
+</Aside>
+
+Until then, write a not-equal test by wrapping `eq()` in `not()`:
+
+```ts
+import { str } from "@arkiv-network/sdk/attr"
+import { eq, not } from "@arkiv-network/sdk/query"
+
+not(eq("status", str("archived")))   // NOT status = str('archived')
+```
+
+`not()` is the full complement over the live entities. The predicate above matches entities whose `status` is any other string, entities whose `status` has another type, and entities that never set `status` at all. Add an `eq()` on a field every entity in your project carries to keep the result inside your data.
+
+### Combine conditions
+
+Conditions combine with AND by default. Chained `where()` calls, several arguments to one `where()`, and an array passed to `where()` all mean the same thing:
+
+```ts
+builder.where(eq("type", str("note"))).where(gt("priority", i32(3)))
+builder.where(eq("type", str("note")), gt("priority", i32(3)))
+builder.where([eq("type", str("note")), gt("priority", i32(3))])
+```
+
+For alternatives, nest `or()` inside a `where()`. Both `and()` and `or()` also accept an array, so you can build a filter list at runtime:
+
+```ts
+import { i32, str } from "@arkiv-network/sdk/attr"
+import { and, eq, gt, or } from "@arkiv-network/sdk/query"
+
+const filters = [eq("project", str("my_project")), eq("type", str("note"))]
+if (minPriority !== undefined) {
+  filters.push(gt("priority", i32(minPriority)))
+}
+
+const page = await publicClient
+  .select({ key: true })
+  .where(and(filters))
+  .where(or(eq("status", str("open")), eq("status", str("review"))))
+  .fetch()
+```
+
+Call `toString()` on a builder or an expression to see the query string the node receives.
+
+### Filter by owner, creator, key and expiry
+
+Four system attributes carry an index and accept predicates. Each has a fixed type:
+
+| Attribute | Type | Meaning |
+| --- | --- | --- |
+| `$owner` | `addr` | The wallet that owns the entity now |
+| `$creator` | `addr` | The wallet that created it. Immutable |
+| `$key` | `key` | The entity key |
+| `$expiresAt` | `u64` | The block the entity expires at |
+
+`ownedBy()` and `createdBy()` are shorthands for an `eq()` on `$owner` and `$creator`:
+
+```ts
+const mine = await publicClient
+  .select({ key: true, payload: true })
+  .where(eq("project", str("my_project")))
+  .ownedBy("0x1234567890123456789012345678901234567890")
+  .fetch()
+```
+
+Ownership changes on transfer, and the creator never does. Filter by creator when you need proof that data came from a wallet you trust, for example entities your backend publishes for a frontend to read. Anyone can copy your project attribute onto their own entities. Nobody can forge `$creator`.
+
+`$expiresAt` is a `u64` block height, so a range predicate on it finds entities that expire soon. One block is 2 seconds, so a day is 43,200 blocks:
+
+```ts
+import { str, u64 } from "@arkiv-network/sdk/attr"
+import { eq, lt } from "@arkiv-network/sdk/query"
+
+const head = await publicClient.getBlockNumber()
+
+const expiringToday = await publicClient
+  .select({ key: true, expiresAt: true })
+  .where(eq("project", str("my_project")))
+  .where(lt("$expiresAt", u64(head + 43_200n)))
+  .ownedBy(myAddress)
+  .fetch()
+```
+
+The other system fields, `$createdAt`, `$updatedAt`, `$creationFlags`, `$contentType` and `$payload`, carry no index and cannot be filtered on. Select the field and filter in JavaScript instead.
+
+## Read the results
+
+`fetch()` resolves to a `QueryResult` with three fields: `entities`, `blockNumber`, and `cursor`. The entities on a page carry the fields you selected, decoded into JavaScript values:
+
+```ts
+for (const entity of page.entities) {
+  const status = entity.attributes.status
+  if (status?.type === "str") console.log(status.value.toUpperCase())
+
+  const level = entity.attributes.level
+  if (level?.type === "i32") console.log(level.value + 1)
+}
+```
+
+Each attribute is an object with a `type` tag and a `value`. Narrowing on the tag gives you a typed value:
+
+| Type tag | `value` is |
+| --- | --- |
+| `bool` | `boolean` |
+| `i32` | `number` |
+| `u64`, `u256` | `bigint` |
+| `dec` | `string`, such as `"3.5"` |
+| `str` | `string` |
+| `addr` | A checksummed `0x` address |
+| `key`, `bytes32` | Lowercase `0x` hex |
+
+Block heights (`createdAt`, `updatedAt`, `expiresAt`) are `bigint`. The payload is a `Uint8Array`: `toJson()` parses it as JSON and `toText()` decodes it as UTF-8. `toJson()` returns `any`, so validate the shape before you trust it. [Validate entity data with schemas](/typescript-sdk/best-practices/#14-validate-entity-data-with-schemas) shows one way.
+
+## Paginate
+
+The node returns at most 200 entities per page and sends a cursor when more remain. Set the page size with `limit()`, then walk the pages with `hasNextPage()` and `next()`:
+
+```ts
+let page = await publicClient
+  .select({ key: true })
+  .where(eq("project", str("my_project")))
+  .limit(200)
+  .fetch()
+
+const keys = page.entities.map((e) => e.key)
+while (page.hasNextPage()) {
+  page = await page.next()
+  keys.push(...page.entities.map((e) => e.key))
+}
+```
+
+Without `limit()`, Tiramisu currently returns 100 per page. The builder is also an async iterable that walks every page for you, one entity at a time:
+
+```ts
+const notes = publicClient
+  .select({ key: true, attributes: true })
+  .where(eq("project", str("my_project")))
+
+for await (const note of notes) {
+  console.log(note.key, note.attributes)
+}
+```
+
+### Every page reads the same block
+
+The first page records the block it was read at in `blockNumber`, and every later page of the same walk reads that same block. Writes that land while you paginate never shift the pages under you. The trade-off is that a cursor expires once the node no longer retains that block. When that happens, start the query again from the first page.
+
+### Resume a walk later
+
+`page.cursor` is a string you can store, and `cursor()` on the builder starts from it. Rebuild the query exactly as before, because a cursor belongs to the query and selection it came from:
+
+```ts
+const resumed = await publicClient
+  .select({ key: true })
+  .where(eq("project", str("my_project")))
+  .limit(200)
+  .cursor(savedCursor)
+  .fetch()
+```
+
+## Sort results
+
+The node returns matching entities newest first and supports no other order. To sort by an attribute, fetch the entities and sort them in JavaScript:
+
+```ts
+const page = await publicClient
+  .select({ key: true, attributes: true })
+  .where(eq("project", str("my_project")), eq("type", str("note")))
+  .fetch()
+
+const priorityOf = (note: (typeof page.entities)[number]) => {
+  const priority = note.attributes.priority
+  return priority?.type === "i32" ? priority.value : 0
+}
+
+const byPriority = [...page.entities]
+  .sort((a, b) => priorityOf(b) - priorityOf(a))
+```
+
+<Aside type="caution" title="limit() runs before your sort">
+`limit(10)` returns the 10 newest matches, not the 10 highest-priority ones. For a true top-n by attribute, walk every page, then sort and slice. If that is too much data, narrow the filter instead: `gte("priority", 8)` costs less than sorting everything.
+</Aside>
+
+## Read a past block
+
+`atBlock()` runs the query against the state as of a block height instead of the head. The result reports the block it read in `blockNumber`, and pagination stays on that block:
+
+```ts
+const snapshot = await publicClient
+  .select({ key: true, attributes: true })
+  .where(eq("project", str("my_project")))
+  .atBlock(1_200_000n)
+  .fetch()
+```
+
+The node keeps a limited history, so a block that is too old is rejected.
+
+## Count entities
+
+`getEntityCount()` returns the number of live entities on the whole chain as a plain number. It takes no query and applies no filter:
+
+```ts
+const total = await publicClient.getEntityCount()
+```
+
+To count the entities that match a filter, walk the pages with `select({ key: true })` and add up the page lengths. Selecting only the key keeps each page small.
+
+## Run a raw query
+
+`query()` runs one page without the builder. It takes an expression built with the predicates above, or a raw query string:
+
+```ts
+import { i32, str } from "@arkiv-network/sdk/attr"
+import { and, eq, gte } from "@arkiv-network/sdk/query"
+
+const page = await publicClient.query(
+  and(eq("project", str("my_project")), gte("level", i32(10))),
+  { select: { key: true, attributes: true }, limit: 100 },
+)
+
+const raw = await publicClient.query(
+  "project = str('my_project') AND level >= i32(10)",
+  { select: { key: true }, limit: 100 },
+)
+```
+
+The options are `select`, `limit`, `cursor` and `atBlock`, with the same meanings as on the builder. The result has `entities`, `cursor` and `blockNumber`, and each entity is typed as the full `Entity` with every field optional.
+
+The string form sends the query language directly. The [query syntax](/json-rpc/querying-data/#query-syntax) reference on the JSON-RPC page documents it.
+
+## Handle query errors
+
+A query the node rejects throws `QueryError`. Its `kind` tells you what to do, and `code`, `data` and `query` carry the detail. No query method retries:
+
+| `kind` | Code | Meaning | What to do |
+| --- | --- | --- | --- |
+| `parse` | `-32001` | The query string does not parse | Fix the query |
+| `type` | `-32002` | A predicate uses an operator the node does not support for that type | Fix the query |
+| `literal` | `-32003` | A literal is out of range for its type | Fix the value |
+| `limits` | `-32004` | The query exceeded a node budget: length, predicate count, or nesting depth | Split the query |
+| `cursor` | `-32005` | The cursor expired or belongs to another query | Restart from page one |
+| `block` | `-32006` | `atBlock` is outside the retained range | Use a more recent block |
+
+```ts
+import { QueryError } from "@arkiv-network/sdk/query"
+
+try {
+  page = await page.next()
+} catch (error) {
+  if (error instanceof QueryError && error.kind === "cursor") {
+    page = await notes.fetch()   // the snapshot is gone: restart the walk
+  } else {
+    throw error
   }
 }
 ```
-
-## Pagination
-
-Arkiv uses cursor-based pagination. A page holds at most 200 results.
-
-```ts
-let result = await publicClient
-  .select({ key: true, payload: true })
-  .where(eq('type', 'note'))
-  .limit(10)
-  .fetch()
-
-console.log('Page 1:', result.entities.length)
-
-// More pages: next() returns a new QueryResult, it does not change this one
-if (result.hasNextPage()) {
-  result = await result.next()
-  console.log('Page 2:', result.entities.length)
-}
-```
-
-## Sorting Results
-
-The network always returns matching entities newest first. The server does not support any other order. To sort by an attribute, fetch the entities, then sort them in JavaScript:
-
-```ts
-const { entities } = await publicClient
-  .select({ key: true, payload: true, attributes: true })
-  .where(eq('type', 'note'))
-  .fetch()
-
-// Read the numeric "priority" attribute off an entity
-const priorityOf = (entity: (typeof entities)[number]) =>
-  Number(entity.attributes.priority?.value ?? 0)
-
-// Highest priority first
-entities.sort((a, b) => priorityOf(b) - priorityOf(a))
-```
-
-<Aside type="caution">
-`.limit(n)` caps the results before your sort runs. As a result, you get the n newest matches, not the top n by your attribute. For a true top n, fetch all matching entities, paginate if needed, then sort and slice the results.
-</Aside>
-
-<Aside type="caution">
-Older SDK versions had `orderBy()` and the `asc()` and `desc()` helpers. Version 0.8.0 removed them. Sort your results in JavaScript instead.
-</Aside>
-
-:::caution[String pattern matching]
-The SDK supports prefix matching on string attributes with `startsWith("name", "prefix")`. The TypeScript SDK does not yet support full glob matching. For that, use the [JSON-RPC API](/json-rpc/querying-data/#query-syntax) directly.
-:::
