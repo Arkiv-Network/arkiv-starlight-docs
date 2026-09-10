@@ -1,18 +1,18 @@
 ---
-title: Mutating Data
-description: Create, patch, delete, and extend entities with the Arkiv TypeScript SDK.
+title: Mutating data
+description: Create, patch, extend, transfer, delete, and batch entities with the Arkiv TypeScript SDK. Covers attribute types, payloads, expiry, and nonces.
 ---
 
-import { Aside } from '@astrojs/starlight/components';
+import { Aside, Steps } from '@astrojs/starlight/components';
 import NetworkNote from '../../../components/NetworkNote.astro';
 
 <NetworkNote />
 
-This page shows you how to create, patch, delete, and extend entities on Arkiv with the wallet client of the TypeScript SDK.
+This page shows you how to write entities with the wallet client of the TypeScript SDK. It covers what an entity is made of, how to pick an attribute type, and how to build an expiry. It then walks through the five write operations, batching, and concurrent writes. Every write is a signed Ethereum transaction, so you need a wallet with test GLM from the [faucet](https://hub.arkiv.network/faucet).
 
-## WalletClient Setup
+## Set up a wallet client
 
-All write operations require a wallet client:
+A wallet client signs and sends transactions, so it carries an account. On a server, build the account from a private key:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
@@ -27,230 +27,354 @@ const walletClient = createWalletClient({
 })
 ```
 
-<Aside type="caution">CAUTION: Do not hardcode a private key. Keep it in an environment variable instead. Anyone who reads a hardcoded key can spend your funds.</Aside>
+`http()` with no URL uses the public RPC endpoint, which is heavily rate limited and meant for a first try. Get a free [access key](/start-here/access-keys/) from the Arkiv Hub and put it in the transport URL before you build anything real.
 
-## Payload Helpers
+The wallet client only writes. Reads such as `getEntity()`, `select()` and `predictEntityKeys()` live on the [public client](/typescript-sdk/querying-data/#set-up-a-public-client), so most apps create both.
 
-Convert data to Arkiv payloads before storing:
+### Write from the browser with a wallet extension
+
+In a browser, the user’s wallet extension signs instead of a private key. Ask it for an account, then pass the extension as the transport and the account address to the client:
+
+```ts
+import { createWalletClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { custom } from "viem"
+
+const [account] = await window.ethereum.request({
+  method: "eth_requestAccounts",
+})
+
+const walletClient = createWalletClient({
+  chain: tiramisu,
+  transport: custom(window.ethereum),
+  account,
+})
+```
+
+The extension asks the user to confirm every transaction. The [MetaMask sketch app](/learn/metamask-sketch-app/) tutorial adds chain switching and a full connect flow.
+
+## What an entity is made of
+
+An entity has contents, a set of indexed attributes, and a lifetime. You write the first three rows of this table, and the engine fills in the rest:
+
+| Part | Set by | What it is |
+| --- | --- | --- |
+| `payload`, `contentType` | you | The contents and their MIME type. Stored, returned, never indexed |
+| `attributes` | you | Up to 30 typed name-value pairs. Indexed, so queries filter on them |
+| `expires` | you | The block the entity stops existing at |
+| `flags`, `salt` | you, optional | Immutable properties and the key salt. See [Create an entity](#create-an-entity) |
+| `key` | engine | A 32-byte identifier derived from your wallet, a per-wallet counter, and the salt |
+| `owner`, `creator` | engine | Your wallet. The owner changes on transfer, the creator never does |
+| `createdAt`, `updatedAt`, `expiresAt` | engine | Block heights |
+
+Put the data you want to filter on in attributes, and everything else in the payload. An attribute is short and typed. A payload is up to 128 KiB of anything.
+
+## Choose an attribute type
+
+Every attribute value carries a type, and the type decides which query operators work on it. Choose the type when you write the value, because a query can only ask for what the index holds.
+
+### Name attributes
+
+An attribute name is 1 to 32 ASCII characters: a lowercase letter first, then lowercase letters, digits, `.`, `-` and `_`. Uppercase letters are rejected, so write names in snake_case, such as `created_at_ms`. Three more kinds of name are reserved:
+
+- Names that start with `$`, which belong to the system attributes
+- Names that contain `--`, which opens a comment in the query language
+- Words the query language reserves: `and`, `or`, `not`, `true`, `false`, `startswith`, `exists`, `typeof`, and the type tags `bool`, `i32`, `u64`, `u256`, `dec`, `bytes32`, `bytes`, `str`, `addr`, `key`
+
+### Pick a type for each value
+
+Import the constructors from `@arkiv-network/sdk/attr`. The table lists what each type accepts, which operators it supports, and what it is for:
+
+| Type | Constructor | Accepts | Operators | Use it for |
+| --- | --- | --- | --- | --- |
+| `str` | `str("open")` | A UTF-8 string up to 128 bytes, no control characters | `eq`, `startsWith` | Categories, status values, slugs, short identifiers |
+| `bool` | `bool(true)` | `true` or `false` | `eq` | Flags such as `pinned` or `draft` |
+| `i32` | `i32(42)` | An integer from −2,147,483,648 to 2,147,483,647 | `eq`, range | Priorities, versions, small counters, scores that can be negative |
+| `u64` | `u64(Date.now())` | A non-negative integer below 2⁶⁴ | `eq`, range | Millisecond timestamps, block heights, anything compared with `$expiresAt` |
+| `u256` | `u256(10n ** 18n)` | A non-negative integer below 2²⁵⁶ | `eq`, range | Token amounts in wei, hashes read as numbers |
+| `dec` | `dec("19.99")` | A decimal string with up to 18 fractional digits | `eq`, range | Prices, ratings, coordinates, anything with a fraction |
+| `addr` | `addr("0x1234…")` | A 20-byte Ethereum address | `eq` | Wallets: authors, recipients, voters |
+| `key` | `key(otherKey)` | A 32-byte entity key | `eq` | References to other entities |
+| `bytes32` | `bytes32(hash)` | Any 32 bytes | `eq` | Hashes, digests, identifiers from other systems |
+
+Range means `gt`, `gte`, `lt` and `lte`. Only the four numeric types carry an ordered index. A number stored as a `str` supports equality and prefix matching and nothing else, so store numbers as numbers.
+
+### Always wrap values in a constructor
+
+Build every value with the constructor for its type, even where the SDK would accept a bare JavaScript value. A constructor is highly recommended, because it rules out a type mismatch between what you store and what you query.
+
+The same rule applies to queries. A predicate asserts the type of its value, so `eq("seller", str("0x1234…"))` and `eq("seller", addr("0x1234…"))` are different questions, and only the one that matches the stored type finds the entity.
+
+### Choose between the numeric types
+
+The four numeric types differ in range and in whether they hold a fraction:
+
+- **`i32`**: anything that fits in 32 bits, and the only signed integer type. `Date.now()` does not fit, so timestamps belong in `u64`
+- **`u64`**: the width the protocol counts in. Block heights and `$expiresAt` are `u64`, so a value you want to compare with them must be a `u64` too
+- **`u256`**: values that can outgrow 64 bits, such as token amounts in wei
+- **`dec`**: a signed fixed-point decimal with up to 18 fractional digits. Pass fractions as strings, such as `dec("0.1")`, because a JavaScript float cannot represent most decimals exactly
+
+`dec` values come back as decimal strings such as `"3.5"`.
+
+### Store strings, addresses, keys and bytes
+
+The non-numeric types each have one rule worth knowing:
+
+- **`str`**: at most 128 UTF-8 bytes. Long or free-form text belongs in the payload, with a short key in the attribute
+- **`addr`**: an Ethereum address, stored checksummed
+- **`key`**: a weak reference to another entity. Nothing checks that the target exists, and a reference to a deleted or expired entity is allowed to dangle
+- **`bytes32`**: any other 32 bytes, such as a `keccak256` digest
+
+### Know what attributes cannot hold
+
+Attributes are flat, typed cells, and three things do not fit:
+
+- **Arrays and objects**: there is no list type. Model a list as one relationship entity per item, as [Model lists with relationship entities](/typescript-sdk/best-practices/#15-model-lists-with-relationship-entities) shows
+- **Empty values**: an attribute is either set or absent, so leave the name out instead of passing `undefined` or `null`
+- **More than 30 of them**: one operation carries at most 32 attribute cells, and the payload and the content type each take one
+
+A full attribute map with every kind of value looks like this:
+
+```ts
+import {
+  addr, bool, bytes32, dec, i32, key, str, u64, u256,
+} from "@arkiv-network/sdk/attr"
+
+const attributes = {
+  project: str("my_project"),
+  type: str("listing"),
+  active: bool(true),
+  priority: i32(3),
+  created_at_ms: u64(Date.now()),
+  bid_wei: u256(1_000_000_000_000_000_000n),
+  price: dec("19.99"),
+  seller: addr("0x1234567890123456789012345678901234567890"),
+  parent: key(parentEntityKey),
+  content_hash: bytes32(contentHash),
+}
+```
+
+## Encode the payload
+
+The payload is a `Uint8Array` of up to 128 KiB, paired with a lowercase MIME type. Two helpers from the package root encode the common cases:
 
 ```ts
 import { jsonToPayload, stringToPayload } from "@arkiv-network/sdk"
 
-// JSON data
-const jsonPayload = jsonToPayload({ title: "My Note", content: "Hello!" })
-
-// Plain text
-const textPayload = stringToPayload("Hello Arkiv!")
-
-// Reading back, use the entity's own decode helpers, not a standalone function
-const text = entity.toText()   // UTF-8 text
-const data = entity.toJson()   // parsed JSON
+const json = jsonToPayload({ title: "My note", body: "Hello" })
+const text = stringToPayload("Hello Arkiv")
 ```
 
-## Create Entity
+`jsonToPayload()` runs `JSON.stringify` and encodes the result as UTF-8. Pair it with `contentType: "application/json"` so `entity.toJson()` can read it back. `stringToPayload()` encodes a string as UTF-8. Pair it with `text/plain` and read it back with `entity.toText()`.
+
+For binary data, pass the bytes directly and read them back from `entity.payload`. An empty `Uint8Array` is valid for an entity that is nothing but attributes.
+
+The content type is a lowercase MIME type such as `image/png`. The `MimeType` type lists common values for autocompletion, and any other lowercase string is accepted. Payloads are capped at 128 KiB, so store larger data elsewhere and keep a reference on the entity.
+
+## Set an expiry
+
+Every entity expires at a block height, and Arkiv counts lifetimes in blocks of 2 seconds. Build the `expires` value with `ExpirationTime`.
+
+### Choose between a variable and an exact expiry
+
+On the wire an expiry is two numbers: an absolute target block, and a minimum lifetime in blocks. The engine resolves them against the block the transaction lands in and takes whichever is later. Each `ExpirationTime` helper fills in one of the two:
 
 ```ts
-import { jsonToPayload, ExpirationTime } from "@arkiv-network/sdk"
+import { ExpirationTime } from "@arkiv-network/sdk"
 
-const { entityKey, txHash } = await walletClient.createEntity({
-  payload: jsonToPayload({ title: "My Note", content: "Hello Arkiv!" }),
+// Variable: a lifetime, counted from the block the transaction lands in
+ExpirationTime.fromDays(30)
+ExpirationTime.fromHours(6)
+ExpirationTime.fromBlocks(1_000)
+
+// Exact: an absolute block height, or a date converted to one
+ExpirationTime.atBlock(1_200_000n)
+ExpirationTime.atDate(new Date("2027-01-01T00:00:00Z"))
+```
+
+A variable expiry, from `fromSeconds()` up to `fromYears()`, is a duration. The engine adds it to the block the transaction lands in, so the entity lives that long from the moment the write lands. The block the engine settled on comes back as `expiresAt` from `createEntity()` and `extendEntity()`.
+
+Durations convert to blocks at the nominal 2-second block time, and block production is not a clock, so a 30-day lifetime is approximately 30 days. `fromMonths()` counts 30 days per month and `fromYears()` 365 days per year. `fromBlocks()` is the one duration with no conversion.
+
+An exact expiry, from `atBlock()` or `atDate()`, names the block itself. The entity expires at that block whenever the transaction lands, which is what you want for a deadline shared across a set of entities or with another system. `atDate()` converts the date to a block against the current head and rounds up, so the entity lives until at least that instant.
+
+### Combine a deadline with a minimum lifetime
+
+An exact expiry that is too close to the current block is rejected as dead on arrival, and one that is close but valid can leave less life than you meant. `atLeast` puts a floor under a deadline. The engine takes the later of the two: the deadline holds when there is time, and the floor raises it when there is not.
+
+```ts
+// Expire at block 1,200,000, but never sooner than 30 seconds after landing
+ExpirationTime.atBlock(1_200_000n, {
+  atLeast: ExpirationTime.fromSeconds(30),
+})
+```
+
+The floor takes a duration from the `from*` helpers, never another deadline. With this floor, a transaction that lands 10 seconds before block 1,200,000 gives the entity 30 seconds instead of 10. One that lands a day before leaves the deadline as it is.
+
+### Expiry rules
+
+Four rules apply to every expiry:
+
+- A duration must be a whole number of blocks, so a multiple of 2 seconds. `fromSeconds(7)` is rejected, `fromSeconds(8)` works
+- The resolved expiry must be after the block the transaction lands in
+- A finite lifetime is capped by the chain constant `MAX_LIFETIME`. `ExpirationTime.permanent()` is the one exception: it sets a sentinel value that the engine never purges, and it is the only way to express permanence
+- An extension never shortens a life. A later expiry moves it out, an equal one is a no-op, and an earlier one is rejected
+
+### What happens when an entity expires
+
+From its expiry block on, an entity is gone. Queries no longer return it, `getEntity()` throws `NoEntityFoundError`, and every write against it is rejected. There is no event and no grace period.
+
+Two habits cover this. Start with a short lifetime and [extend it](#extend-an-entitys-expiry) while the data still matters, because you pay for the lifetime you choose. And if you mirror Arkiv data elsewhere, track `expiresAt` yourself, or query `$expiresAt` for entities that expire soon as [Querying data](/typescript-sdk/querying-data/#filter-by-owner-creator-key-and-expiry) shows.
+
+## Create an entity
+
+`createEntity()` takes the contents, the attributes and the lifetime, and resolves once the transaction is in a block:
+
+```ts
+import { ExpirationTime, jsonToPayload } from "@arkiv-network/sdk"
+import { dec, str, u64 } from "@arkiv-network/sdk/attr"
+
+const { entityKey, txHash, expiresAt } = await walletClient.createEntity({
+  payload: jsonToPayload({ title: "Standing desk", body: "Barely used" }),
   contentType: "application/json",
   attributes: {
-    type: "note",
-    id: crypto.randomUUID(),
-    created: Date.now(),
+    project: str("my_project"),
+    type: str("listing"),
+    price: dec("249.00"),
+    posted_at_ms: u64(Date.now()),
   },
-  expires: ExpirationTime.fromHours(12),
-})
-
-console.log("Created:", entityKey)
-```
-
-### Parameters
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `payload` | `Uint8Array` | Entity data (use `jsonToPayload` or `stringToPayload`) |
-| `contentType` | `string` | MIME type, for example `application/json` or `text/plain` |
-| `attributes` | `object` | Attribute names mapped to values, for querying |
-| `expires` | `Expiry` | Lifetime, built with `ExpirationTime` |
-
-### Validation Rules
-
-The SDK validates mutations before sending them and throws a descriptive error on invalid input:
-
-- **A bare numeric attribute value must be an integer.** `number` defaults to the `i32` type, and a non-integer `i32` throws `InvalidValueError`. For a genuine decimal, store the value with `dec(...)` from `@arkiv-network/sdk/attr`. It keeps full precision and still supports range queries. You can also scale to an integer, for example `1.5` to `1500`, and divide by the same factor on read. That older workaround still works, but `dec(...)` is usually the better fit.
-- **`expires` must resolve to a whole number of blocks.** Arkiv measures expiration in blocks, and 1 block is 2 seconds. A duration passed to `ExpirationTime.fromSeconds()` or another `from*` helper must be a positive multiple of 2 seconds. An invalid duration throws `InvalidExpiryError`.
-
-```ts
-import { dec } from "@arkiv-network/sdk/attr"
-
-// Throws InvalidValueError, floats are not a valid i32
-attributes: { price: 19.99 }
-
-// Correct: a genuine decimal, full precision preserved
-attributes: { price: dec("19.99") }
-
-// Correct: or scale to an integer (divide by 100 on read)
-attributes: { priceCents: 1999 }
-
-// Throws InvalidExpiryError, not a multiple of the 2s block time
-expires: ExpirationTime.fromSeconds(7)
-
-// Correct: positive integer, multiple of 2
-expires: ExpirationTime.fromHours(1)
-```
-
-### Returns
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `entityKey` | `Hex` | Unique identifier for the entity |
-| `txHash` | `Hash` | Transaction hash on the chain |
-| `expiresAt` | `bigint` | Block the entity is expected to expire at |
-
-## Patch Entity
-
-Change some of an entity's attributes or contents. Every field you do not name stays untouched:
-
-```ts
-const { txHash } = await walletClient.patchEntity({
-  entityKey: entityKey,
-  set: { title: "Updated Note", updated: Date.now() },
-  unset: ["draft"],
+  expires: ExpirationTime.fromDays(30),
 })
 ```
 
-<Aside>
-`patchEntity` is a **partial update**. `set` writes or overwrites the named attributes. `unset` removes the named ones. Everything else stays exactly as it was, including the payload if you do not pass one. You do not need to read the entity first to keep the fields that you do not change.
-</Aside>
+The parameters are:
 
-`patchEntity` can also replace the payload and content type, independently of any attribute change:
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `payload` | `Uint8Array` | yes | The contents. See [Encode the payload](#encode-the-payload) |
+| `contentType` | `string` | yes | A lowercase MIME type |
+| `attributes` | `AttributeInputs` | no | Up to 30 typed values, keyed by name |
+| `expires` | `Expiry` | yes | Built with `ExpirationTime` |
+| `flags` | `CreationFlags` | no | `readonly` and `permissionlessExtension`. Both default to `false` |
+| `salt` | `bigint` or `NO_SALT` | no | Mixed into the key. Defaults to 128 random bits |
+
+The result carries the new `entityKey`, the `txHash`, and `expiresAt`, the block the engine recorded as the expiry.
+
+### Fix properties at creation with flags
+
+Two properties are set when an entity is created and can never change afterwards:
+
+- **`readonly`**: freezes the attributes and the payload. The entity can still be extended, transferred, and deleted. Use it for records that must not change once published
+- **`permissionlessExtension`**: lets any wallet extend the expiry, not only the owner. Use it when a third party should be able to keep something alive without being able to change it
 
 ```ts
-const { txHash } = await walletClient.patchEntity({
-  entityKey: entityKey,
-  payload: jsonToPayload({ title: "Updated Note", content: "New content" }),
+await walletClient.createEntity({
+  payload: jsonToPayload({ hash: "sha256:1234567890abcdef" }),
   contentType: "application/json",
+  attributes: { project: str("my_project"), type: str("attestation") },
+  expires: ExpirationTime.fromYears(1),
+  flags: { readonly: true, permissionlessExtension: true },
 })
 ```
 
-The entity's key, owner, creation flags and expiry never change through a patch. Use `extendEntity` for the expiry and `changeOwnership` for the owner.
+### Control the key with a salt
 
-### Parameters
+The engine derives the key from your wallet, a per-wallet entity counter, and a random 128-bit salt. The salt means nobody but you can predict the key of an entity you are about to create. You rarely need to touch the salt. The one case is a batch in which one entity references another created in the same batch. See [Reference an entity created in the same batch](#reference-an-entity-created-in-the-same-batch).
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `entityKey` | `Hex` | Key of the entity to patch |
-| `set` | `object` | Attributes to write or overwrite, by name |
-| `unset` | `string[]` | Attribute names to remove |
-| `payload` | `Uint8Array` | New payload (omit to leave the current one untouched) |
-| `contentType` | `string` | New MIME type (omit to keep the current one) |
+## Patch an entity
 
-<Aside type="caution">
-At least one of `set`, `unset`, `payload` or `contentType` is required: a patch with nothing to apply throws `EmptyPatchError`. And a name cannot appear in both `set` and `unset`: that throws `ConflictingMutationError`.
-</Aside>
-
-## Delete Entity
+`patchEntity()` changes only what it names. Attributes you do not mention keep their values, and the payload and content type stay as they are unless you pass new ones:
 
 ```ts
-const { txHash } = await walletClient.deleteEntity({
-  entityKey: entityKey,
+import { i32, str } from "@arkiv-network/sdk/attr"
+
+const { txHash } = await walletClient.patchEntity({
+  entityKey,
+  set: { status: str("sold"), version: i32(2) },
+  unset: ["featured"],
 })
 ```
 
-## Change Ownership
+Because a patch names only the change, you can update one field without reading the entity first, and two writers changing different fields do not race each other. The parameters are:
 
-Transfer an entity to a new owner:
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `entityKey` | `Hex` | The entity to patch |
+| `set` | `AttributeInputs` | Attributes to write. An existing name is overwritten, a new name is added |
+| `unset` | `string[]` | Attribute names to remove. A name the entity does not carry is not an error |
+| `payload` | `Uint8Array` | New contents. Omit it to keep the current payload |
+| `contentType` | `string` | New MIME type. Omit it to keep the current one |
+
+`set` can change an attribute’s type, so `set: { level: u64(5) }` on an `i32` level stores a `u64`. A query written for the old type stops matching that entity, so keep types stable within a project.
+
+A patch never moves the key, the owner, the creation flags or the expiry. Only the owner can patch, and a `readonly` entity rejects every patch. For a full replacement with a clean attribute set, delete the entity and create a new one.
+
+## Extend an entity’s expiry
+
+`extendEntity()` sets a new expiry. It is not additive: a duration counts from now, not from the current expiry, so `fromDays(30)` means alive for 30 more days whatever the entity had left:
 
 ```ts
-const { entityKey, txHash } = await walletClient.changeOwnership({
-  entityKey: entityKey,
-  newOwner: "0x1234567890abcdef1234567890abcdef12345678",
+const { expiresAt } = await walletClient.extendEntity({
+  entityKey,
+  expires: ExpirationTime.fromDays(30),
 })
 ```
 
-<Aside type="caution">Only the current owner can transfer ownership. After the transfer, you lose the ability to patch, delete, or extend the entity.</Aside>
+The new expiry must not be earlier than the current one. `atBlock()` and `atDate()` work here too, so you can pin an entity to a calendar date.
 
-### Parameters
+The owner can always extend. Any wallet can extend an entity created with `permissionlessExtension`. The result carries `expiresAt`, the block the engine recorded.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `entityKey` | `Hex` | Key of the entity to transfer |
-| `newOwner` | `Hex` | Address of the new owner |
+## Transfer ownership
 
-### Returns
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `entityKey` | `Hex` | Key of the transferred entity |
-| `txHash` | `Hash` | Transaction hash on the chain |
-
-## Extend Expiration
-
-Add more time to an entity before it expires:
+`changeOwnership()` hands the entity to another wallet:
 
 ```ts
-const { txHash } = await walletClient.extendEntity({
-  entityKey: entityKey,
-  expires: ExpirationTime.fromHours(1),
+const { txHash } = await walletClient.changeOwnership({
+  entityKey,
+  newOwner: "0x1234567890123456789012345678901234567890",
 })
 ```
 
-<Aside type="tip">
-Start with a short expiration. If you need more time, extend it. Extra time wastes storage fees.
-</Aside>
+After the transfer you can no longer patch, extend or delete the entity, and the new owner can. `$owner` changes. `$creator` does not, so a `createdBy()` filter still finds it.
 
-## Batch Operations
+## Delete an entity
 
-Do multiple operations in a single transaction using `executeBatch()`. It accepts `creates`, `patches`, `deletes`, `extensions`, and `ownershipChanges`:
+`deleteEntity()` removes the entity at once, before its expiry:
 
 ```ts
-await walletClient.executeBatch({
+const { txHash } = await walletClient.deleteEntity({ entityKey })
+```
+
+Only the owner can delete, and `readonly` does not prevent it. Letting an entity expire costs nothing, so delete only what must go now.
+
+## Batch operations
+
+`executeBatch()` applies any mix of the five operations in one transaction. The batch is atomic: every operation applies, or none does, and each later operation sees the effects of the earlier ones:
+
+```ts
+const result = await walletClient.executeBatch({
   creates: [
     {
-      payload: jsonToPayload({ content: "Item 1" }),
+      payload: jsonToPayload({ body: "First" }),
       contentType: "application/json",
-      attributes: { type: "item" },
-      expires: ExpirationTime.fromMinutes(30),
-    },
-    {
-      payload: jsonToPayload({ content: "Item 2" }),
-      contentType: "application/json",
-      attributes: { type: "item" },
-      expires: ExpirationTime.fromMinutes(30),
+      attributes: { project: str("my_project"), type: str("note") },
+      expires: ExpirationTime.fromDays(7),
     },
   ],
+  patches: [{ entityKey: noteToArchive, set: { status: str("archived") } }],
+  extensions: [{ entityKey: noteToKeep, expires: ExpirationTime.fromDays(30) }],
+  ownershipChanges: [{ entityKey: noteToHandOver, newOwner: recipient }],
+  deletes: [{ entityKey: staleNote }],
 })
+
+result.createdEntities   // keys of the new entities, in batch order
 ```
 
-<Aside type="caution">
-Do not use a loop with individual `createEntity()` calls. That is slow and expensive. Do not fire them in parallel with `Promise.all` either. Concurrent writes from one wallet collide on the transaction nonce (see [Concurrent Writes and Nonces](#concurrent-writes-and-nonces)). Always use `executeBatch()` for batch operations.
-</Aside>
+Each list takes the same parameters as the single-entity method. The result carries `txHash` and one array of keys per operation kind: `createdEntities`, `patchedEntities`, `deletedEntities`, `extendedEntities` and `ownershipChanges`.
 
-### Mixing Operation Types
+The SDK orders a batch as creates, then patches, deletes, extensions, and ownership changes. A later operation can target an entity created earlier in the same batch, but only if you know its key in advance. The next section shows how.
 
-```ts
-await walletClient.executeBatch({
-  creates: [{
-    payload: jsonToPayload({ content: "New item" }),
-    contentType: "application/json",
-    attributes: { type: "item" },
-    expires: ExpirationTime.fromHours(1),
-  }],
-  patches: [{
-    entityKey: "0x456...",
-    set: { status: "archived" },
-  }],
-  extensions: [{
-    entityKey: "0x789...",
-    expires: ExpirationTime.fromHours(1),
-  }],
-  deletes: [{ entityKey: "0x321..." }],
-})
-```
-
-### Batch with Dynamic Data
+Use a batch whenever you have more than one write to make. A loop of single writes costs a transaction each, and parallel single writes from one wallet collide on the nonce, as [Concurrent writes and nonces](#concurrent-writes-and-nonces) explains:
 
 ```ts
 const items = ["frontend", "backend", "devops"]
@@ -260,38 +384,85 @@ await walletClient.executeBatch({
     payload: jsonToPayload({ profileId: "alice-123", skill }),
     contentType: "application/json",
     attributes: {
-      type: "skill",
-      profileId: "alice-123",
-      skill,
+      project: str("my_project"),
+      type: str("skill"),
+      profile_id: str("alice-123"),
+      skill: str(skill),
     },
     expires: ExpirationTime.fromDays(30),
   })),
 })
 ```
 
-## Concurrent Writes and Nonces
+### Reference an entity created in the same batch
 
-Every write is an on-chain transaction, and all transactions from one wallet must use strictly sequential nonces. The SDK does not manage nonces for you: each write fetches the next nonce from the network at send time. Two writes in flight at the same moment fetch the **same** nonce and collide: one transaction gets rejected or silently replaces the other.
+A key is derived from the wallet, its entity counter and the salt, and `predictEntityKeys()` on the public client computes it before the create lands. That lets a second entity store a `key` attribute pointing at the first, in the same transaction:
+
+<Steps>
+
+1. Predict the keys. Pass the count of creates the batch will carry. Each predicted key comes paired with the salt that produces it.
+
+   ```ts
+   const [thread, reply] = await publicClient.predictEntityKeys({
+     owner: walletClient.account.address,
+     count: 2,
+   })
+   ```
+
+2. Send the batch with those salts. A create that picks its own random salt would land on a different key, so pass `salt` from the prediction on every create.
+
+   ```ts
+   import { key, str } from "@arkiv-network/sdk/attr"
+
+   await walletClient.executeBatch({
+     creates: [
+       {
+         payload: jsonToPayload({ title: "Thread" }),
+         contentType: "application/json",
+         attributes: { project: str("my_project"), type: str("thread") },
+         expires: ExpirationTime.fromDays(30),
+         salt: thread.salt,
+       },
+       {
+         payload: jsonToPayload({ body: "First reply" }),
+         contentType: "application/json",
+         attributes: {
+           project: str("my_project"),
+           type: str("reply"),
+           parent: key(thread.key),
+         },
+         expires: ExpirationTime.fromDays(30),
+         salt: reply.salt,
+       },
+     ],
+   })
+   ```
+
+3. Confirm the keys from the result. `createdEntities` holds the keys the engine minted, in batch order.
+
+</Steps>
+
+A prediction holds only while no other create from this wallet lands first, because each create consumes a counter value and moves the predicted keys.
+
+## Concurrent writes and nonces
+
+Every write is a transaction, and every transaction from one wallet must carry the next nonce in sequence. The SDK fetches the nonce from the network at send time, so two writes in flight at once fetch the same nonce and collide. One of them is rejected, or silently replaces the other:
 
 ```ts
-// Wrong: both writes fetch the same nonce, so one of them fails or is replaced
+// Wrong: both writes fetch the same nonce
 await Promise.all([
-  walletClient.createEntity({ ... }),
-  walletClient.createEntity({ ... }),
+  walletClient.createEntity(first),
+  walletClient.createEntity(second),
 ])
 ```
 
-There are two ways to write concurrently from one wallet:
-
-**Batch into a single transaction (preferred).** `executeBatch()` submits any number of operations as one transaction, one nonce, no collisions. See [Batch Operations](#batch-operations).
-
-**Use the nonce manager of viem.** Sometimes you cannot avoid separate transactions, for example independent writes from different code paths. Create the account with `nonceManager`. It then allocates nonces locally and in order, instead of fetching one per write:
+The preferred fix is one batch, because one transaction has one nonce. When the writes come from code paths you cannot join, give the account viem’s nonce manager. It allocates nonces locally and in order:
 
 ```ts
 import { createWalletClient } from "@arkiv-network/sdk"
 import { tiramisu } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
-import { privateKeyToAccount, nonceManager } from "viem/accounts"
+import { nonceManager, privateKeyToAccount } from "viem/accounts"
 
 const walletClient = createWalletClient({
   chain: tiramisu,
@@ -300,93 +471,51 @@ const walletClient = createWalletClient({
     nonceManager,
   }),
 })
-
-// Correct: the nonce manager hands out sequential nonces
-await Promise.all([
-  walletClient.createEntity({ ... }),
-  walletClient.createEntity({ ... }),
-])
 ```
 
-See viem's [`createNonceManager` docs](https://viem.sh/docs/accounts/local/createNonceManager) for customization.
+With the nonce manager, the `Promise.all` above works. The [createNonceManager](https://viem.sh/docs/accounts/local/createNonceManager) docs of viem describe the options.
 
-<Aside type="caution">
-A nonce manager coordinates writes only within a single process. Two processes or servers that write with the same private key still collide. Give each writer its own wallet, or route all writes through one process.
+<Aside type="caution" title="A nonce manager covers one process">
+Two processes that write with the same private key still collide, because each manages its own nonces. Give each writer its own wallet, or route every write through one process.
 </Aside>
 
-## ExpirationTime Reference
+## Set transaction options
 
-Always use the helper instead of raw numbers: every `from*` helper returns an `Expiry` value, not a raw number of seconds:
-
-```ts
-import { ExpirationTime } from "@arkiv-network/sdk"
-
-ExpirationTime.fromMinutes(30)   // 30 minutes from now
-ExpirationTime.fromHours(1)      // 1 hour from now
-ExpirationTime.fromHours(12)     // 12 hours from now
-ExpirationTime.fromHours(24)     // 24 hours from now
-ExpirationTime.fromDays(7)       // 7 days from now
-ExpirationTime.atBlock(1_200_000n)         // an absolute block height
-ExpirationTime.atDate(new Date("2027-01-01")) // an absolute wall-clock date
-ExpirationTime.permanent()       // never expires
-```
-
-## Browser Usage with MetaMask
-
-In browser applications, use MetaMask as the transport instead of a private key:
+Every write method takes an optional second argument with the transaction fields the wallet would otherwise estimate:
 
 ```ts
-import { createWalletClient } from "@arkiv-network/sdk"
-import { tiramisu } from "@arkiv-network/sdk/chains"
-import { custom } from "viem"
-
-// Request wallet connection
-await window.ethereum.request({ method: 'eth_requestAccounts' })
-
-// Use MetaMask as transport
-const walletClient = createWalletClient({
-  chain: tiramisu,
-  transport: custom(window.ethereum),
+await walletClient.createEntity(params, {
+  gas: 500_000n,
+  maxFeePerGas: 2_000_000_000n,
+  maxPriorityFeePerGas: 1_000_000_000n,
 })
 ```
 
-See the [MetaMask Sketch App tutorial](/learn/metamask-sketch-app/) for a complete browser example.
+The fields are `gas`, `nonce`, and either `gasPrice` for a legacy transaction or `maxFeePerGas` with `maxPriorityFeePerGas` for an EIP-1559 one. Anything you leave out is estimated.
 
-## Error Handling
+## Handle write errors
 
-The SDK does not retry on failure: all methods throw on error. Wrap write operations in try/catch:
+A write that the chain rejects throws `EntityMutationError`. Its message names the reason, and `txHash` is set when the transaction reached the chain. The SDK never retries. The reasons you are most likely to see:
 
-```ts
-try {
-  const { entityKey, txHash } = await walletClient.createEntity({
-    payload: jsonToPayload({ title: "My Post" }),
-    contentType: "application/json",
-    attributes: { type: "post" },
-    expires: ExpirationTime.fromHours(12),
-  })
-} catch (error) {
-  // Common failures:
-  // - Invalid input (InvalidValueError, InvalidExpiryError, InvalidAttributeNameError)
-  // - User rejected the transaction (MetaMask popup dismissed)
-  // - Insufficient funds / gas
-  // - Network error (RPC unreachable)
-  // - Entity already deleted or expired (for patch/extend)
-  console.error("Transaction failed:", error)
-}
-```
+| Reason | Meaning |
+| --- | --- |
+| `NotOwner` | The signing wallet does not own the entity |
+| `EntityNotFound` | No live entity has that key. It was deleted, or it expired |
+| `ReadOnlyEntity` | A patch on an entity created with `readonly` |
+| `ExpiryNotExtended` | The new expiry is earlier than the current one |
+| `Ident32InvalidByte` | An attribute name holds an uppercase letter or another character outside the grammar |
 
-The SDK's typed errors are exported from the package root, so you can handle them specifically:
+A rejected wallet confirmation, insufficient GLM for gas, and an unreachable RPC throw the same error with the transport’s message. Invalid parameters, such as a float passed to `i32()`, throw a typed error from the package root before anything is sent.
 
 ```ts
-import { InvalidValueError, InvalidExpiryError } from "@arkiv-network/sdk"
+import { EntityMutationError } from "@arkiv-network/sdk"
+import { str } from "@arkiv-network/sdk/attr"
 
 try {
-  await walletClient.createEntity({ ... })
+  await walletClient.patchEntity({ entityKey, set: { status: str("sold") } })
 } catch (error) {
-  if (error instanceof InvalidValueError) {
-    // an attribute value did not fit the type it named or defaulted to
-  } else if (error instanceof InvalidExpiryError) {
-    // expires was not a positive multiple of the 2s block time, or exceeded a protocol bound
+  if (error instanceof EntityMutationError) {
+    console.error(error.message, error.txHash)
   } else {
     throw error
   }

@@ -32,7 +32,7 @@ import { PROJECT_ATTRIBUTE } from "./lib/arkiv"
 const { entityKey } = await walletClient.createEntity({
   payload: jsonToPayload({ title, content }),
   contentType: "application/json",
-  attributes: { [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value, entityType: "post" },
+  attributes: { [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value, entity_type: "post" },
   expires: ExpirationTime.fromDays(30),
 })
 
@@ -41,7 +41,7 @@ const result = await publicClient
   .select({ key: true, payload: true })
   .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
-    eq("entityType", "post"),
+    eq("entity_type", "post"),
   )
   .limit(50)
   .fetch()
@@ -63,7 +63,7 @@ Attributes are your indexes. Without the right ones, you will fetch too much dat
 // Good: attributes map to your query patterns
 attributes: {
   type: "vote",              // filter by entity type
-  proposalKey: proposalId,   // link related entities
+  proposal_key: proposalId,   // link related entities
   voter: voterAddr,          // filter by user
   choice: "yes",             // filter by value
   weight: 1,                 // numeric for aggregation
@@ -199,13 +199,13 @@ attributes: { type: "proposal" }
 // Vote entities reference the proposal
 attributes: {
   type: "vote",
-  proposalKey: proposalEntityKey,
+  proposal_key: proposalEntityKey,
 }
 
 // Query all votes for a proposal
 await publicClient
   .select({ key: true, payload: true })
-  .where(eq("type", "vote"), eq("proposalKey", proposalEntityKey))
+  .where(eq("type", "vote"), eq("proposal_key", proposalEntityKey))
   .fetch()
 ```
 
@@ -236,7 +236,7 @@ const trustedPosts = await publicClient
   .select({ key: true, payload: true })
   .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
-    eq("entityType", "post"),
+    eq("entity_type", "post"),
   )
   .createdBy(CREATOR_WALLET_ADDRESS)
   .fetch()
@@ -313,8 +313,8 @@ const { entityKey: profileKey } = await walletClient.createEntity({
   contentType: "application/json",
   attributes: {
     [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value,
-    entityType: "profile",
-    profileId: "alice-123",
+    entity_type: "profile",
+    profile_id: "alice-123",
   },
   expires: ExpirationTime.fromDays(30),
 })
@@ -327,8 +327,8 @@ await walletClient.executeBatch({
     contentType: "application/json",
     attributes: {
       [PROJECT_ATTRIBUTE.key]: PROJECT_ATTRIBUTE.value,
-      entityType: "profileSkill",
-      profileId: "alice-123",
+      entity_type: "profileSkill",
+      profile_id: "alice-123",
       skill,
     },
     expires: ExpirationTime.fromDays(30),
@@ -340,7 +340,7 @@ const frontendDevs = await publicClient
   .select({ key: true, payload: true })
   .where(
     eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
-    eq("entityType", "profileSkill"),
+    eq("entity_type", "profileSkill"),
     eq("skill", "frontend"),
   )
   .fetch()
@@ -372,4 +372,4 @@ const { entityKey: newEntityKey } = await walletClient.createEntity({
 })
 ```
 
-See [Mutating Data](/typescript-sdk/mutating-data/#patch-entity) for details.
+See [Mutating Data](/typescript-sdk/mutating-data/#patch-an-entity) for details.
