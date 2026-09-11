@@ -44,7 +44,7 @@ npm install @arkiv-network/sdk viem
    import { privateKeyToAccount } from "viem/accounts"
 
    /** Attribute name used to filter this project's entities. */
-   export const PROJECT_ATTRIBUTE_NAME = "projectId" as const
+   export const PROJECT_ATTRIBUTE_NAME = "project_id" as const
 
    /** Replace with a globally unique string for your own app. */
    export const PROJECT_ATTRIBUTE_VALUE = "your-app-project-id" as const
@@ -64,6 +64,8 @@ npm install @arkiv-network/sdk viem
    ```
 
    <Aside type="caution">Always ensure to store sensitive information - such as the private key in this example - in environment variables.</Aside>
+
+   <Aside type="caution">Attribute names must be lowercase. Tiramisu rejects an uppercase letter in a name, so use `project_id`, not `projectId`.</Aside>
 
    <Aside type="tip">
    Anonymous access to the RPC endpoint is rate limited. Register a project on the [access keys page](/start-here/access-keys/) and pass the key in the RPC URL, as a `X-API-KEY` header, or as a bearer token.
@@ -97,7 +99,7 @@ npm install @arkiv-network/sdk viem
        contentType: "application/json",
        attributes: {
          [PROJECT_ATTRIBUTE_NAME]: PROJECT_ATTRIBUTE_VALUE,
-         entityType: "profile",
+         entity_type: "profile",
          handle: profile.handle,
          wallet: profile.wallet,
          updated: u64(Date.now()),
@@ -153,7 +155,7 @@ Below are some examples of how to query user profiles and use Arkiv filtering ca
 See more advanced examples for the [`select()`](/typescript-sdk/api-reference/main/type-aliases/publicarkivactions/#select) function to see how to retrieve only specific fields from the entity.
 </Aside>
 
-Every query below filters on both the project attribute and `entityType`. The project attribute alone is not enough, because your app writes other kinds of entities under the same project.
+Every query below filters on both the project attribute and `entity_type`. The project attribute alone is not enough, because your app writes other kinds of entities under the same project.
 
 ### Look up a profile by handle or address
 
@@ -171,7 +173,7 @@ export async function getProfile(handle: string) {
     .select({ key: true, payload: true, attributes: true })
     .where(
       eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-      eq("entityType", "profile"),
+      eq("entity_type", "profile"),
       eq("handle", handle),
     )
     .limit(1)
@@ -228,7 +230,7 @@ const { entities: results } = await publicClient
   .select({ key: true, payload: true, attributes: true })
   .where(
     eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-    eq("entityType", "profile"),
+    eq("entity_type", "profile"),
     startsWith("handle", "ad"),
   )
   .limit(20)
@@ -253,7 +255,7 @@ const { entities } = await publicClient
   .select({ attributes: { handle: true } })
   .where(
     eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-    eq("entityType", "profile"),
+    eq("entity_type", "profile"),
   )
   .limit(100)
   .fetch()
@@ -279,7 +281,7 @@ let page = await publicClient
   .select({ key: true, payload: true, attributes: true })
   .where(
     eq(PROJECT_ATTRIBUTE_NAME, PROJECT_ATTRIBUTE_VALUE),
-    eq("entityType", "profile"),
+    eq("entity_type", "profile"),
   )
   .limit(100)
   .fetch()
