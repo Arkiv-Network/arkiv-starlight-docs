@@ -19,7 +19,7 @@ You will learn what to store in the entity's **attributes** vs in the entity's *
 - [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk) installed
 - [`viem`](https://www.npmjs.com/package/viem) installed
 - a wallet funded with testnet tokens from the [faucet](/networks/tiramisu/)
-- an [access key](/start-here/access-keys/) for the Tiramisu RPC endpoint
+- optional: an [access key](/start-here/access-keys/) for the Tiramisu RPC endpoint, to raise the rate limit
 
 ```bash
 npm install @arkiv-network/sdk viem
@@ -306,7 +306,12 @@ If a trusted backend writes every profile, add `.createdBy(yourBackendAddress)` 
 
 Use the [`patchEntity`](/typescript-sdk/api-reference/main/functions/createwalletclient/#patchentity) function from the Arkiv SDK to update an entity.
 
-You can specify only the fields or attributes you want to update. Fields you do not name keep their current value (so you never have to read the profile first)
+`patchEntity` treats attributes and the payload differently:
+
+- **Attributes are merged.** Name only the ones you change in `set`. The rest keep their current value, so you do not need to read them first.
+- **The payload is replaced whole.** If you pass a `payload`, it overwrites the old one. Leave it out to keep the current payload untouched.
+
+That is why the example below reads the profile first. It needs the current `displayName` to write it back next to the new bio.
 
 ```ts title="update-profile.ts"
 import { jsonToPayload } from "@arkiv-network/sdk"
@@ -331,10 +336,6 @@ await walletClient.patchEntity({
   set: { updated: u64(Date.now()), wallet: newWalletAddress },
 })
 ```
-
-<Aside>
-The payload is replaced whole, not merged. Attributes are merged. That is why `displayName` is passed through here while the attributes you do not name stay untouched.
-</Aside>
 
 ## Next steps
 
