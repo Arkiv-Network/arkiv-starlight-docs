@@ -197,7 +197,7 @@ curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
     "jsonrpc":"2.0","id":1,
     "method":"arkiv_query",
     "params":[
-      "type = str('nft') AND status = str('active')",
+      "type = str('\''nft'\'') AND status = str('\''active'\'')",
       {"limit":"0xa","select":{"key":true,"attributes":true}}
     ]
   }'
@@ -238,7 +238,7 @@ curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
   -d '{
     "jsonrpc":"2.0","id":13,
     "method":"arkiv_query",
-    "params":["name STARTSWITH str('test') AND NOT (status = str('deleted'))", null]
+    "params":["name STARTSWITH str('\''test'\'') AND NOT (status = str('\''deleted'\''))", null]
   }'
 ```
 
