@@ -27,7 +27,7 @@ const walletClient = createWalletClient({
 })
 ```
 
-`http()` with no URL uses the public RPC endpoint, which is heavily rate limited and meant for a first try. Get a free [access key](/start-here/access-keys/) from the Arkiv Hub and put it in the transport URL before you build anything real.
+`http()` with no URL uses the public RPC endpoint configured as the default in the `tiramisu` chain. That endpoint is heavily rate limited and meant for testing. To raise the rate limit for a production build, **get a free [access key](/start-here/access-keys/)** from the Arkiv Hub and append it to the end of the RPC URL.
 
 The wallet client only writes. Reads such as `getEntity()`, `select()` and `predictEntityKeys()` live on the [public client](/typescript-sdk/querying-data/#set-up-a-public-client), so most apps create both.
 
@@ -51,7 +51,11 @@ const walletClient = createWalletClient({
 })
 ```
 
-The extension asks the user to confirm every transaction. The [MetaMask sketch app](/learn/metamask-sketch-app/) tutorial adds chain switching and a full connect flow.
+The extension asks the user to confirm every transaction.
+
+<Aside type="tip">
+Check the [MetaMask sketch app](/learn/metamask-sketch-app/) tutorial to add chain switching and a full connect flow.
+</Aside>
 
 ## What an entity is made of
 
@@ -217,7 +221,7 @@ Four rules apply to every expiry:
 
 - A duration must be a whole number of blocks, so a multiple of 2 seconds. `fromSeconds(7)` is rejected, `fromSeconds(8)` works
 - The resolved expiry must be after the block the transaction lands in
-- A finite lifetime is capped by the chain constant `MAX_LIFETIME`. `ExpirationTime.permanent()` is the one exception: it sets a sentinel value that the engine never purges, and it is the only way to express permanence
+- A lifetime has no upper bound except the 64-bit width of the field. `ExpirationTime.permanent()` sets the largest block height a `u64` holds, which is so far in the future that the entity is permanent in practice
 - An extension never shortens a life. A later expiry moves it out, an equal one is a no-op, and an earlier one is rejected
 
 ### What happens when an entity expires

@@ -25,7 +25,7 @@ const publicClient = createPublicClient({
 })
 ```
 
-`http()` with no URL uses the public RPC endpoint of the chain, which is heavily rate limited and meant for a first try. Get a free [access key](/start-here/access-keys/) from the Arkiv Hub and put it in the transport URL before you build anything real. Keep that key on a server, because anyone who opens your website can read it from the network requests.
+`http()` with no URL uses the public RPC endpoint configured as the default in the `tiramisu` chain. That endpoint is heavily rate limited and meant for testing. To raise the rate limit for a production build, **get a free [access key](/start-here/access-keys/)** from the Arkiv Hub and append it to the end of the RPC URL. Keep that key on a server, because anyone who opens your website can read it from the network requests.
 
 ## Read one entity by key
 
@@ -33,6 +33,22 @@ When you already hold an entity key, `getEntity()` returns the entity with every
 
 ```ts
 const entity = await publicClient.getEntity(entityKey)
+// {
+//   key: "0x9f3c…",                          // Hex, 32 bytes
+//   owner: "0x1234…",                        // checksummed address
+//   creator: "0x1234…",                      // checksummed address
+//   createdAt: 1_180_400n,                   // bigint block height
+//   updatedAt: 1_180_400n,                   // bigint block height
+//   expiresAt: 1_200_000n,                   // bigint block height
+//   creationFlags: { readonly: false, permissionlessExtension: false, raw: 0 },
+//   contentType: "application/json",
+//   payload: Uint8Array [ 123, 34, … ],      // raw bytes
+//   attributes: {
+//     status: { type: "str", value: "open" }, // typed name-value pairs
+//     priority: { type: "i32", value: 3 },
+//   },
+//   attributeSchema: { status: "str", priority: "i32" },
+// }
 
 entity.owner                     // checksummed address
 entity.expiresAt                 // bigint block height
