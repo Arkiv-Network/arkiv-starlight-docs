@@ -7,11 +7,13 @@ import starlight from "@astrojs/starlight";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import starlightPageActions from "starlight-page-actions";
+import starlightLinksValidator from "starlight-links-validator";
 import starlightTypeDoc, { typeDocSidebarGroup } from "starlight-typedoc";
 
 const configDir = dirname(fileURLToPath(import.meta.url));
 const sdkClonePath = resolve(configDir, ".sdk-cache/arkiv-sdk-js");
 const sdkAvailable = existsSync(resolve(sdkClonePath, "src/index.ts"));
+const validateLinks = process.env.VALIDATE_LINKS === "1";
 if (!sdkAvailable) {
 	console.warn(
 		"[astro.config] SDK source not found at .sdk-cache/arkiv-sdk-js/ — skipping API reference generation. Run `bun run sync-sdk` to populate.",
@@ -159,6 +161,14 @@ export default defineConfig({
 				SiteTitle: "./src/components/SiteTitle.astro",
 			},
 			plugins: [
+				// only validate in CI
+				...(validateLinks
+					? [
+							starlightLinksValidator({
+								exclude: ["/typescript-sdk/api-reference/**"],
+							}),
+						]
+					: []),
 				starlightPageActions({
 					baseUrl: process.env.SITE_URL || "https://docs.arkiv.network",
 				}),

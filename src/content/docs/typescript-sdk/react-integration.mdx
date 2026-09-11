@@ -46,7 +46,7 @@ export async function fetchEntitiesByType<T>(
     .select({ key: true, payload: true })
     .where(
       eq(PROJECT_ATTRIBUTE.key, PROJECT_ATTRIBUTE.value),
-      eq("entityType", entityType),
+      eq("entity_type", entityType),
     )
     .limit(50)
     .fetch()
@@ -173,7 +173,7 @@ function CreatePostButton() {
       contentType: "application/json",
       attributes: {
         project: "my-app",
-        entityType: "post",
+        entity_type: "post",
       },
       expires: ExpirationTime.fromDays(30),
     })
