@@ -5,6 +5,7 @@ description: Create, patch, extend, transfer, delete, and batch entities with th
 
 import { Aside, Steps } from '@astrojs/starlight/components';
 import NetworkNote from '../../../components/NetworkNote.astro';
+import RpcTerms from '../../../components/RpcTerms.astro';
 
 <NetworkNote />
 
@@ -28,6 +29,8 @@ const walletClient = createWalletClient({
 ```
 
 `http()` with no URL uses the public RPC endpoint configured as the default in the `tiramisu` chain. That endpoint is heavily rate limited and meant for testing. To raise the rate limit for a production build, **get a free [access key](/start-here/access-keys/)** from the Arkiv Hub and append it to the end of the RPC URL.
+
+<RpcTerms />
 
 The wallet client only writes. Reads such as `getEntity()`, `select()` and `predictEntityKeys()` live on the [public client](/typescript-sdk/querying-data/#set-up-a-public-client), so most apps create both.
 

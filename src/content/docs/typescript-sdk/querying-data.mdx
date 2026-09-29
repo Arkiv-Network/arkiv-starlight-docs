@@ -5,6 +5,7 @@ description: Read entities from Arkiv with the TypeScript SDK. Select fields, fi
 
 import { Aside } from '@astrojs/starlight/components';
 import NetworkNote from '../../../components/NetworkNote.astro';
+import RpcTerms from '../../../components/RpcTerms.astro';
 
 <NetworkNote />
 
@@ -26,6 +27,8 @@ const publicClient = createPublicClient({
 ```
 
 `http()` with no URL uses the public RPC endpoint configured as the default in the `tiramisu` chain. That endpoint is heavily rate limited and meant for testing. To raise the rate limit for a production build, **get a free [access key](/start-here/access-keys/)** from the Arkiv Hub and append it to the end of the RPC URL. Keep that key on a server, because anyone who opens your website can read it from the network requests.
+
+<RpcTerms />
 
 ## Read one entity by key
 
