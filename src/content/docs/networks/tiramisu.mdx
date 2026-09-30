@@ -4,6 +4,7 @@ description: Tiramisu is Arkiv's current public testnet. This page gives the cha
 ---
 
 import { Aside } from '@astrojs/starlight/components';
+import RpcTerms from '../../../components/RpcTerms.astro';
 
 Tiramisu is Arkiv's current public testnet. You can build and test your app against a live network.
 
@@ -34,6 +35,8 @@ For the full setup, see [Installation](/start-here/installation/).
 | Native gas token  | GLM                                                      |
 | Faucet            | [hub.arkiv.network/faucet](https://hub.arkiv.network/faucet) |
 | Explorer          | [tiramisu.explorer.arkiv.network](https://tiramisu.explorer.arkiv.network) |
+
+<RpcTerms />
 
 <Aside type="tip">
 If you use a raw JSON-RPC client instead of the SDK, get the chain ID and RPC URL from the table. Add them to your client settings.

@@ -1,0 +1,22 @@
+---
+// Legal line shown wherever the docs advertise the public RPC endpoint.
+// One place to edit when the policy URLs change.
+const termsUrl = "https://arkiv.network/terms";
+const privacyUrl = "https://arkiv.network/privacy";
+
+const { class: className } = Astro.props;
+---
+
+<p class:list={["rpc-terms", className]}>
+	Use of the public RPC is subject to the Arkiv{" "}
+	<a href={termsUrl} target="_blank" rel="noopener">Terms of Use</a> and{" "}
+	<a href={privacyUrl} target="_blank" rel="noopener">Privacy Policy</a>.
+</p>
+
+<style>
+	.rpc-terms {
+		font-size: 0.75rem;
+		line-height: 1.4;
+		color: var(--sl-color-gray-3);
+	}
+</style>
