@@ -8,6 +8,7 @@ hero:
 ---
 
 import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/components';
+import RpcTerms from '../../components/RpcTerms.astro';
 
 <div class="hero-landing">
   <div class="hero-logo">[ ARKIV ]</div>
@@ -58,6 +59,7 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
       <a href="https://hub.arkiv.network/faucet" target="_blank" rel="noopener">Get Test Tokens</a>
       <a href="https://hub.arkiv.network/api-keys" target="_blank" rel="noopener" data-umami-event="get-api-key">Get Access Key</a>
     </div>
+    <RpcTerms class="testnet-terms" />
   </div>
   <div class="quickstart-cards">
     <div class="qs-card">
@@ -281,6 +283,10 @@ import { Card, CardGrid, LinkCard, LinkButton } from '@astrojs/starlight/compone
     border-top: 1px solid var(--sl-color-gray-5);
     margin-top: 1.25rem;
     padding-top: 1rem;
+  }
+  .testnet-terms {
+    margin-top: 1rem;
+    margin-bottom: 0;
   }
   .testnet-actions a,
   .testnet-actions button {

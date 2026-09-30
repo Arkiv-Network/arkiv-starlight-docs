@@ -4,6 +4,7 @@ description: Get an Arkiv access key from the Arkiv Hub to raise the rate limits
 ---
 
 import { Aside, Steps } from '@astrojs/starlight/components';
+import RpcTerms from '../../../components/RpcTerms.astro';
 
 An access key raises the rate limits on your calls to the Arkiv RPC. You get keys from the [Arkiv Hub](https://hub.arkiv.network/api-keys).
 
@@ -12,6 +13,8 @@ An access key raises the rate limits on your calls to the Arkiv RPC. You get key
 - Each key has a monthly quota, measured in cost units.
 
 You do not need a key to try Arkiv. The public RPC works without one, at the default rate limit.
+
+<RpcTerms />
 
 ## Get a key
 
