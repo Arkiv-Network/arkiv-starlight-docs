@@ -52,8 +52,9 @@ export default defineConfig({
 		"/start-here/installation": "/start-here/first-entity/",
 		"/typescript-sdk/querying-data": "/querying/select/",
 		"/typescript-sdk/mutating-data": "/writing/create/",
-		"/typescript-sdk/live-events": "/events/watch/",
-		"/typescript-sdk/react-integration": "/start-here/clients/",
+		"/typescript-sdk/live-events": "/querying/watch-events/",
+		"/events/watch": "/querying/watch-events/",
+		"/typescript-sdk/react-integration": "/guides/react/",
 		"/typescript-sdk/best-practices": "/start-here/introduction/",
 	},
 	markdown: {
@@ -103,12 +104,13 @@ export default defineConfig({
 						{ label: "Paginate Results", slug: "querying/paginate" },
 						{ label: "Read One Entity", slug: "querying/get-entity" },
 						{ label: "Query Without a Schema", slug: "querying/without-schema" },
+						{ label: "Watch Entity Events", slug: "querying/watch-events" },
 					],
 				},
 				{
-					label: "Events",
+					label: "Guides",
 					items: [
-						{ label: "Watch Entity Events", slug: "events/watch" },
+						{ label: "Use with React", slug: "guides/react" },
 					],
 				},
 				{

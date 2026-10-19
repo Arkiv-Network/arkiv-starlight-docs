@@ -1,6 +1,6 @@
 ---
 title: Connect to Arkiv
-description: Create a public client to read from Arkiv and a wallet client to write, from a server, a browser wallet or a local node.
+description: Create a public client to read from Arkiv and a wallet client to write, from a server or a browser wallet.
 ---
 
 import { Aside } from '@astrojs/starlight/components';
@@ -64,6 +64,8 @@ const walletClient = createWalletClient({
 })
 ```
 
+This connects to the wallet directly. In an app that uses wagmi, such as one built with RainbowKit, [build the client from wagmi’s connection](/guides/react/) instead.
+
 The wallet asks the user to approve every write, and it has to be on Tiramisu when it does. `addChain` adds Tiramisu to the wallet and asks the user to switch to it:
 
 ```ts
@@ -93,18 +95,3 @@ const transport = http(
 <Aside type="caution">
 Anyone can read a key out of your site’s network requests. Use access keys on a server, not in the browser.
 </Aside>
-
-## Run against a local node
-
-The `localhost` chain points at a node on `http://127.0.0.1:8545`:
-
-```ts
-import { localhost } from "@arkiv-network/sdk/chains"
-
-const publicClient = createPublicClient({
-  chain: localhost,
-  transport: http(),
-})
-```
-
-To choose the chain at runtime, for example from an environment variable, look it up by name with `chainFromName("tiramisu")`.

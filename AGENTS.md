@@ -52,7 +52,7 @@ Because the real SDK source lands in `.sdk-cache/arkiv-sdk-js/`, you can typeche
 
 ### Site structure
 
-The sidebar follows the reader's path: Get Started (what Arkiv is, the first-entity tutorial, connecting), Schemas, Write Data, Query Data, Events, Reference (query language, errors, limits, the generated API Reference), JSON-RPC API (read methods and the write calldata, for clients without an SDK), then Networks and Tools. One page does one job: a tutorial, a how-to, a reference or a concept, never a mix.
+The sidebar follows the reader's path: Get Started (what Arkiv is, the first-entity tutorial, connecting), Schemas, Write Data, Query Data (including watching events), Guides (task-focused walkthroughs such as React with wagmi), Reference (query language, errors, limits, the generated API Reference), JSON-RPC API (read methods and the write calldata, for clients without an SDK), then Networks and Tools. One page does one job: a tutorial, a how-to, a reference or a concept, never a mix.
 
 ### Content conventions
 

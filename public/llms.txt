@@ -6,7 +6,7 @@
 
 - [What Arkiv is](https://docs.arkiv.network/start-here/introduction/): entities, attributes, ownership, expiration
 - [Your first entity](https://docs.arkiv.network/start-here/first-entity/): install, define a schema, write, query
-- [Connect to Arkiv](https://docs.arkiv.network/start-here/clients/): public and wallet clients, browser wallets, local nodes
+- [Connect to Arkiv](https://docs.arkiv.network/start-here/clients/): public and wallet clients, browser wallets, access keys
 
 ## Schemas
 
@@ -27,10 +27,11 @@
 - [Paginate results](https://docs.arkiv.network/querying/paginate/): `limit`, `fetch`, `next`, `for await`, `cursor`, `atBlock`
 - [Read one entity](https://docs.arkiv.network/querying/get-entity/): `getEntity(key, schema?)`
 - [Query without a schema](https://docs.arkiv.network/querying/without-schema/): `$attributes`, `$attributeSchema`, `query()`, raw query strings
+- [Watch entity events](https://docs.arkiv.network/querying/watch-events/): `watchEntityEvents`
 
-## Events
+## Guides
 
-- [Watch entity events](https://docs.arkiv.network/events/watch/): `watchEntityEvents`
+- [Use with React](https://docs.arkiv.network/guides/react/): wagmi, RainbowKit, TanStack Query, Next.js; build the Arkiv wallet client from wagmi’s connection
 
 ## Reference
 
