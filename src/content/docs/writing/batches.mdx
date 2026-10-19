@@ -1,0 +1,73 @@
+---
+title: Batches
+description: Send creates, patches, extensions, ownership changes and deletes in one transaction that applies all or nothing.
+---
+
+`executeBatch` sends many operations in one transaction. Either every operation applies or none does. A batch can mix entities of several schemas, and a create in it can refer to another entity the same batch creates. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Send a batch
+
+Each kind of operation has its own list. Creates and patches name their schema:
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk"
+import { dec } from "@arkiv-network/sdk/schema"
+
+const result = await walletClient.executeBatch({
+  creates: [
+    { schema: Posts, values, expiration: ExpirationTime.fromDays(7) },
+  ],
+  patches: [{ schema: Posts, entityKey, set: { score: dec("5") } }],
+  extensions: [
+    { entityKey: otherKey, expiration: ExpirationTime.fromDays(90) },
+  ],
+  ownershipChanges: [{ entityKey: oldKey, newOwner: teammate }],
+  deletes: [{ entityKey: staleKey }],
+})
+```
+
+Every list is optional, but the batch needs at least one operation. A create takes the same `flags` and `salt` as [`createEntity`](/writing/create/).
+
+The result holds the transaction hash and the keys each kind of operation touched. `createdEntities` lists the new keys in the order of `creates`:
+
+```ts
+const [newPostKey] = result.createdEntities
+```
+
+## Refer to an entity created in the same batch
+
+To link two new entities, you need the first one’s key before it exists. `predictEntityKeys` works out the keys an account’s next creates will get, each with the salt that produces it:
+
+```ts
+import { defineSchema, key, str } from "@arkiv-network/sdk/schema"
+
+const Comments = defineSchema("comments", {
+  post: key().indexed(),
+  text: str(),
+})
+
+const [post, comment] = await publicClient.predictEntityKeys({
+  owner: account.address,
+  count: 2,
+})
+```
+
+Pass each salt to its create, in the same order. The comment stores the post’s key:
+
+```ts
+const expiration = ExpirationTime.fromDays(7)
+
+await walletClient.executeBatch({
+  creates: [
+    { schema: Posts, values, expiration, salt: post.salt },
+    {
+      schema: Comments,
+      values: { post: key(post.key), text: "First!" },
+      expiration,
+      salt: comment.salt,
+    },
+  ],
+})
+```
+
+A prediction holds only while nothing else from the same account lands first. If another create from the account gets in between, the keys change.

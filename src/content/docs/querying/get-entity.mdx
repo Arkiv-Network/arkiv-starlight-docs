@@ -1,0 +1,47 @@
+---
+title: Read one entity
+description: Fetch a single entity by its key with getEntity, through a schema or without one.
+---
+
+`getEntity` fetches one entity by its key, with every field. Through a schema the row is typed and checked like a query’s rows. Without one, you get the entity’s attributes as a map. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Read through a schema
+
+```ts
+const post = await publicClient.getEntity(entityKey, Posts)
+
+post.$owner         // Hex
+post.$expiresAt     // bigint
+post.title.value    // string
+post.summary?.value // string | undefined, since summary is optional
+```
+
+The row holds every entity field and every column, the same as `select()` through the schema. It throws `SchemaMismatchError` if the entity doesn’t fit `Posts`.
+
+## Read without a schema
+
+```ts
+const entity = await publicClient.getEntity(entityKey)
+
+entity.$attributes.title        // ArkivValue | undefined
+entity.$attributeSchema.title   // { type, indexed } | undefined
+entity.$creationFlags.readonly  // boolean
+```
+
+Without a schema, the row holds every entity field, all attributes in `$attributes`, and their types in `$attributeSchema`.
+
+## Handle a missing entity
+
+`getEntity` throws `NoEntityFoundError` when no live entity has the key. That covers a key that never existed, and an entity that was deleted or has expired:
+
+```ts
+import { NoEntityFoundError } from "@arkiv-network/sdk"
+
+try {
+  await publicClient.getEntity(entityKey)
+} catch (error) {
+  if (error instanceof NoEntityFoundError) {
+    console.log("Gone")
+  }
+}
+```

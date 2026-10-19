@@ -1,0 +1,82 @@
+---
+title: Query language
+description: The syntax of the query strings the Arkiv node parses, as sent by the SDK and accepted by query() and the Data Explorer.
+---
+
+A query is a boolean expression over attributes. The SDK’s condition functions write it for you. You write it by hand when you pass a string to `query()` or use the [Data Explorer](/start-here/data-explorer/).
+
+```sql
+category = str('news') AND score > dec(4) AND NOT EXISTS(summary)
+```
+
+## Comparisons
+
+| Syntax | Matches when the attribute |
+| --- | --- |
+| `name = value` | Equals the value |
+| `name != value` | Is set with the value’s type, to a different value |
+| `name < value`, `<=`, `>`, `>=` | Compares as given. `i32`, `u64`, `u256` and `dec` only |
+| `name STARTSWITH str('prefix')` | Is a `str` that starts with the prefix |
+| `EXISTS(name)` | Is set, with any type |
+| `TYPEOF(name) = type` | Is set with the given type, such as `i32` |
+
+A comparison also checks the type: `score = i32(4)` doesn’t match a `score` stored as a `dec`.
+
+## Values
+
+Write every value with its type, except booleans:
+
+| Type | Example |
+| --- | --- |
+| `bool` | `true`, `false` |
+| `i32` | `i32(-7)` |
+| `u64` | `u64(1700000000)` |
+| `u256` | `u256(1000000000000000000)` |
+| `dec` | `dec(4.5)` |
+| `str` | `str('it''s')`. A quote inside is doubled |
+| `addr` | `addr(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045)` |
+| `key` | `key(0x9f2c…)`, 32 bytes |
+| `bytes32` | `bytes32(0xabab…)`, 32 bytes |
+
+A bare number is an `i32`. `bytes` values can’t be compared, since `bytes` is never indexed.
+
+## Entity fields
+
+Four entity fields can be filtered on, each with a fixed type:
+
+| Field | Type |
+| --- | --- |
+| `$key` | `key` |
+| `$owner` | `addr` |
+| `$creator` | `addr` |
+| `$expiresAt` | `u64` |
+
+## Combining
+
+`AND`, `OR` and `NOT` combine conditions. `NOT` binds tightest, then `AND`, then `OR`. Use parentheses to group:
+
+```sql
+(category = str('news') OR category = str('blog')) AND score >= dec(3)
+```
+
+`NOT` matches every live entity the condition doesn’t, including entities without the attribute.
+
+## Other rules
+
+- Keywords are case-insensitive: `and` and `AND` are the same
+- `--` starts a comment that runs to the end of the line
+- A query needs at least one condition. There’s no way to match every entity
+- A named schema’s tag is the `str` attribute `arkiv.schema`. `arkiv.schema = str('my-app.posts')` matches every entity written through a schema named `my-app.posts`
+
+## Errors
+
+The node rejects a query it can’t run with a `QueryError`. Its `kind` says why:
+
+| `kind` | Cause |
+| --- | --- |
+| `parse` | The query doesn’t parse |
+| `type` | A condition uses the wrong type for its operator, such as `<` on an `addr` |
+| `literal` | A value is invalid, such as an `i32` out of range |
+| `limits` | The query goes over a node limit, such as its length or nesting depth |
+| `cursor` | The cursor expired, or belongs to another query |
+| `block` | The node doesn’t keep the requested block |

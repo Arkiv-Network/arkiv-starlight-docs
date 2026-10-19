@@ -1,0 +1,93 @@
+---
+title: Define a schema
+description: Describe an entity’s attributes with defineSchema, choose which ones are indexed, optional or defaulted, and keep entity kinds apart with a schema name.
+---
+
+A schema lists the attributes an entity has, their types, and which of them are indexed. The SDK types your writes and reads from it and checks them when they run. Arkiv itself never sees the schema: it stores each attribute with its type and an indexed flag, and the schema decides both.
+
+## Declare the columns
+
+Call `defineSchema` with a name and an object of columns. Each column is a type constructor called with no arguments:
+
+```ts
+import { addr, bytes, dec, defineSchema, str } from "@arkiv-network/sdk/schema"
+
+const Posts = defineSchema("my-app.posts", {
+  author: addr().indexed(),
+  category: str().indexed(),
+  score: dec().indexed(),
+  title: str(),
+  body: bytes(),
+  summary: str().optional(),
+})
+```
+
+The key of each entry is the attribute’s name. See [column types](/schemas/column-types/) for every type and what it holds.
+
+## Index the columns you filter on
+
+`.indexed()` makes a column filterable. A column without it is stored and selectable, but a filter on it is a compile error:
+
+```ts
+import { eq } from "@arkiv-network/sdk/query"
+
+publicClient.select().from(Posts).where(eq("category", "news")) // works
+publicClient.select().from(Posts).where(eq("title", "Hello"))   // compile error
+```
+
+An index costs extra on every write, so index only what you filter on. `bytes` columns can’t be indexed.
+
+## Make a column optional or give it a default
+
+By default, every column is required: a create must give it a value. Two modifiers change that:
+
+- **`.optional()`**: a create may leave the column out, a patch may unset it, and a read gives `undefined` where it’s missing
+- **`.default(value)`**: a create that leaves the column out writes this value instead
+
+```ts
+import { bool, defineSchema, i32, key, str } from "@arkiv-network/sdk/schema"
+
+const Comments = defineSchema("comments", {
+  post: key().indexed(),
+  text: str(),
+  likes: i32().indexed().default(0),
+  hidden: bool().optional(),
+})
+```
+
+Modifiers chain in any order, and each returns a new column.
+
+## Name the schema after your project
+
+A named schema tags every entity it creates with an indexed `arkiv.schema` attribute that holds the name. A query through the schema filters on that tag, so it only sees entities written through it:
+
+```ts
+const { entities } = await publicClient.select().from(Posts).fetch()
+```
+
+This returns posts only, even with no other filter. The tag isn’t part of the rows you read back.
+
+Arkiv is a public database, and other projects may define a schema called `posts` too. Put your project in the name, as in `my-app.posts`, so your queries don’t pick up their entities. A name can be any text up to 128 bytes.
+
+The tag keeps other projects’ data out by accident, not on purpose: anyone can write an entity with your tag. When you need to trust what you read, also [filter by owner or creator](/querying/filter/#filter-on-entity-fields).
+
+Leave the name out when you don’t want a tag:
+
+```ts
+const Tags = defineSchema({ label: str().indexed() })
+```
+
+An unnamed schema still types and checks what you read and write. A query through it matches whatever its filters match, whichever project wrote the entities, so give its queries a filter only your data matches.
+
+## Naming rules
+
+An attribute name:
+
+- Starts with a letter, followed by letters, digits, `.`, `-` or `_`
+- Is at most 32 bytes long
+- Is case-sensitive: `Title` and `title` are different attributes
+- Can’t contain `--`, or be a word the query language reserves, such as `and`, `not`, `exists` or a type name like `str`
+
+A name can’t start with `$`, so a column never collides with an entity field. A column called `owner` is fine, and you read it next to the entity’s `$owner`. `arkiv.schema` is the only name a schema can’t use.
+
+A schema has at most 32 columns, or 31 if it’s named, since the tag counts as one more attribute.

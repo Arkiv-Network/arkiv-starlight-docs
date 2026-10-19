@@ -13,10 +13,10 @@ You are a technical writer for Arkiv. The reader is a developer who wants to lea
 - One canonical example. Cut anything that does not change what they do next.
 - Lead with the action. Concept first only when the API is unusable without it.
 - Verify names, signatures, and imports against `.sdk-cache/arkiv-sdk-js/` or an existing page. Do not invent APIs.
-- Reuse existing terms (entity, payload, attributes, expiry). No synonyms.
-- Cookbook and tutorials are sequential and copy-pasteable. Concept pages explain one idea and link out. Do not hand-edit generated API Reference.
-- Show common failure modes next to the happy path (missing project attribute, wrong attribute type, expired entity).
-- Second person, present tense, short. No fluff, no em dashes, no "Overview" that restates the title.
+- Reuse existing terms (entity, attribute, column, schema, expiration, entity field). No synonyms.
+- Show common failure modes next to the happy path (a value of the wrong type, a filter on a column that isn't indexed, an expired entity).
+- Arkiv is a public database: anyone can write entities of any shape. Examples name schemas after the project (`my-app.posts`), and pages that read data the app trusts filter by owner or creator (`ownedBy`, `createdBy`).
+- Do not hand-edit the generated API Reference.
 
 ## Commands
 
@@ -50,11 +50,17 @@ The `rewriteIndexLinks` remark plugin in `astro.config.mjs` exists to repair Typ
 
 Because the real SDK source lands in `.sdk-cache/arkiv-sdk-js/`, you can typecheck the code snippets in a doc page against it instead of guessing at the API. Extract the snippets into a scratch directory inside that clone (so `viem` resolves from its `node_modules`), add a `tsconfig.json` mapping `@arkiv-network/sdk` and its subpath exports to `../src/*/index.ts`, run `.sdk-cache/arkiv-sdk-js/node_modules/typescript/bin/tsc`, then delete the scratch directory. This catches signature drift that prose review does not.
 
+### Site structure
+
+The sidebar follows the reader's path: Get Started (what Arkiv is, the first-entity tutorial, connecting), Schemas, Write Data, Query Data, Events, Reference (query language, errors, limits, the generated API Reference), JSON-RPC API (read methods and the write calldata, for clients without an SDK), then Networks and Tools. One page does one job: a tutorial, a how-to, a reference or a concept, never a mix.
+
 ### Content conventions
 
 - Pages are `.mdx` with `title` and `description` frontmatter. Starlight components (`Aside`, `Steps`, `Tabs`, `TabItem`) are imported per file from `@astrojs/starlight/components`.
-- `src/components/NetworkNote.astro` is the single source of truth for which testnet the docs target. Every SDK guide, cookbook recipe, and tutorial renders it near the top. When the public testnet changes, edit that component rather than the pages.
-- SDK code samples import from `@arkiv-network/sdk`, with `viem` as the peer dependency for transports and accounts.
+- SDK code samples import from `@arkiv-network/sdk` and its subpaths (`/schema`, `/query`, `/chains`), with `viem` as the peer dependency for transports and accounts.
+- Every page after the tutorial reuses its `Posts` schema, `account`, `publicClient` and `walletClient`, and says so in its first paragraph. Don't redefine them per page.
+- Wherever a page shows or uses the public RPC URL (including `http()` with no URL), render `src/components/RpcTerms.astro` next to it. It links the Terms of Use and Privacy Policy.
+- `src/components/NetworkNote.astro` is the single source of truth for which testnet the docs target. The tutorial and the "Connect to Arkiv" page render it near the top. When the public testnet changes, edit that component rather than the pages.
 
 ### Component overrides
 
@@ -78,19 +84,21 @@ Bumping the documented SDK version means editing that pin in `.github/workflows/
 `.github/workflows/spellcheck.yml` runs codespell on pull requests to `main` and `develop`. New proper nouns that codespell flags go in that workflow's `ignore_words_list`.
 
 
-## Writing Philosophy & Guidelines
+## Writing guidelines
 
-- **Keep It Simple**: documentation should be clear and direct. Don't add sections unless they help users accomplish tasks.
-- **Be concise:** sacrifice grammar for concision. Terse responses preferred. No fluff.
+Follow the [Vercel writing guidelines](https://raw.githubusercontent.com/vercel-labs/writing-guidelines/refs/heads/main/README.md). The ones that come up most:
 
-- **Focus on the User**
-  - What is the user trying to do?
-  - What do they need to know to succeed?
-  - What mistakes do they commonly make?
+- Open every page with a one-paragraph summary. Don't over-explain: say it once, link to the page that covers it
+- Active voice, second person, present tense, sentences under 20 words. Contractions are fine
+- No `easy`, `simple`, `quick`, `just`, `very`, `really`. No rhetorical questions
+- No em dashes or hyphens as punctuation. Use colons, commas or periods. Curly quotes and apostrophes in prose
+- Sentence case for page titles and headings, title case for sidebar labels
+- Introduce every list with a colon. No periods on list items that aren't full sentences
+- Every code block has a language tag, explains itself in the prose around it, and stays under 80 columns and 25 lines
+- Placeholders are descriptive `snake_case`: `your_private_key_here`
 
-- Write consistently with same format
-- In tutorials, list prerequisites as bullet points
-- When mentioning external packages, always link them as clickable URLs to npm.org. For example: [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), [`viem`](https://www.npmjs.com/package/viem).
-- At the beginning of any Cookbook tutorial, use the starting sentence _"In this guide, you will learn..."_ + explain what the developer following this tutorial will learn with a bullet point list.
-- When showing commands to install packages, always show commands to install with all these package managers: bun, pnpm, yarn, and npm (in this exact order)
-- Always link specific concepts, technical terms, or specific Arkiv SDK methods to a relevant page in the doc, including an anchor link. For the developer to deep dive more.
+Repo conventions on top of those:
+
+- Link external packages to npm the first time they appear: [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), [`viem`](https://www.npmjs.com/package/viem)
+- Show install commands in `<Tabs syncKey="pkg">` with bun, pnpm, yarn and npm, in that order
+- Link SDK methods and concepts to the page that covers them, with an anchor

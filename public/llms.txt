@@ -1,92 +1,56 @@
 # Arkiv
 
-> The Web3 database. A universal data layer for Ethereum — queryable, time-scoped, tamper-proof, wallet-owned.
+> The Web3 database. A universal data layer for Ethereum — queryable, time-scoped, tamper-proof, wallet-owned. The TypeScript SDK is `@arkiv-network/sdk`, built on viem.
 
-## Documentation
+## Get started
 
-- Getting started: https://docs.arkiv.network/start-here/fundamentals/
-- Installation & Hello World: https://docs.arkiv.network/start-here/installation/
-- Testnet (Kaolin): https://docs.arkiv.network/start-here/testnet/
-- Best practices: https://docs.arkiv.network/typescript-sdk/best-practices/
+- [What Arkiv is](https://docs.arkiv.network/start-here/introduction/): entities, attributes, ownership, expiration
+- [Your first entity](https://docs.arkiv.network/start-here/first-entity/): install, define a schema, write, query
+- [Connect to Arkiv](https://docs.arkiv.network/start-here/clients/): public and wallet clients, browser wallets, local nodes
 
-## TypeScript SDK
+## Schemas
 
-Package: `@arkiv-network/sdk` (NOT `arkiv-sdk` — that package is deprecated)
+- [Define a schema](https://docs.arkiv.network/schemas/define/): `defineSchema`, `.indexed()`, `.optional()`, `.default()`, named schemas
+- [Column types](https://docs.arkiv.network/schemas/column-types/): `bool`, `i32`, `u64`, `u256`, `dec`, `str`, `addr`, `key`, `bytes32`, `bytes`
 
-### Imports
+## Write data
 
-```ts
-import { createWalletClient, createPublicClient, http } from "@arkiv-network/sdk"
-import { kaolin } from "@arkiv-network/sdk/chains"
-import { privateKeyToAccount } from "@arkiv-network/sdk/accounts"
-import { eq, gt, lt, gte, lte, desc } from "@arkiv-network/sdk/query"
-import { jsonToPayload, stringToPayload, payloadToString, ExpirationTime } from "@arkiv-network/sdk/utils"
-```
+- [Create entities](https://docs.arkiv.network/writing/create/): `createEntity(schema, values, { expiration, flags, salt })`
+- [Expiration](https://docs.arkiv.network/writing/expiration/): `ExpirationTime`, `extendEntity`
+- [Change and delete](https://docs.arkiv.network/writing/change/): `patchEntity`, `changeOwnership`, `deleteEntity`
+- [Batches](https://docs.arkiv.network/writing/batches/): `executeBatch`, `predictEntityKeys`
 
-### Clients
+## Query data
 
-- `createWalletClient({ chain, transport, account })` — read/write, requires private key
-- `createPublicClient({ chain, transport })` — read-only, safe for frontend
+- [Select fields](https://docs.arkiv.network/querying/select/): `select({ $key: true, title: true }).from(schema)`, flat typed rows
+- [Filter results](https://docs.arkiv.network/querying/filter/): `where`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `startsWith`, `exists`, `hasType`, `and`, `or`, `not`
+- [Paginate results](https://docs.arkiv.network/querying/paginate/): `limit`, `fetch`, `next`, `for await`, `cursor`, `atBlock`
+- [Read one entity](https://docs.arkiv.network/querying/get-entity/): `getEntity(key, schema?)`
+- [Query without a schema](https://docs.arkiv.network/querying/without-schema/): `$attributes`, `$attributeSchema`, `query()`, raw query strings
 
-### Writing data
+## Events
 
-- `walletClient.createEntity({ payload, contentType, attributes, expiresIn })` → `{ entityKey, txHash }`
-- `walletClient.updateEntity({ entityKey, payload, contentType, attributes, expiresIn })` — FULL REPLACE, not patch. Omitted attributes are silently removed.
-- `walletClient.deleteEntity({ entityKey })` → `{ txHash }`
-- `walletClient.extendEntity({ entityKey, expiresIn })` — extend expiration
-- `walletClient.changeOwnership({ entityKey, newOwner })` — transfer ownership
-- `walletClient.mutateEntities({ creates, updates, deletes, extensions })` — batch operations
+- [Watch entity events](https://docs.arkiv.network/events/watch/): `watchEntityEvents`
 
-### Reading data
+## Reference
 
-- `publicClient.getEntity(entityKey)` — single entity by key
-- `publicClient.buildQuery()` — chainable query builder:
-  - `.where(condition)` — filter (eq, gt, lt, gte, lte)
-  - `.ownedBy(address)` / `.createdBy(address)` — wallet filters
-  - `.orderBy(desc('field', 'type'))` — ordering
-  - `.withPayload(true)` / `.withAttributes(true)` — include data
-  - `.limit(n)` — max results (cap: 200)
-  - `.fetch()` — execute
-
-### Live events
-
-- `publicClient.subscribeEntityEvents({ onEntityCreated, onEntityUpdated, onEntityDeleted, onEntityExpired, onEntityExpiresInExtended, onError }, pollingInterval?, fromBlock?)` — returns `unsubscribe()` function
-- NOTE: There is NO `watchEntities` method. Use `subscribeEntityEvents`.
-
-### Payload helpers
-
-- `jsonToPayload(object)` — JSON to payload
-- `stringToPayload(string)` — text to payload
-- `payloadToString(payload)` — payload to text
-
-### Expiration helpers
-
-- `ExpirationTime.fromMinutes(n)`
-- `ExpirationTime.fromHours(n)`
-- `ExpirationTime.fromDays(n)`
-
-### Query operators
-
-- `eq(key, value)` — exact match (strings and numbers)
-- `gt(key, value)`, `lt()`, `gte()`, `lte()` — numeric comparisons only
-- No `contains()`, `startsWith()`, or full-text search at protocol level
+- [Query language](https://docs.arkiv.network/reference/query-language/)
+- [Errors](https://docs.arkiv.network/reference/errors/)
+- [Limits](https://docs.arkiv.network/reference/limits/)
+- [API reference](https://docs.arkiv.network/typescript-sdk/api-reference/)
 
 ## JSON-RPC API
 
-- Querying: https://docs.arkiv.network/json-rpc/querying-data/
-- Mutating: https://docs.arkiv.network/json-rpc/mutating-entities/
+- [Read methods](https://docs.arkiv.network/json-rpc/querying-data/): `arkiv_query`, `arkiv_getEntity`, `arkiv_getEntityCount`, `arkiv_getBlockTiming`
+- [Write transactions](https://docs.arkiv.network/json-rpc/mutating-entities/): `execute` calldata, attribute encoding, entity keys, events, revert errors
 
-## Important conventions
+## Conventions that trip up generated code
 
-- Always use a project attribute on every entity to namespace your app's data
-- `updateEntity` is full-replace — re-send ALL attributes you want to keep
-- String attributes support only `eq()`. Use numeric values for range queries.
-- All entities expire. Use `ExpirationTime` helpers for human-readable durations.
-
-## Testnet
-
-- Chain: Kaolin (ID: 60138453025)
-- RPC: https://kaolin.hoodi.arkiv.network/rpc
-- WebSocket: wss://kaolin.hoodi.arkiv.network/rpc/ws
-- Explorer: https://explorer.kaolin.hoodi.arkiv.network/
-- Faucet: https://kaolin.hoodi.arkiv.network/faucet/
+- Arkiv is a public database: anyone can write entities of any shape. Name schemas after your project (`defineSchema("my-app.posts", ...)`), and filter by owner or creator (`.ownedBy(address)`, `.createdBy(address)`) when you need to trust what you read
+- Entity fields start with `$` in selections, rows and filters: `$key`, `$owner`, `$creator`, `$createdAt`, `$updatedAt`, `$expiresAt`, `$creationFlags`. Names without `$` are attributes
+- Every write goes through a schema. There is no payload or content type: store data in `str` (up to 128 bytes) or `bytes` columns
+- A column value is a typed object: read it through `.value`. `dec`, `addr`, `key`, `bytes32` and `u64` values must be wrapped, as in `dec("4.5")`
+- Only indexed columns can be filtered on. `bytes` is never indexed
+- `expiration` is required on every create. Build it with helpers such as `ExpirationTime.fromDays(30)`
+- There is no `updateEntity`: `patchEntity` changes only the columns it names
+- There is no server-side sorting. Sort fetched rows in JavaScript

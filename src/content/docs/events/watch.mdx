@@ -1,0 +1,75 @@
+---
+title: Watch entity events
+description: React to entities being created, patched, extended, handed over or deleted with watchEntityEvents.
+---
+
+`watchEntityEvents` calls your handlers as entity operations land on the chain. Use it to update a UI live, or to keep a copy of Arkiv data in your own database. The examples on this page use the clients from [your first entity](/start-here/first-entity/).
+
+## Watch events
+
+Pass a handler for each kind of event you care about. The call returns a function that stops watching:
+
+```ts
+const unwatch = publicClient.watchEntityEvents({
+  onEntityCreated: ({ entityKey, owner, expiresAt }) => {
+    console.log("Created", entityKey, "by", owner, "until", expiresAt)
+  },
+  onEntityDeleted: ({ entityKey }) => console.log("Deleted", entityKey),
+  onError: (error) => console.error(error),
+})
+
+unwatch()
+```
+
+The SDK polls the node for new events, every half block by default. Set `pollingInterval` in milliseconds to change it.
+
+## Events
+
+Every event has `entityKey`, `blockNumber`, `transactionHash` and `logIndex`. Each kind adds:
+
+| Handler | When | Adds |
+| --- | --- | --- |
+| `onEntityCreated` | An entity was created | `owner`, `expiresAt`, `creationFlags` |
+| `onEntityPatched` | An entity’s attributes changed | `owner` |
+| `onExpiryExtended` | An entity was extended | `owner`, `expiresAt` |
+| `onOwnershipTransferred` | An entity was handed over | `previousOwner`, `newOwner` |
+| `onEntityDeleted` | An entity was deleted | `owner` |
+
+Events carry no attributes. To see what a patch changed, [read the entity](/querying/get-entity/). An event isn’t a row, so its fields have no `$`.
+
+`owner` on `onExpiryExtended` is the entity’s owner, not the account that extended it. Arkiv emits no event when an entity expires.
+
+## Handle every event in order
+
+`onEvent` receives every event, in the order the operations were applied. Each event has a `type` you can switch on:
+
+```ts
+publicClient.watchEntityEvents({
+  onEvent: (event) => {
+    switch (event.type) {
+      case "EntityCreated":
+      case "EntityPatched":
+        return refresh(event.entityKey)
+      case "EntityDeleted":
+        return remove(event.entityKey)
+    }
+  },
+})
+```
+
+`onEvent` runs before the handler for the same kind of event.
+
+## Catch up from an earlier block
+
+`fromBlock` replays events from that block before following new ones. Use it to resume after a restart:
+
+```ts
+publicClient.watchEntityEvents({
+  onEvent: apply,
+  fromBlock: lastSeenBlock + 1n,
+})
+```
+
+## Handle errors
+
+`onError` receives transport failures, events that don’t decode, and anything your own handlers throw. Without it, errors go to `console.error`. Pass it in production: a watcher that stops receiving events looks the same as a quiet chain.
