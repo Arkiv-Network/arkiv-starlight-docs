@@ -1,0 +1,45 @@
+---
+title: Errors
+description: Every error the TypeScript SDK throws, when it throws it, and what to do about it.
+---
+
+The SDK checks your input before it sends anything, so most mistakes throw a specific error with a message that names the problem. Check for one with `instanceof`. Errors from the node arrive as `EntityMutationError` for writes and `QueryError` for queries.
+
+Every error below is exported from `@arkiv-network/sdk`, except the three query errors, which come from `@arkiv-network/sdk/query`.
+
+## Writes
+
+| Error | Thrown when |
+| --- | --- |
+| `EntityMutationError` | The transaction failed or reverted, for example because the account isn’t the owner or has no GLM. `txHash` holds the transaction, if it was sent |
+| `SchemaMismatchError` | A value is missing, names a column the schema doesn’t have, or has the wrong type |
+| `InvalidValueError` | A value doesn’t fit its type: out of range, wrong length, bad checksum, too many decimal places |
+| `UntypedValueError` | A value is neither a typed value nor a plain boolean, number, bigint, string or `Uint8Array` |
+| `MissingValueError` | A value is `null`. Leave the column out, or `unset` it in a patch |
+| `EntityTooLargeError` | The `bytes` values of one create or patch add up to more than 128 KiB |
+| `EmptyPatchError` | A patch has nothing to set or unset |
+| `ConflictingMutationError` | A patch sets and unsets the same column |
+| `InvalidExpiryError` | An expiration is in the past, too far away to store, or not a whole number of blocks |
+| `InvalidCreationFlagsError` | A creation flag isn’t a boolean |
+| `InvalidSaltError` | A salt is negative or wider than 128 bits |
+| `NoRandomSourceError` | The runtime has no `crypto.getRandomValues` to make a random salt |
+
+## Reads
+
+| Error | Thrown when |
+| --- | --- |
+| `NoEntityFoundError` | `getEntity` found no live entity with the key. `entityKey` holds the key |
+| `SchemaMismatchError` | An entity read through a schema lacks a selected required column, holds a value of another type, or has another schema’s tag. Use [`onMismatch: "skip"`](/querying/select/#entities-that-dont-fit-the-schema) to leave such entities out |
+| `NoMoreResultsError` | `next()` was called on the last page. Check `hasNextPage()` first |
+| `UnknownAttributeTypeError` | The node returned an attribute type this SDK version can’t decode. Update the SDK |
+| `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, compares against the wrong type, or the query has no condition at all |
+| `UnsupportedOperatorError` | An operator doesn’t work on the value’s type, such as `gt` on an `addr` |
+| `QueryError` | The node rejected the query. `kind` says why: see [query language errors](/reference/query-language/#errors) |
+
+## Schemas
+
+| Error | Thrown when |
+| --- | --- |
+| `InvalidAttributeNameError` | A column name breaks the [naming rules](/schemas/define/#naming-rules) |
+| `SchemaDefinitionError` | The schema name isn’t a valid `str`, an entry isn’t a column, or a column is named `arkiv.schema` |
+| `TooManyAttributesError` | A schema has more columns than one entity can hold |

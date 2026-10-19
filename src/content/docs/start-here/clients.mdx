@@ -1,0 +1,97 @@
+---
+title: Connect to Arkiv
+description: Create a public client to read from Arkiv and a wallet client to write, from a server or a browser wallet.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+import NetworkNote from '../../../components/NetworkNote.astro';
+import RpcTerms from '../../../components/RpcTerms.astro';
+
+<NetworkNote />
+
+You reach Arkiv through two clients. A public client reads: it queries entities and watches events, and needs no account. A wallet client writes: it signs and sends transactions with an account. Both are [viem clients](https://viem.sh/docs/clients/intro) with Arkiv’s actions added, so they take a chain and a transport like any viem client.
+
+## Read with a public client
+
+```ts
+import { createPublicClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { http } from "viem"
+
+const publicClient = createPublicClient({
+  chain: tiramisu,
+  transport: http(),
+})
+```
+
+A public client holds no secrets, so it’s safe in the browser. `http()` with no URL uses the chain’s public RPC, which is rate limited.
+
+<RpcTerms />
+
+## Write from a server
+
+On a server, sign with a private key. Keep the key in an environment variable or a secret store, never in code:
+
+```ts
+import { createWalletClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { http, type Hex } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+
+const walletClient = createWalletClient({
+  chain: tiramisu,
+  transport: http(),
+  account: privateKeyToAccount(process.env.PRIVATE_KEY as Hex),
+})
+```
+
+## Write from a browser wallet
+
+In the browser, let the user’s wallet sign. Pass the wallet’s provider as a `custom` transport and the user’s address as the account:
+
+```ts
+import { createWalletClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { custom } from "viem"
+
+const [address] = await window.ethereum.request({
+  method: "eth_requestAccounts",
+})
+const walletClient = createWalletClient({
+  chain: tiramisu,
+  transport: custom(window.ethereum),
+  account: address,
+})
+```
+
+This connects to the wallet directly. In an app that uses wagmi, such as one built with RainbowKit, [build the client from wagmi’s connection](/guides/react/) instead.
+
+The wallet asks the user to approve every write, and it has to be on Tiramisu when it does. `addChain` adds Tiramisu to the wallet and asks the user to switch to it:
+
+```ts
+await walletClient.addChain({ chain: tiramisu })
+```
+
+## Read and write with one setup
+
+A wallet client has only the write actions. Keep a public client next to it for reads. Both can share the transport settings:
+
+```ts
+const transport = http()
+const publicClient = createPublicClient({ chain: tiramisu, transport })
+const walletClient = createWalletClient({ chain: tiramisu, transport, account })
+```
+
+## Use an access key
+
+Without a key, the public RPC applies a default rate limit. To raise it, put an [access key](/start-here/access-keys/) at the end of the RPC URL:
+
+```ts
+const transport = http(
+  "https://rpc.tiramisu.db-chain.testnet.arkiv.network/your_access_key_here",
+)
+```
+
+<Aside type="caution">
+Anyone can read a key out of your site’s network requests. Use access keys on a server, not in the browser.
+</Aside>

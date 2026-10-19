@@ -1,0 +1,234 @@
+---
+title: Use Arkiv with React
+description: Read and write Arkiv data in a React app that connects wallets with wagmi, such as a Next.js app with RainbowKit.
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import RpcTerms from '../../../components/RpcTerms.astro';
+
+In a React app that connects wallets through wagmi, read through an Arkiv public client and write through an Arkiv wallet client built from wagmi’s connection. Users connect once, with the connect button you already have. This guide uses a Next.js app with RainbowKit, which includes wagmi and TanStack Query. The same code works with ConnectKit or plain wagmi.
+
+Before you start, you need:
+
+- A React app with wagmi and TanStack Query set up, for example from RainbowKit’s Next.js template
+- The SDK installed
+
+<Tabs syncKey="pkg">
+  <TabItem label="bun">
+    ```bash
+    bun add @arkiv-network/sdk
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @arkiv-network/sdk
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @arkiv-network/sdk
+    ```
+  </TabItem>
+  <TabItem label="npm">
+    ```bash
+    npm install @arkiv-network/sdk
+    ```
+  </TabItem>
+</Tabs>
+
+## Add Tiramisu to the wagmi config
+
+Add the `tiramisu` chain to the chains your config lists, next to any chains your app already uses:
+
+```ts title="lib/wagmi.ts"
+import { getDefaultConfig } from "@rainbow-me/rainbowkit"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+
+export const config = getDefaultConfig({
+  appName: "My App",
+  projectId: "your_walletconnect_project_id",
+  chains: [tiramisu],
+  ssr: true,
+})
+```
+
+RainbowKit then asks the user to switch networks when their wallet is on a chain that isn’t in the list.
+
+## Share the schema and a public client
+
+Reads don’t need the user’s wallet, so one public client serves the whole app. Put it next to your schemas:
+
+```ts title="lib/arkiv.ts"
+import { createPublicClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { addr, bytes, dec, defineSchema, str } from "@arkiv-network/sdk/schema"
+import { http } from "viem"
+
+export const Posts = defineSchema("my-app.posts", {
+  author: addr().indexed(),
+  category: str().indexed(),
+  score: dec().indexed(),
+  title: str(),
+  body: bytes(),
+  summary: str().optional(),
+})
+
+export const publicClient = createPublicClient({
+  chain: tiramisu,
+  transport: http(),
+})
+```
+
+<RpcTerms />
+
+## Read with TanStack Query
+
+Wrap each query in `useQuery`. This hook lists the posts an account owns:
+
+```ts title="hooks/use-posts.ts"
+import { useQuery } from "@tanstack/react-query"
+import type { Address } from "viem"
+import { Posts, publicClient } from "@/lib/arkiv"
+
+export function usePosts(owner: Address | undefined) {
+  return useQuery({
+    queryKey: ["posts", owner],
+    enabled: owner !== undefined,
+    queryFn: async () => {
+      const { entities } = await publicClient
+        .select({ $key: true, title: true, score: true })
+        .from(Posts)
+        .ownedBy(owner as Address)
+        .fetch()
+      return entities
+    },
+  })
+}
+```
+
+Anyone can write entities with your schema’s tag, so `ownedBy` keeps the list to the account’s own posts. Keep `bigint` values out of query keys, since TanStack Query can’t hash them.
+
+Use the hook with the connected account:
+
+```tsx title="components/my-posts.tsx"
+"use client"
+
+import { useAccount } from "wagmi"
+import { usePosts } from "@/hooks/use-posts"
+
+export function MyPosts() {
+  const { address } = useAccount()
+  const { data: posts, isPending } = usePosts(address)
+
+  if (!address) return <p>Connect a wallet to see your posts.</p>
+  if (isPending) return <p>Loading…</p>
+
+  return (
+    <ul>
+      {posts?.map((post) => (
+        <li key={post.$key}>
+          {post.title.value} ({post.score.value})
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Build a wallet client from wagmi
+
+Writes need an Arkiv wallet client. Build it from the connection wagmi already manages:
+
+```ts title="hooks/use-arkiv-wallet.ts"
+import { createWalletClient } from "@arkiv-network/sdk"
+import { tiramisu } from "@arkiv-network/sdk/chains"
+import { useMemo } from "react"
+import { custom } from "viem"
+import { useWalletClient } from "wagmi"
+
+export function useArkivWallet() {
+  // Only resolves while the wallet is connected and on Tiramisu
+  const { data: walletClient } = useWalletClient({ chainId: tiramisu.id })
+
+  return useMemo(() => {
+    if (!walletClient) return undefined
+    return createWalletClient({
+      chain: tiramisu,
+      transport: custom(walletClient.transport),
+      account: walletClient.account,
+    })
+  }, [walletClient])
+}
+```
+
+`custom(walletClient.transport)` sends the Arkiv client’s requests through the connected wallet, so the user approves each write there. With `chainId: tiramisu.id`, the hook returns `undefined` until the wallet is connected and on Tiramisu.
+
+Don’t use `window.ethereum` in a wagmi app. It may not be the wallet the user connected, and with WalletConnect there may be none.
+
+## Write with a mutation
+
+Wrap each write in `useMutation`, and invalidate the queries it changes:
+
+```ts title="hooks/use-create-post.ts"
+import { ExpirationTime } from "@arkiv-network/sdk"
+import { addr, dec } from "@arkiv-network/sdk/schema"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { stringToBytes } from "viem"
+import { useArkivWallet } from "@/hooks/use-arkiv-wallet"
+import { Posts } from "@/lib/arkiv"
+
+export function useCreatePost() {
+  const arkiv = useArkivWallet()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (post: { title: string; body: string }) => {
+      if (!arkiv) throw new Error("Connect a wallet on Tiramisu first")
+      const values = {
+        author: addr(arkiv.account.address),
+        category: "news",
+        score: dec("4.5"),
+        title: post.title,
+        body: stringToBytes(post.body),
+      }
+      const expiration = ExpirationTime.fromDays(30)
+      return arkiv.createEntity(Posts, values, { expiration })
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
+  })
+}
+```
+
+`createEntity` resolves once the post is in a block, so the refetched list includes it. Call the mutation from a component:
+
+```tsx title="components/new-post-button.tsx"
+"use client"
+
+import { useCreatePost } from "@/hooks/use-create-post"
+import { useArkivWallet } from "@/hooks/use-arkiv-wallet"
+
+export function NewPostButton() {
+  const ready = useArkivWallet() !== undefined
+  const createPost = useCreatePost()
+
+  return (
+    <button
+      disabled={!ready || createPost.isPending}
+      onClick={() => createPost.mutate({ title: "Hello", body: "From React" })}
+    >
+      {createPost.isPending ? "Confirm in your wallet…" : "New post"}
+    </button>
+  )
+}
+```
+
+## Next.js
+
+- A component that calls these hooks is a client component, so it needs `"use client"` at the top. The hooks don’t
+- `lib/arkiv.ts` has no browser code. Server components and route handlers can import `publicClient` and query with it
+
+## Next steps
+
+- [Filter results](/querying/filter/): narrow a query beyond the owner
+- [Paginate results](/querying/paginate/): load long lists page by page
+- [Watch entity events](/querying/watch-events/): update the UI when entities change

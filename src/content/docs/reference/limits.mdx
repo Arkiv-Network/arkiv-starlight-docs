@@ -1,0 +1,35 @@
+---
+title: Limits
+description: The size, count and range limits Arkiv enforces on entities, attributes, values and queries.
+---
+
+Arkiv enforces these limits on every entity and query. The SDK checks them before it sends anything, and exports each one as a constant.
+
+## Entities and attributes
+
+| Limit | Value | Constant |
+| --- | --- | --- |
+| Attributes per entity, and columns per schema | 32, or 31 for a named schema | `MAX_ATTRIBUTES` |
+| Attribute name length | 32 bytes | `MAX_NAME_BYTES` |
+| `str` value length | 128 bytes of UTF-8 | `MAX_STRING_BYTES` |
+| `bytes` value length | 128 KiB | `MAX_BYTES_LENGTH` |
+| All `bytes` values of one create or patch | 128 KiB | `MAX_ENTITY_BYTES` |
+| Latest expiration block | 2^64 − 1 | `MAX_EXPIRES_AT` |
+| Key salt | 128 bits | `MAX_SALT` |
+
+## Values
+
+| Type | Range | Constants |
+| --- | --- | --- |
+| `i32` | −2,147,483,648 to 2,147,483,647 | `I32_MIN`, `I32_MAX` |
+| `u64` | 0 to 2^64 − 1 | `U64_MAX` |
+| `u256` | 0 to 2^256 − 1 | `U256_MAX` |
+| `dec` | 18 decimal places, within the signed 256-bit range when scaled | `DECIMAL_SCALE` |
+
+## Queries
+
+| Limit | Value | Constant |
+| --- | --- | --- |
+| Rows per page | 200 | `MAX_LIMIT`, from `@arkiv-network/sdk/query` |
+
+The node also limits query length and nesting depth. A query over those limits fails with a `QueryError` whose `kind` is `"limits"`.
