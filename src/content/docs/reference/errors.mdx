@@ -29,11 +29,11 @@ Every error below is exported from `@arkiv-network/sdk`, except the three query 
 | Error | Thrown when |
 | --- | --- |
 | `NoEntityFoundError` | `getEntity` found no live entity with the key. `entityKey` holds the key |
-| `SchemaMismatchError` | An entity read through a schema lacks a selected required column, holds a value of another type, or has another schema’s tag. Use [`onMismatch: "skip"`](/querying/select/#entities-that-dont-fit-the-schema) to leave such entities out |
+| `SchemaMismatchError` | An entity read through a schema lacks a selected required column, holds a value of another type, or has another schema’s tag. Thrown by `getEntity`, and by a query with [`onMismatch: "throw"`](/querying/select/#entities-that-dont-fit-the-schema). Queries skip such entities by default |
 | `NoMoreResultsError` | `next()` was called on the last page. Check `hasNextPage()` first |
 | `UnknownAttributeTypeError` | The node returned an attribute type this SDK version can’t decode. Update the SDK |
-| `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, compares against the wrong type, or the query has no condition at all |
-| `UnsupportedOperatorError` | An operator doesn’t work on the value’s type, such as `gt` on an `addr` |
+| `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, compares against the wrong type, has `between` bounds of two types, or the query has no condition at all |
+| `UnsupportedOperatorError` | `startsWith` was given a value that isn’t a `str` |
 | `QueryError` | The node rejected the query. `kind` says why: see [query language errors](/reference/query-language/#errors) |
 
 ## Schemas

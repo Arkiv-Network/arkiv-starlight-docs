@@ -26,12 +26,27 @@ Several conditions in one `where`, or across several `where` calls, must all hol
 | --- | --- |
 | `eq(name, value)` | Equals the value |
 | `ne(name, value)` | Is set, with the same type, to a different value |
-| `gt`, `gte`, `lt`, `lte` | Is greater than, at least, less than, or at most the value. Numbers and decimals only |
+| `gt`, `gte`, `lt`, `lte` | Is greater than, at least, less than, or at most the value |
+| `between(name, low, high)` | Is between the two values, both included |
 | `startsWith(name, prefix)` | Is a `str` that starts with the prefix |
 | `exists(name)` | Is set, with any type |
 | `hasType(name, type)` | Is set with the given type, such as `"i32"` |
 
-Combine them with:
+Every type except `bytes` can be compared and ranged. Numbers and decimals compare by value, and `false` comes before `true`. Strings, addresses and keys compare byte by byte, so strings sort by their UTF-8 bytes, not alphabetically.
+
+`between` is the same as `and(gte(...), lte(...))` in one condition:
+
+```ts
+import { between } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true })
+  .from(Posts)
+  .where(between("score", dec("3.5"), dec("5")))
+  .fetch()
+```
+
+Combine conditions with:
 
 - **`and(...)`**: all must hold
 - **`or(...)`**: at least one must hold
@@ -48,7 +63,7 @@ const posts = publicClient.select({ $key: true }).from(Posts)
 
 posts.where(eq("title", "Hello")) // title isn’t indexed
 posts.where(eq("score", 5)) // score is a dec: write dec(5)
-posts.where(gt("author", addr(account.address))) // addresses have no order
+posts.where(between("score", dec(1), 5)) // both bounds need one type
 ```
 
 ## Filter on entity fields

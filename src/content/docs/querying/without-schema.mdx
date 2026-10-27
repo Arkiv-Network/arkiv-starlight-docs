@@ -26,11 +26,13 @@ A filter on a value of the wrong type isn’t an error here. `eq("score", 5)` lo
 
 ## Discover an entity’s shape
 
-Select `$attributes` and `$attributeSchema` to see every attribute and its type:
+`$attributeSchema` returns each attribute’s name, type and whether it’s indexed, without the values. Use it to learn what entities hold before you fetch them. Values can be large: a `bytes` attribute holds up to 128 KiB, and an RPC endpoint may cap how big a response can be. A page of 100 entities with every value can be more than it sends.
+
+Fetch the shape first:
 
 ```ts
 const { entities } = await publicClient
-  .select({ $key: true, $attributes: true, $attributeSchema: true })
+  .select({ $key: true, $attributeSchema: true })
   .where(eq("category", "news"))
   .fetch()
 
@@ -38,12 +40,21 @@ for (const row of entities) {
   for (const [name, { type, indexed }] of Object.entries(
     row.$attributeSchema,
   )) {
-    console.log(name, type, indexed, row.$attributes[name]?.value)
+    console.log(name, type, indexed)
   }
 }
 ```
 
-Without a schema, `select()` and `select("*")` return every entity field plus `$attributes` and `$attributeSchema`.
+Then select only the attributes you need, by name:
+
+```ts
+const titles = await publicClient
+  .select({ $key: true, title: true })
+  .where(eq("category", "news"))
+  .fetch()
+```
+
+Without a schema, `select()` and `select("*")` return every entity field plus `$attributes`, but never `$attributeSchema`. Select it by name.
 
 ## Run one query with query()
 

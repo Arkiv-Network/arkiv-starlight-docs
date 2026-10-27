@@ -86,7 +86,7 @@ An attribute name:
 - Starts with a letter, followed by letters, digits, `.`, `-` or `_`
 - Is at most 32 bytes long
 - Is case-sensitive: `Title` and `title` are different attributes
-- Can’t contain `--`, or be a word the query language reserves, such as `and`, `not`, `exists` or a type name like `str`
+- Can’t contain `--`, or be a word the query language reserves, such as `and`, `not`, `between` or a type name like `str`
 
 A name can’t start with `$`, so a column never collides with an entity field. A column called `owner` is fine, and you read it next to the entity’s `$owner`. `arkiv.schema` is the only name a schema can’t use.
 

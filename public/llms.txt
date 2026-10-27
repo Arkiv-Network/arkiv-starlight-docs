@@ -11,7 +11,7 @@
 ## Schemas
 
 - [Define a schema](https://docs.arkiv.network/schemas/define/): `defineSchema`, `.indexed()`, `.optional()`, `.default()`, named schemas
-- [Column types](https://docs.arkiv.network/schemas/column-types/): `bool`, `i32`, `u64`, `u256`, `dec`, `str`, `addr`, `key`, `bytes32`, `bytes`
+- [Column types](https://docs.arkiv.network/schemas/column-types/): `bool`, `i32`, `u64`, `u256`, `dec`, `str`, `addr`, `key`, `bytes`
 
 ## Write data
 
@@ -23,8 +23,9 @@
 ## Query data
 
 - [Select fields](https://docs.arkiv.network/querying/select/): `select({ $key: true, title: true }).from(schema)`, flat typed rows
-- [Filter results](https://docs.arkiv.network/querying/filter/): `where`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `startsWith`, `exists`, `hasType`, `and`, `or`, `not`
-- [Paginate results](https://docs.arkiv.network/querying/paginate/): `limit`, `fetch`, `next`, `for await`, `cursor`, `atBlock`
+- [Filter results](https://docs.arkiv.network/querying/filter/): `where`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `between`, `startsWith`, `exists`, `hasType`, `and`, `or`, `not`
+- [Paginate results](https://docs.arkiv.network/querying/paginate/): `limit` (max 100), `fetch`, `next`, `for await`, `cursor`, `atBlock`
+- [Count entities](https://docs.arkiv.network/querying/count/): `client.count()`, `withCount`
 - [Read one entity](https://docs.arkiv.network/querying/get-entity/): `getEntity(key, schema?)`
 - [Query without a schema](https://docs.arkiv.network/querying/without-schema/): `$attributes`, `$attributeSchema`, `query()`, raw query strings
 - [Watch entity events](https://docs.arkiv.network/querying/watch-events/): `watchEntityEvents`
@@ -42,7 +43,7 @@
 
 ## JSON-RPC API
 
-- [Read methods](https://docs.arkiv.network/json-rpc/querying-data/): `arkiv_query`, `arkiv_getEntity`, `arkiv_getEntityCount`, `arkiv_getBlockTiming`
+- [Read methods](https://docs.arkiv.network/json-rpc/querying-data/): `arkiv_query` (with the `count` projection), `arkiv_getEntity`, `arkiv_getBlockTiming`
 - [Write transactions](https://docs.arkiv.network/json-rpc/mutating-entities/): `execute` calldata, attribute encoding, entity keys, events, revert errors
 
 ## Conventions that trip up generated code
@@ -50,8 +51,9 @@
 - Arkiv is a public database: anyone can write entities of any shape. Name schemas after your project (`defineSchema("my-app.posts", ...)`), and filter by owner or creator (`.ownedBy(address)`, `.createdBy(address)`) when you need to trust what you read
 - Entity fields start with `$` in selections, rows and filters: `$key`, `$owner`, `$creator`, `$createdAt`, `$updatedAt`, `$expiresAt`, `$creationFlags`. Names without `$` are attributes
 - Every write goes through a schema. There is no payload or content type: store data in `str` (up to 128 bytes) or `bytes` columns
-- A column value is a typed object: read it through `.value`. `dec`, `addr`, `key`, `bytes32` and `u64` values must be wrapped, as in `dec("4.5")`
+- A column value is a typed object: read it through `.value`. `dec`, `addr`, `key` and `u64` values must be wrapped, as in `dec("4.5")`
 - Only indexed columns can be filtered on. `bytes` is never indexed
 - `expiration` is required on every create. Build it with helpers such as `ExpirationTime.fromDays(30)`
 - There is no `updateEntity`: `patchEntity` changes only the columns it names
 - There is no server-side sorting. Sort fetched rows in JavaScript
+- There is no `getEntityCount`. Count with `client.count().from(schema).where(...).fetch()`, or add `.withCount()` to a select to get the total on every page

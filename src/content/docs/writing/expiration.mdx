@@ -57,7 +57,7 @@ const { expiresAt } = await walletClient.extendEntity({
 })
 ```
 
-A duration counts from now, not from the current expiration. Extending an entity with 10 days left by `fromDays(30)` leaves it with 30 days, not 40. A new expiration that isn’t later than the current one is rejected.
+A duration counts from now, not from the current expiration. Extending an entity with 10 days left by `fromDays(30)` leaves it with 30 days, not 40. A new expiration earlier than the current one is rejected, and one equal to it changes nothing.
 
 Only the owner can extend an entity, unless it was created with the [`permissionlessExtension` flag](/writing/create/#fix-properties-at-creation).
 

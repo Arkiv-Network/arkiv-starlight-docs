@@ -24,11 +24,10 @@ The row holds every entity field and every column, the same as `select()` throug
 const entity = await publicClient.getEntity(entityKey)
 
 entity.$attributes.title        // ArkivValue | undefined
-entity.$attributeSchema.title   // { type, indexed } | undefined
 entity.$creationFlags.readonly  // boolean
 ```
 
-Without a schema, the row holds every entity field, all attributes in `$attributes`, and their types in `$attributeSchema`.
+Without a schema, the row holds every entity field and all attributes in `$attributes`, the same as `select()`. To see which attributes are indexed, select `$attributeSchema` in a [query](/querying/without-schema/).
 
 ## Handle a missing entity
 

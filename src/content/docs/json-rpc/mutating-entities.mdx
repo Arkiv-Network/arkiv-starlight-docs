@@ -36,7 +36,7 @@ Each entry of `ops` is a tag and `operationData`, the `abi.encode` of the struct
 
 - **Create** doesn’t take a key. The node derives one, see [entity keys](#entity-keys)
 - **Patch** changes only the attributes in `mutations` and leaves the others and the expiry as they are
-- **Extend expiry** must move the expiry later
+- **Extend expiry** can’t move the expiry earlier. Extending to the current expiry changes nothing
 - **Transfer ownership** can’t go to the zero address or the current owner
 
 An operation that reverts reverts the whole batch. Each operation that applies emits one [event](#events).
@@ -61,7 +61,6 @@ The low 7 bits of `typeId` are the type. Bit 7, `0x80`, marks the attribute as i
 | `3` | `u64` | 32 bytes |
 | `4` | `u256` | 32 bytes |
 | `5` | `dec` | 32 bytes, a signed integer of the value times 10^18 |
-| `6` | `bytes32` | 32 bytes |
 | `7` | `bytes` | Raw bytes, up to 128 KiB. Can’t be indexed |
 | `8` | `str` | UTF-8, up to 128 bytes |
 | `9` | `addr` | 32 bytes, the address right-aligned |
@@ -226,6 +225,6 @@ A failed operation reverts with an ABI-encoded custom error, which `eth_call` an
 | `ReadOnlyEntity(bytes32 entityKey)` | A patch of a read-only entity |
 | `ReservedCreationFlags(uint8 creationFlags)` | A reserved flag bit is set |
 | `ExpiryDeadOnArrival(uint64 target, uint64 currentBlock)` | The expiry isn’t after the current block |
-| `ExpiryNotExtended(bytes32 entityKey, uint64 newExpiresAt, uint64 currentExpiresAt)` | The new expiry isn’t later than the current one |
+| `ExpiryNotExtended(bytes32 entityKey, uint64 newExpiresAt, uint64 currentExpiresAt)` | The new expiry is earlier than the current one |
 | `TransferToZeroAddress(bytes32 entityKey)` | A transfer to the zero address |
 | `TransferToSelf(bytes32 entityKey)` | A transfer to the current owner |

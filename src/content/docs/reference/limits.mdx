@@ -30,6 +30,6 @@ Arkiv enforces these limits on every entity and query. The SDK checks them befor
 
 | Limit | Value | Constant |
 | --- | --- | --- |
-| Rows per page | 200 | `MAX_LIMIT`, from `@arkiv-network/sdk/query` |
+| Rows per page | 100 | `MAX_LIMIT`, from `@arkiv-network/sdk/query` |
 
 The node also limits query length and nesting depth. A query over those limits fails with a `QueryError` whose `kind` is `"limits"`.

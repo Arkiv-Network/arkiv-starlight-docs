@@ -102,6 +102,7 @@ export default defineConfig({
 						{ label: "Select Fields", slug: "querying/select" },
 						{ label: "Filter Results", slug: "querying/filter" },
 						{ label: "Paginate Results", slug: "querying/paginate" },
+						{ label: "Count Entities", slug: "querying/count" },
 						{ label: "Read One Entity", slug: "querying/get-entity" },
 						{ label: "Query Without a Schema", slug: "querying/without-schema" },
 						{ label: "Watch Entity Events", slug: "querying/watch-events" },

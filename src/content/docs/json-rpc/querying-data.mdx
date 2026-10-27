@@ -1,17 +1,16 @@
 ---
 title: Read methods
-description: The arkiv_* JSON-RPC methods that query entities, read one entity, count entities and report block timing.
+description: The arkiv_* JSON-RPC methods that query and count entities, read one entity, and report block timing.
 ---
 
 import RpcTerms from '../../../components/RpcTerms.astro';
 
-An Arkiv node answers the standard Ethereum JSON-RPC methods plus four `arkiv_*` methods that read entities. The SDK’s public client calls them for you. Call them directly when you work in a language without an SDK.
+An Arkiv node answers the standard Ethereum JSON-RPC methods plus three `arkiv_*` methods that read entities. The SDK’s public client calls them for you. Call them directly when you work in a language without an SDK.
 
 | Method | Returns |
 | --- | --- |
-| [`arkiv_query`](#arkiv_query) | One page of the entities that match a query |
+| [`arkiv_query`](#arkiv_query) | One page of the entities that match a query, and how many match |
 | [`arkiv_getEntity`](#arkiv_getentity) | One entity by key, or `null` |
-| [`arkiv_getEntityCount`](#arkiv_getentitycount) | How many entities match a query |
 | [`arkiv_getBlockTiming`](#arkiv_getblocktiming) | The current block, its time and the block duration |
 
 The examples send requests to Tiramisu’s public RPC, `https://rpc.tiramisu.db-chain.testnet.arkiv.network`. Its chain ID is `7738577`.
@@ -45,7 +44,7 @@ The second parameter is optional. Every field in it is optional too:
 | Field | Description |
 | --- | --- |
 | `select` | The fields to return. Defaults to `{ "key": true }` |
-| `limit` | The page size, from 1 to 200. Defaults to 100 |
+| `limit` | The page size, from 1 to 100. Defaults to 100 |
 | `cursor` | The cursor of the previous page |
 | `atBlock` | The block to read at, as a hex number or `"latest"`. Defaults to the latest block |
 
@@ -61,8 +60,18 @@ Every `select` field is a boolean, and off unless you set it:
 | `creationFlags` | `{ "readonly", "permissionlessExtension", "raw" }` |
 | `attributes` | Every attribute with its value |
 | `attributeSchema` | Every attribute’s name, type and `indexed`, without values |
+| `count` | How many entities the query matches, as the response’s `count` |
 
 `attributes` also takes an object of names, to return only those: `{ "attributes": { "title": true } }`.
+
+`count` isn’t a field of each entity. It counts every match at the block, whatever the `limit`, and every page repeats it. With `count` as the only field, `data` is empty and there’s no `cursor`:
+
+```json
+[
+  "arkiv.schema = str('my-app.posts') AND category = str('news')",
+  { "select": { "count": true } }
+]
+```
 
 ### Response
 
@@ -82,12 +91,13 @@ Every `select` field is a boolean, and off unless you set it:
       }
     ],
     "blockNumber": "0x1bc",
-    "cursor": "b64:Xk3…"
+    "cursor": "b64:Xk3…",
+    "count": "0x2a"
   }
 }
 ```
 
-An entity holds only the fields you selected. A field you didn’t select is left out, not set to `null`. `blockNumber` is the block the page was read at.
+An entity holds only the fields you selected. A field you didn’t select is left out, not set to `null`. `blockNumber` is the block the page was read at, and `count` is there only if you selected it.
 
 An attribute’s `type` decides how its `value` is written:
 
@@ -98,23 +108,20 @@ An attribute’s `type` decides how its `value` is written:
 | `u64`, `u256` | A hex quantity, such as `"0x2a"` |
 | `dec` | A decimal string, such as `"4.5"` |
 | `str` | A string |
-| `addr`, `key`, `bytes32`, `bytes` | Hex bytes |
+| `addr`, `key`, `bytes` | Hex bytes |
 
 ### Paginate
 
-A response with a `cursor` has more pages. To get the next one, send the same query and `select` again with:
-
-- `cursor` set to the response’s `cursor`
-- `atBlock` set to the response’s `blockNumber`
+A response with a `cursor` has more pages. To get the next one, send the same query and `select` again with that cursor:
 
 ```json
 [
   "arkiv.schema = str('my-app.posts') AND category = str('news')",
-  { "cursor": "b64:Xk3…", "atBlock": "0x1bc", "limit": "0xa" }
+  { "cursor": "b64:Xk3…", "limit": "0xa" }
 ]
 ```
 
-A cursor only works at the block it was read at, so every page reads the same block. The last page has no `cursor`.
+The cursor pins the block of the first page, so every page reads the same block. The last page has no `cursor`.
 
 ### Errors
 
@@ -123,13 +130,13 @@ The node rejects a query it can’t run with one of these error codes:
 | Code | Cause |
 | --- | --- |
 | `-32001` | The query doesn’t parse. `data` holds the position, what was expected and what was found |
-| `-32002` | A condition uses the wrong type for its operator, such as `<` on an `addr` |
+| `-32002` | A condition uses the wrong type for its operator, such as `STARTSWITH` on an `i32`, or `BETWEEN` bounds of two types |
 | `-32003` | A value is invalid, such as an `i32` out of range |
 | `-32004` | The query goes over a node limit, such as its length or nesting depth |
 | `-32005` | The cursor expired, is malformed, or belongs to another query |
 | `-32006` | The node doesn’t keep the requested block |
 
-A `limit` outside 1 to 200 fails with `-32602`, invalid params.
+A `limit` outside 1 to 100 fails with `-32602`, invalid params.
 
 ## arkiv_getEntity
 
@@ -145,21 +152,6 @@ Reads one entity by key, with every field except `attributeSchema`. The optional
 ```
 
 The result has the shape of an entity in `arkiv_query`. It’s `null` when no live entity has the key: it never existed, or it was deleted or has expired.
-
-## arkiv_getEntityCount
-
-Counts the live entities that match a query. The optional parameter takes a `query` and a `block` number. Without them, it counts every entity at the latest block:
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "arkiv_getEntityCount",
-  "params": [{ "query": "arkiv.schema = str('my-app.posts')" }]
-}
-```
-
-The result is a number, such as `18427`.
 
 ## arkiv_getBlockTiming
 
