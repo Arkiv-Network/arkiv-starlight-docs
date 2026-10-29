@@ -67,7 +67,7 @@ const page = await publicClient.query(eq("category", "news"), {
 })
 ```
 
-The options also take `cursor` and `atBlock`.
+The options also take `cursor` and `atBlock`, and `orderBy` to [sort](/querying/sort/) the results. There’s no schema to take a type from, so the key names its type, as in `orderBy: desc("score", "dec")`.
 
 ## Send a raw query string
 
@@ -76,5 +76,7 @@ The options also take `cursor` and `atBlock`.
 ```ts
 await publicClient.query("category = str('news') AND score > dec(4)")
 ```
+
+An `orderBy` passed with a string is still checked, and goes after the string as its `ORDER BY` clause, so the string can’t end in one of its own.
 
 Use this for queries built elsewhere, such as in the [Data Explorer](/start-here/data-explorer/). In your own code, prefer the condition functions, which check names, types and operators for you.

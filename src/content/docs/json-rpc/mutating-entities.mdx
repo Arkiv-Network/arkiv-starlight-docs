@@ -61,6 +61,7 @@ The low 7 bits of `typeId` are the type. Bit 7, `0x80`, marks the attribute as i
 | `3` | `u64` | 32 bytes |
 | `4` | `u256` | 32 bytes |
 | `5` | `dec` | 32 bytes, a signed integer of the value times 10^18 |
+| `6` | Reserved | |
 | `7` | `bytes` | Raw bytes, up to 128 KiB. Can’t be indexed |
 | `8` | `str` | UTF-8, up to 128 bytes |
 | `9` | `addr` | 32 bytes, the address right-aligned |

@@ -25,9 +25,10 @@
 - [Select fields](https://docs.arkiv.network/querying/select/): `select({ $key: true, title: true }).from(schema)`, flat typed rows
 - [Filter results](https://docs.arkiv.network/querying/filter/): `where`, `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `between`, `startsWith`, `exists`, `hasType`, `and`, `or`, `not`
 - [Paginate results](https://docs.arkiv.network/querying/paginate/): `limit` (max 100), `fetch`, `next`, `for await`, `cursor`, `atBlock`
+- [Sort results](https://docs.arkiv.network/querying/sort/): `orderBy(asc(name))`, `orderBy(desc(name))`, one key, entity fields, entities without the attribute
 - [Count entities](https://docs.arkiv.network/querying/count/): `client.count()`, `withCount`
 - [Read one entity](https://docs.arkiv.network/querying/get-entity/): `getEntity(key, schema?)`
-- [Query without a schema](https://docs.arkiv.network/querying/without-schema/): `$attributes`, `$attributeSchema`, `query()`, raw query strings
+- [Query without a schema](https://docs.arkiv.network/querying/without-schema/): `$attributes`, `$attributeSchema`, `query()` with `orderBy`, raw query strings
 - [Watch entity events](https://docs.arkiv.network/querying/watch-events/): `watchEntityEvents`
 
 ## Guides
@@ -55,5 +56,6 @@
 - Only indexed columns can be filtered on. `bytes` is never indexed
 - `expiration` is required on every create. Build it with helpers such as `ExpirationTime.fromDays(30)`
 - There is no `updateEntity`: `patchEntity` changes only the columns it names
-- There is no server-side sorting. Sort fetched rows in JavaScript
+- Sort with `.orderBy(desc("score"))` from `@arkiv-network/sdk/query`. It takes one key, an `asc` or a `desc`. Through a schema, any column but a `bytes` one can be sorted on, indexed or not, and so can `$key`, `$owner`, `$creator` and `$expiresAt`. Without a schema, write the type: `desc("score", "dec")`. `query()` takes the same key: `query(condition, { orderBy: desc("score", "dec") })`
+- An entity without the sorted attribute, or with it stored as another type, sorts first with `asc` and last with `desc`
 - There is no `getEntityCount`. Count with `client.count().from(schema).where(...).fetch()`, or add `.withCount()` to a select to get the total on every page

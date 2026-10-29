@@ -3,7 +3,7 @@ title: Query language
 description: The syntax of the query strings the Arkiv node parses, as sent by the SDK and accepted by query() and the Data Explorer.
 ---
 
-A query is a boolean expression over attributes. The SDK’s condition functions write it for you. You write it by hand when you pass a string to `query()` or use the [Data Explorer](/start-here/data-explorer/).
+A query is a boolean expression over attributes, optionally followed by a sort. The SDK’s condition and sort functions write it for you. You write it by hand when you pass a string to `query()` or use the [Data Explorer](/start-here/data-explorer/).
 
 ```sql
 category = str('news') AND score > dec(4) AND NOT EXISTS(summary)
@@ -46,7 +46,7 @@ A bare number is an `i32`. `bytes` values can’t be compared, since `bytes` is 
 
 ## Entity fields
 
-Four entity fields can be filtered on, each with a fixed type:
+Four entity fields can be filtered and sorted on, each with a fixed type:
 
 | Field | Type |
 | --- | --- |
@@ -65,10 +65,25 @@ Four entity fields can be filtered on, each with a fixed type:
 
 `NOT` matches every live entity the condition doesn’t, including entities without the attribute.
 
+## Sorting
+
+`ORDER BY` at the end of a query sorts the entities it matches by one attribute. It names the attribute, the type to sort it as, and a direction:
+
+```sql
+category = str('news') ORDER BY score:dec DESC
+```
+
+- `ASC` sorts smallest first and `DESC` largest first. Without either, the sort is `ASC`. The SDK always writes one
+- An attribute needs its type after the `:`. An [entity field](#entity-fields) has a fixed type, so `ORDER BY $expiresAt` needs none, and a `:` can repeat it but not change it
+- A sort sees only the attribute stored with its type. An entity without the attribute, or with it stored as another type, sorts below every value: first with `ASC`, last with `DESC`
+- A query sorts by one attribute only. Entities that tie come in the node’s own order
+- Unlike a condition, a sort reads an attribute whether or not it’s indexed. `$createdAt` and `$updatedAt` can’t be sorted on. Values sort in the order they compare
+- `ORDER BY` applies to the whole condition, so `a = i32(1) OR b = i32(2) ORDER BY a:i32 ASC` needs no parentheses
+
 ## Other rules
 
 - Keywords are case-insensitive: `and` and `AND` are the same
-- The keywords `AND`, `OR`, `NOT`, `TRUE`, `FALSE`, `BETWEEN`, `STARTSWITH`, `EXISTS` and `TYPEOF`, and the type names, can’t be attribute names
+- The keywords `AND`, `OR`, `NOT`, `TRUE`, `FALSE`, `BETWEEN`, `STARTSWITH`, `EXISTS`, `TYPEOF`, `ORDER`, `BY`, `ASC` and `DESC`, and the type names, can’t be attribute names
 - `--` starts a comment that runs to the end of the line
 - A named schema’s tag is the `str` attribute `arkiv.schema`. `arkiv.schema = str('my-app.posts')` matches every entity written through a schema named `my-app.posts`
 

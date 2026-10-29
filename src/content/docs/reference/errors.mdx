@@ -32,7 +32,7 @@ Every error below is exported from `@arkiv-network/sdk`, except the three query 
 | `SchemaMismatchError` | An entity read through a schema lacks a selected required column, holds a value of another type, or has another schema’s tag. Thrown by `getEntity`, and by a query with [`onMismatch: "throw"`](/querying/select/#entities-that-dont-fit-the-schema). Queries skip such entities by default |
 | `NoMoreResultsError` | `next()` was called on the last page. Check `hasNextPage()` first |
 | `UnknownAttributeTypeError` | The node returned an attribute type this SDK version can’t decode. Update the SDK |
-| `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, compares against the wrong type, has `between` bounds of two types, or the query has no condition at all |
+| `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, a [sort key](/querying/sort/) names a `bytes` column or one the schema doesn’t have, either uses the wrong type, `between` has bounds of two types, a sort key has no type in a query without a schema, `orderBy` gets more than one key, or the query has no condition at all |
 | `UnsupportedOperatorError` | `startsWith` was given a value that isn’t a `str` |
 | `QueryError` | The node rejected the query. `kind` says why: see [query language errors](/reference/query-language/#errors) |
 

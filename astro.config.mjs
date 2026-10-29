@@ -1,6 +1,6 @@
 // @ts-check
 
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import starlight from "@astrojs/starlight";
@@ -19,6 +19,22 @@ if (!sdkAvailable) {
 		"[astro.config] SDK source not found at .sdk-cache/arkiv-sdk-js/ — skipping API reference generation. Run `bun run sync-sdk` to populate.",
 	);
 }
+
+// starlight-page-actions writes its own llms.txt, a bare list of the sidebar's
+// links, over the one in public/ when the build is done. This integration runs
+// after it and puts the hand-written one back.
+const handWrittenLlmsTxt = {
+	name: "hand-written-llms-txt",
+	hooks: {
+		/** @param {{ dir: URL }} options */
+		"astro:build:done": ({ dir }) => {
+			copyFileSync(
+				resolve(configDir, "public/llms.txt"),
+				resolve(fileURLToPath(dir), "llms.txt"),
+			);
+		},
+	},
+};
 
 // typedoc-plugin-markdown emits links like `/foo/bar/index/` when entryFileName
 // is "index" (so each module gets its own root page). Starlight collapses any
@@ -101,6 +117,7 @@ export default defineConfig({
 					items: [
 						{ label: "Select Fields", slug: "querying/select" },
 						{ label: "Filter Results", slug: "querying/filter" },
+						{ label: "Sort Results", slug: "querying/sort" },
 						{ label: "Paginate Results", slug: "querying/paginate" },
 						{ label: "Count Entities", slug: "querying/count" },
 						{ label: "Read One Entity", slug: "querying/get-entity" },
@@ -323,6 +340,7 @@ export default defineConfig({
   `
 			}]
 		}),
+		handWrittenLlmsTxt,
 	],
 	vite: {
 		plugins: [tailwindcss()],
