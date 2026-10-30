@@ -79,4 +79,4 @@ await publicClient.query("category = str('news') AND score > dec(4)")
 
 An `orderBy` passed with a string is still checked, and goes after the string as its `ORDER BY` clause, so the string can’t end in one of its own.
 
-Use this for queries built elsewhere, such as in the [Data Explorer](/start-here/data-explorer/). In your own code, prefer the condition functions, which check names, types and operators for you.
+Use this for queries built elsewhere. In your own code, prefer the condition functions, which check names, types and operators for you.
