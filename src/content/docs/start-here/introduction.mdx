@@ -54,7 +54,7 @@ The account that creates an entity owns it. Only the owner can change, hand over
 
 Every entity has an expiration block. From that block on, the entity is gone: queries don’t return it and every operation on it fails. You choose a lifetime when you create the entity, and you can [extend it](/writing/expiration/) later.
 
-Arkiv counts time in blocks. A block takes 2 seconds on Tiramisu, the public testnet.
+Arkiv counts time in blocks. A block takes 2 seconds on Rabdi, the public testnet.
 
 ## Arkiv is public
 
@@ -65,6 +65,6 @@ Anyone can write entities to Arkiv, with any attribute names and values, and any
 
 ## How you reach Arkiv
 
-Arkiv speaks Ethereum’s JSON-RPC. Writes are [transactions](/json-rpc/mutating-entities/), and reads are [`arkiv_query` calls](/json-rpc/querying-data/). You pay for writes in GLM, Arkiv’s gas token. The TypeScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), wraps both and builds on [viem](https://viem.sh).
+Arkiv speaks Ethereum’s JSON-RPC. Writes are [transactions](/json-rpc/mutating-entities/), and reads are [`arkiv_query` calls](/json-rpc/querying-data/). You pay for writes in GLM, Arkiv’s gas token. On the testnet, it’s test GLM, `tGLM`. The TypeScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), wraps both and builds on [viem](https://viem.sh).
 
 Next, [store your first entity](/start-here/first-entity/).

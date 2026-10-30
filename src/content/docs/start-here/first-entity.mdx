@@ -1,6 +1,6 @@
 ---
 title: Store and query your first entity
-description: Write a blog post to the Tiramisu testnet with the TypeScript SDK, then find it again with a query.
+description: Write a blog post to the Rabdi testnet with the TypeScript SDK, then find it again with a query.
 ---
 
 import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
@@ -9,12 +9,13 @@ import RpcTerms from '../../../components/RpcTerms.astro';
 
 <NetworkNote />
 
-In this tutorial you write a blog post to Arkiv and read it back with a query. It takes one TypeScript file and a test account with some GLM.
+In this tutorial you write a blog post to Arkiv and read it back with a query. It takes one TypeScript file and a test account with some test GLM.
 
 Before you start, you need:
 
 - Node.js 22.10 or later, or [Bun](https://bun.sh)
-- The private key of a test account. Fund it with test GLM from the [faucet](https://hub.arkiv.network/faucet)
+- The private key of a test account. Fund it with test GLM (`tGLM`) from the [faucet](https://hub.arkiv.network/faucet)
+- An access key. Arkiv’s public RPC is heavily rate limited to prevent abuse, so get a free key from the [Arkiv Hub](https://hub.arkiv.network/access-keys)
 
 ## Set up the project
 
@@ -52,10 +53,11 @@ Before you start, you need:
       </TabItem>
     </Tabs>
 
-3. Put your private key in an environment variable:
+3. Put your private key and access key in environment variables:
 
     ```bash
     export PRIVATE_KEY=your_private_key_here
+    export ARKIV_ACCESS_KEY=your_access_key_here
     ```
 
 </Steps>
@@ -79,26 +81,23 @@ const Posts = defineSchema("my-app.posts", {
 
 The name tags every post you write, and a query through `Posts` only sees entities with that tag. Arkiv is a public database that other projects write to as well, so replace `my-app` with a name unique to your project. The rest of the docs use this schema.
 
-## Connect to Tiramisu
+## Connect to Rabdi
 
 Add two clients. The public client reads, and the wallet client signs and sends writes with your account:
 
 ```ts title="hello.ts"
 import { createPublicClient, createWalletClient } from "@arkiv-network/sdk"
-import { tiramisu } from "@arkiv-network/sdk/chains"
+import { rabdi } from "@arkiv-network/sdk/chains"
 import { http, type Hex } from "viem"
 import { privateKeyToAccount } from "viem/accounts"
 
+const chain = rabdi({ accessKey: process.env.ARKIV_ACCESS_KEY ?? "" })
 const account = privateKeyToAccount(process.env.PRIVATE_KEY as Hex)
-const publicClient = createPublicClient({ chain: tiramisu, transport: http() })
-const walletClient = createWalletClient({
-  chain: tiramisu,
-  transport: http(),
-  account,
-})
+const publicClient = createPublicClient({ chain, transport: http() })
+const walletClient = createWalletClient({ chain, transport: http(), account })
 ```
 
-`http()` with no URL uses Tiramisu’s public RPC, which is rate limited. For more, add an [access key](/start-here/access-keys/).
+`rabdi` puts your [access key](/start-here/access-keys/) in the RPC URL, so `http()` with no URL sends it. Without `ARKIV_ACCESS_KEY`, the chain uses the public RPC and logs a warning.
 
 <RpcTerms />
 
@@ -168,7 +167,7 @@ Created 0x5f1e…
 0x5f1e… Hello, Arkiv My first entity.
 ```
 
-If the create fails because of insufficient funds, the account has no GLM yet. Get some from the [faucet](https://hub.arkiv.network/faucet) and run the script again.
+If the create fails because of insufficient funds, the account has no tGLM yet. Get some from the [faucet](https://hub.arkiv.network/faucet) and run the script again.
 
 ## Next steps
 

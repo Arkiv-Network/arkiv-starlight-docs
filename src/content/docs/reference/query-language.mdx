@@ -6,7 +6,7 @@ description: The syntax of the query strings the Arkiv node parses, as sent by t
 A query is a boolean expression over attributes, optionally followed by a sort. The SDK’s condition and sort functions write it for you. You write it by hand when you pass a string to `query()` or use the [Data Explorer](/start-here/data-explorer/).
 
 ```sql
-category = str('news') AND score > dec(4) AND NOT EXISTS(summary)
+category = str('news') AND score > dec(4) AND EXISTS(summary)
 ```
 
 ## Comparisons
@@ -14,7 +14,6 @@ category = str('news') AND score > dec(4) AND NOT EXISTS(summary)
 | Syntax | Matches when the attribute |
 | --- | --- |
 | `name = value` | Equals the value |
-| `name != value` | Is set with the value’s type, to a different value |
 | `name < value`, `<=`, `>`, `>=` | Compares as given |
 | `name BETWEEN low AND high` | Is between the two values, both included. Both need one type |
 | `name STARTSWITH str('prefix')` | Is a `str` that starts with the prefix |
@@ -57,13 +56,11 @@ Four entity fields can be filtered and sorted on, each with a fixed type:
 
 ## Combining
 
-`AND`, `OR` and `NOT` combine conditions. `NOT` binds tightest, then `AND`, then `OR`. Use parentheses to group:
+`AND` and `OR` combine conditions. `AND` binds tighter than `OR`. Use parentheses to group:
 
 ```sql
 (category = str('news') OR category = str('blog')) AND score >= dec(3)
 ```
-
-`NOT` matches every live entity the condition doesn’t, including entities without the attribute.
 
 ## Sorting
 
@@ -97,5 +94,3 @@ The node rejects a query it can’t run with a `QueryError`. Its `kind` says why
 | `type` | A condition uses the wrong type for its operator, such as `STARTSWITH` on an `i32`, or `BETWEEN` bounds of two types |
 | `literal` | A value is invalid, such as an `i32` out of range |
 | `limits` | The query goes over a node limit, such as its length or nesting depth |
-| `cursor` | The cursor expired, or belongs to another query |
-| `block` | The node doesn’t keep the requested block |

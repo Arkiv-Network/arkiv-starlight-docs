@@ -13,7 +13,7 @@ An Arkiv node answers the standard Ethereum JSON-RPC methods plus three `arkiv_*
 | [`arkiv_getEntity`](#arkiv_getentity) | One entity by key, or `null` |
 | [`arkiv_getBlockTiming`](#arkiv_getblocktiming) | The current block, its time and the block duration |
 
-The examples send requests to Tiramisu’s public RPC, `https://rpc.tiramisu.db-chain.testnet.arkiv.network`. Its chain ID is `7738577`.
+The examples send requests to Rabdi’s RPC, `https://rpc.rabdi.db-chain.testnet.arkiv.network`, with your [access key](/start-here/access-keys/) at the end of the URL. Its chain ID is `7794095`. Set `ARKIV_ACCESS_KEY` before you run them. Without a key, the requests go to the public RPC, which is heavily rate limited.
 
 <RpcTerms />
 
@@ -22,7 +22,7 @@ The examples send requests to Tiramisu’s public RPC, `https://rpc.tiramisu.db-
 Finds the entities that match a query and returns the fields you select:
 
 ```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
+curl "https://rpc.rabdi.db-chain.testnet.arkiv.network/$ARKIV_ACCESS_KEY" \
   -H "content-type: application/json" \
   --data @- <<'EOF'
 {
@@ -45,8 +45,7 @@ The second parameter is optional. Every field in it is optional too:
 | --- | --- |
 | `select` | The fields to return. Defaults to `{ "key": true }` |
 | `limit` | The page size, from 1 to 100. Defaults to 100 |
-| `cursor` | The cursor of the previous page |
-| `atBlock` | The block to read at, as a hex number or `"latest"`. Defaults to the latest block |
+| `offset` | How many matches to skip before the page. Defaults to 0 |
 
 ### Select fields
 
@@ -64,7 +63,7 @@ Every `select` field is a boolean, and off unless you set it:
 
 `attributes` also takes an object of names, to return only those: `{ "attributes": { "title": true } }`.
 
-`count` isn’t a field of each entity. It counts every match at the block, whatever the `limit`, and every page repeats it. With `count` as the only field, `data` is empty and there’s no `cursor`:
+`count` isn’t a field of each entity. It counts every match at the block, whatever the `limit`, and every page repeats it. With `count` as the only field, `data` is empty:
 
 ```json
 [
@@ -91,7 +90,6 @@ Every `select` field is a boolean, and off unless you set it:
       }
     ],
     "blockNumber": "0x1bc",
-    "cursor": "b64:Xk3…",
     "count": "0x2a"
   }
 }
@@ -112,16 +110,16 @@ An attribute’s `type` decides how its `value` is written:
 
 ### Paginate
 
-A response with a `cursor` has more pages. To get the next one, send the same query and `select` again with that cursor:
+To get the next page, send the same query again with an `offset`. Add `ORDER BY $key ASC` so every page uses one order. This asks for the third page of 10:
 
 ```json
 [
-  "arkiv.schema = str('my-app.posts') AND category = str('news')",
-  { "cursor": "b64:Xk3…", "limit": "0xa" }
+  "arkiv.schema = str('my-app.posts') ORDER BY $key ASC",
+  { "limit": "0xa", "offset": "0x14" }
 ]
 ```
 
-The cursor pins the block of the first page, so every page reads the same block. The last page has no `cursor`.
+Each request reads the latest block. An entity created or deleted between two requests shifts the matches after it, so a row can repeat or be missed. A page with fewer rows than `limit` is the last, and an `offset` past the end returns an empty page. To read every match once, page by key: add `$key > key(0x…)` with the last key of the previous page.
 
 ### Errors
 
@@ -133,14 +131,12 @@ The node rejects a query it can’t run with one of these error codes:
 | `-32002` | A condition uses the wrong type for its operator, such as `STARTSWITH` on an `i32`, or `BETWEEN` bounds of two types |
 | `-32003` | A value is invalid, such as an `i32` out of range |
 | `-32004` | The query goes over a node limit, such as its length or nesting depth |
-| `-32005` | The cursor expired, is malformed, or belongs to another query |
-| `-32006` | The node doesn’t keep the requested block |
 
 A `limit` outside 1 to 100 fails with `-32602`, invalid params.
 
 ## arkiv_getEntity
 
-Reads one entity by key, with every field except `attributeSchema`. The optional second parameter is a block number to read at:
+Reads one entity by key at the latest block, with every field except `attributeSchema`:
 
 ```json
 {

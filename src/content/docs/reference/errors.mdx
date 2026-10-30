@@ -11,7 +11,7 @@ Every error below is exported from `@arkiv-network/sdk`, except the three query 
 
 | Error | Thrown when |
 | --- | --- |
-| `EntityMutationError` | The transaction failed or reverted, for example because the account isn’t the owner or has no GLM. `txHash` holds the transaction, if it was sent |
+| `EntityMutationError` | The transaction failed or reverted, for example because the account isn’t the owner or has no tGLM. `txHash` holds the transaction, if it was sent |
 | `SchemaMismatchError` | A value is missing, names a column the schema doesn’t have, or has the wrong type |
 | `InvalidValueError` | A value doesn’t fit its type: out of range, wrong length, bad checksum, too many decimal places |
 | `UntypedValueError` | A value is neither a typed value nor a plain boolean, number, bigint, string or `Uint8Array` |
@@ -30,11 +30,16 @@ Every error below is exported from `@arkiv-network/sdk`, except the three query 
 | --- | --- |
 | `NoEntityFoundError` | `getEntity` found no live entity with the key. `entityKey` holds the key |
 | `SchemaMismatchError` | An entity read through a schema lacks a selected required column, holds a value of another type, or has another schema’s tag. Thrown by `getEntity`, and by a query with [`onMismatch: "throw"`](/querying/select/#entities-that-dont-fit-the-schema). Queries skip such entities by default |
-| `NoMoreResultsError` | `next()` was called on the last page. Check `hasNextPage()` first |
 | `UnknownAttributeTypeError` | The node returned an attribute type this SDK version can’t decode. Update the SDK |
 | `InvalidPredicateError` | A condition names an attribute that isn’t an indexed column of the schema, a [sort key](/querying/sort/) names a `bytes` column or one the schema doesn’t have, either uses the wrong type, `between` has bounds of two types, a sort key has no type in a query without a schema, `orderBy` gets more than one key, or the query has no condition at all |
 | `UnsupportedOperatorError` | `startsWith` was given a value that isn’t a `str` |
 | `QueryError` | The node rejected the query. `kind` says why: see [query language errors](/reference/query-language/#errors) |
+
+## Chains
+
+| Error | Thrown when |
+| --- | --- |
+| `MissingAccessKeyError` | `rabdi` was called with an invalid `accessKey`. Pass a [key](/start-here/access-keys/), or `""` for the rate-limited public RPC |
 
 ## Schemas
 

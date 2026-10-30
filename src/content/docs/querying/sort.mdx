@@ -94,9 +94,9 @@ const page = await publicClient.query(eq("category", "news"), {
 })
 ```
 
-## Pages and cursors
+## Sort and paginate
 
-The order covers every match, not each page on its own, so `next` and `for await` [continue](/querying/paginate/) where the last page ended. A cursor belongs to its query, order included: to [resume from a cursor](/querying/paginate/#resume-from-a-cursor), build the query with the same `orderBy`.
+The order covers every match, not each page on its own. With the same `orderBy` on every request, `offset` [pages](/querying/paginate/) through one order. Without `orderBy`, matches come oldest first.
 
 ## See the query that’s sent
 

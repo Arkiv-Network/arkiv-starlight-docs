@@ -1,6 +1,6 @@
 ---
 title: Filter results
-description: Narrow a query with where, combine conditions with and, or and not, and filter on owners, creators and expiration.
+description: Narrow a query with where, combine conditions with and and or, and filter on owners, creators and expiration.
 ---
 
 `where` decides which entities a query returns. You build conditions with functions from `@arkiv-network/sdk/query`, and through a schema they’re checked against its indexed columns. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
@@ -25,7 +25,6 @@ Several conditions in one `where`, or across several `where` calls, must all hol
 | Function | Matches entities where the attribute |
 | --- | --- |
 | `eq(name, value)` | Equals the value |
-| `ne(name, value)` | Is set, with the same type, to a different value |
 | `gt`, `gte`, `lt`, `lte` | Is greater than, at least, less than, or at most the value |
 | `between(name, low, high)` | Is between the two values, both included |
 | `startsWith(name, prefix)` | Is a `str` that starts with the prefix |
@@ -50,9 +49,6 @@ Combine conditions with:
 
 - **`and(...)`**: all must hold
 - **`or(...)`**: at least one must hold
-- **`not(condition)`**: the condition doesn’t hold
-
-`ne` and `not(eq(...))` differ. `ne("category", "news")` only matches entities that have a `category`. `not(eq("category", "news"))` also matches entities without one.
 
 ## Mistakes the compiler catches
 

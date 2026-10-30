@@ -67,7 +67,7 @@ const page = await publicClient.query(eq("category", "news"), {
 })
 ```
 
-The options also take `cursor` and `atBlock`, and `orderBy` to [sort](/querying/sort/) the results. There’s no schema to take a type from, so the key names its type, as in `orderBy: desc("score", "dec")`.
+The options also take an `offset` to [paginate](/querying/paginate/), `count`, and `orderBy` to [sort](/querying/sort/) the results. There’s no schema to take a type from, so the key names its type, as in `orderBy: desc("score", "dec")`.
 
 ## Send a raw query string
 

@@ -59,17 +59,6 @@ publicClient.watchEntityEvents({
 
 `onEvent` runs before the handler for the same kind of event.
 
-## Catch up from an earlier block
-
-`fromBlock` replays events from that block before following new ones. Use it to resume after a restart:
-
-```ts
-publicClient.watchEntityEvents({
-  onEvent: apply,
-  fromBlock: lastSeenBlock + 1n,
-})
-```
-
 ## Handle errors
 
 `onError` receives transport failures, events that don’t decode, and anything your own handlers throw. Without it, errors go to `console.error`. Pass it in production: a watcher that stops receiving events looks the same as a quiet chain.

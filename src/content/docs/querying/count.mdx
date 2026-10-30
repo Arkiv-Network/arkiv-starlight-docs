@@ -7,7 +7,7 @@ You can count how many entities a query matches without fetching them, or get th
 
 ## Count without fetching rows
 
-`count` takes the same filters as [`select`](/querying/select/): `from`, [`where`](/querying/filter/), `ownedBy`, `createdBy` and [`atBlock`](/querying/paginate/#read-a-past-block). `fetch` returns the total as a `bigint`:
+`count` takes the same filters as [`select`](/querying/select/): `from`, [`where`](/querying/filter/), `ownedBy` and `createdBy`. `fetch` returns the total as a `bigint`:
 
 ```ts
 import { eq } from "@arkiv-network/sdk/query"
@@ -40,7 +40,7 @@ const page = await publicClient
 console.log(`${page.entities.length} of ${page.count}`)
 ```
 
-Every page of one query reads the same block, so each page carries the same `count` as you [paginate](/querying/paginate/).
+Each page reads the latest block, so its `count` is the total at that block. To number the pages, [count once](/querying/paginate/#count-the-pages) before you fetch them.
 
 ## Entities that don’t fit the schema
 

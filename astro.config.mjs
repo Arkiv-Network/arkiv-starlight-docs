@@ -60,9 +60,11 @@ function rewriteIndexLinks() {
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
-		"/start-here/testnet": "/networks/tiramisu/",
+		"/start-here/testnet": "/networks/rabdi/",
 		"/networks/migrate-from-kaolin": "/networks/older-networks/",
-		"/networks/cheesecake": "/networks/tiramisu/",
+		"/networks/cheesecake": "/networks/rabdi/",
+		"/networks/tiramisu": "/networks/rabdi/",
+		"/networks/braga": "/networks/older-networks/#braga",
 		"/start-here/api-keys": "/start-here/access-keys/",
 		"/start-here/fundamentals": "/start-here/introduction/",
 		"/start-here/installation": "/start-here/first-entity/",
@@ -150,7 +152,7 @@ export default defineConfig({
 				{
 					label: "Networks",
 					items: [
-						{ label: "Tiramisu", slug: "networks/tiramisu" },
+						{ label: "Rabdi", slug: "networks/rabdi" },
 						{ label: "Older Networks", slug: "networks/older-networks" },
 					],
 				},

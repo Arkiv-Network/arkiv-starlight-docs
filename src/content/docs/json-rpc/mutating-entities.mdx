@@ -116,7 +116,7 @@ A salt of `0` makes the key predictable to anyone. A random salt makes it predic
 The entity nonce counts the entities an account has created. It’s separate from the transaction nonce, and each create in a batch uses the next one. Read it with an `eth_call` of `entityNonce(address owner)`, selector `0x36917bfd`, on the Arkiv address. Set `OWNER` to the account’s address first:
 
 ```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
+curl "https://rpc.rabdi.db-chain.testnet.arkiv.network/$ARKIV_ACCESS_KEY" \
   -H "content-type: application/json" \
   --data @- <<EOF
 {

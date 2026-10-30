@@ -32,7 +32,7 @@ Verify changes by running `bun run build` and confirming your pages appear in `d
 
 `astro.config.mjs` declares the entire sidebar by hand. Starlight does not autogenerate it here.
 
-A new page under `src/content/docs/` gets a route immediately but stays invisible until you add an entry to the `sidebar` array. `src/content/docs/networks/braga.mdx` is a live example of a reachable page with no sidebar entry.
+A new page under `src/content/docs/` gets a route immediately but stays invisible until you add an entry to the `sidebar` array.
 
 ### API Reference is generated from another repo
 
