@@ -159,7 +159,6 @@ export default defineConfig({
 				{
 					label: "Tools",
 					items: [
-						{ label: "Data Explorer", slug: "start-here/data-explorer" },
 						{ label: "Access Keys", slug: "start-here/access-keys" },
 						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 					],

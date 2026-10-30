@@ -1,9 +1,9 @@
 ---
 title: Query language
-description: The syntax of the query strings the Arkiv node parses, as sent by the SDK and accepted by query() and the Data Explorer.
+description: The syntax of the query strings the Arkiv node parses, as sent by the SDK and accepted by query().
 ---
 
-A query is a boolean expression over attributes, optionally followed by a sort. The SDK’s condition and sort functions write it for you. You write it by hand when you pass a string to `query()` or use the [Data Explorer](/start-here/data-explorer/).
+A query is a boolean expression over attributes, optionally followed by a sort. The SDK’s condition and sort functions write it for you. You write it by hand when you pass a string to `query()`.
 
 ```sql
 category = str('news') AND score > dec(4) AND EXISTS(summary)
