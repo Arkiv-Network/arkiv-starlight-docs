@@ -1,0 +1,106 @@
+---
+title: Filter results
+description: Narrow a query with where, combine conditions with and and or, and filter on owners, creators and expiration.
+---
+
+`where` decides which entities a query returns. You build conditions with functions from `@arkiv-network/sdk/query`, and through a schema they’re checked against its indexed columns. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Add conditions
+
+```ts
+import { and, eq, gt } from "@arkiv-network/sdk/query"
+import { dec } from "@arkiv-network/sdk/schema"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true })
+  .from(Posts)
+  .where(and(eq("category", "news"), gt("score", dec("4"))))
+  .fetch()
+```
+
+Several conditions in one `where`, or across several `where` calls, must all hold.
+
+## Conditions
+
+| Function | Matches entities where the attribute |
+| --- | --- |
+| `eq(name, value)` | Equals the value |
+| `gt`, `gte`, `lt`, `lte` | Is greater than, at least, less than, or at most the value |
+| `between(name, low, high)` | Is between the two values, both included |
+| `startsWith(name, prefix)` | Is a `str` that starts with the prefix |
+| `exists(name)` | Is set, with any type |
+| `hasType(name, type)` | Is set with the given type, such as `"i32"` |
+
+Every type except `bytes` can be compared and ranged. Numbers and decimals compare by value, and `false` comes before `true`. Strings, addresses and keys compare byte by byte, so strings sort by their UTF-8 bytes, not alphabetically.
+
+`between` is the same as `and(gte(...), lte(...))` in one condition:
+
+```ts
+import { between } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true })
+  .from(Posts)
+  .where(between("score", dec("3.5"), dec("5")))
+  .fetch()
+```
+
+Combine conditions with:
+
+- **`and(...)`**: all must hold
+- **`or(...)`**: at least one must hold
+
+## Mistakes the compiler catches
+
+Through a schema, a condition must name an indexed column and use its type. Anything else is a compile error, and throws `InvalidPredicateError` if it runs anyway:
+
+```ts
+const posts = publicClient.select({ $key: true }).from(Posts)
+
+posts.where(eq("title", "Hello")) // title isn’t indexed
+posts.where(eq("score", 5)) // score is a dec: write dec(5)
+posts.where(between("score", dec(1), 5)) // both bounds need one type
+```
+
+## Filter on entity fields
+
+Four entity fields can be filtered on: `$key`, `$owner`, `$creator` and `$expiresAt`. `ownedBy` and `createdBy` are shortcuts for the two accounts.
+
+Arkiv is public, and anyone can write an entity with your schema’s tag and attribute names. Filtering by owner or creator is the only way to be sure an entity came from an account you trust. Filter by the user’s wallet for data users own, or by your backend’s account for data your app writes:
+
+```ts
+import { lt } from "@arkiv-network/sdk/query"
+import { u64 } from "@arkiv-network/sdk/schema"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true })
+  .from(Posts)
+  .ownedBy(account.address)
+  .where(lt("$expiresAt", u64(2_000_000n)))
+  .fetch()
+```
+
+The creator never changes. The owner changes when the entity is handed over, so `ownedBy` and `createdBy` can differ.
+
+## Queries without a filter
+
+A query through a named schema needs no `where`: it matches every entity with the schema’s tag. Any other query needs at least one condition, or it throws `InvalidPredicateError`.
+
+## See the query that’s sent
+
+`toString()` on a query returns the text the node receives, in the [query language](/reference/query-language/):
+
+```ts
+const query = publicClient
+  .select({ $key: true })
+  .from(Posts)
+  .where(and(eq("category", "news"), gt("score", dec("4"))))
+
+console.log(query.toString())
+```
+
+This prints:
+
+```text
+arkiv.schema = str('my-app.posts') AND category = str('news') AND score > dec(4)
+```

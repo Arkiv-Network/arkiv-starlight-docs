@@ -1,151 +1,78 @@
 ---
-title: Querying Data
-description: Query Arkiv entities with the JSON-RPC API. This page covers syntax, operators, pagination, and utility methods.
+title: Read methods
+description: The arkiv_* JSON-RPC methods that query and count entities, read one entity, and report block timing.
 ---
 
-import { Aside } from '@astrojs/starlight/components';
 import RpcTerms from '../../../components/RpcTerms.astro';
 
-You can query entities stored on Arkiv with standard JSON-RPC 2.0 calls. This page covers the methods, query syntax, operators, pagination, and utility endpoints.
+An Arkiv node answers the standard Ethereum JSON-RPC methods plus three `arkiv_*` methods that read entities. The SDK’s public client calls them for you. Call them directly when you work in a language without an SDK.
 
-## Endpoint
+| Method | Returns |
+| --- | --- |
+| [`arkiv_query`](#arkiv_query) | One page of the entities that match a query, and how many match |
+| [`arkiv_getEntity`](#arkiv_getentity) | One entity by key, or `null` |
+| [`arkiv_getBlockTiming`](#arkiv_getblocktiming) | The current block, its time and the block duration |
 
-| Property  | Value                                                |
-| --------- | ----------------------------------------------------- |
-| Chain ID  | `7738577` (`0x7614d1`)                                |
-| HTTP RPC  | `https://rpc.tiramisu.db-chain.testnet.arkiv.network`     |
-| Explorer  | [tiramisu.explorer.arkiv.network](https://tiramisu.explorer.arkiv.network) |
+The examples send requests to Rabdi’s RPC, `https://rpc.rabdi.db-chain.testnet.arkiv.network`, with your [access key](/start-here/access-keys/) at the end of the URL. Its chain ID is `7794095`. Set `ARKIV_ACCESS_KEY` before you run them. Without a key, the requests go to the public RPC, which is heavily rate limited.
 
 <RpcTerms />
 
-<Aside>
-This is the [Tiramisu testnet](/networks/tiramisu/) endpoint. To inspect a transaction, block, or entity, open the [explorer](https://tiramisu.explorer.arkiv.network).
-</Aside>
-
-## Request Format
-
-All methods use standard JSON-RPC 2.0:
-
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"METHOD_NAME","params":[]}'
-```
-
-## arkiv_getEntity
-
-This method reads one entity by key, at the tip or as of a past block.
-
-### Parameters
-
-| Index | Type   | Required | Description                          |
-| ----- | ------ | -------- | ------------------------------------- |
-| 0     | string | Yes      | Entity key, 32-byte hex               |
-| 1     | number | No       | Block number to read as of            |
-
-This method returns every field on the entity. There is no `select` option, because the read already names a single entity. If the key never existed, was deleted, or expired, this method returns `null`.
-
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"arkiv_getEntity","params":["0x9f2c..."]}'
-```
-
 ## arkiv_query
 
-This method queries entities from the indexed store.
+Finds the entities that match a query and returns the fields you select:
 
-### Parameters
-
-| Index | Type        | Required | Description      |
-| ----- | ----------- | -------- | ---------------- |
-| 0     | string      | Yes      | Query expression |
-| 1     | object/null | No       | Query options    |
-
-### Query Syntax
-
-A query is a bare boolean expression, no `SELECT` or `WHERE`. Keywords are case-insensitive. A comment starts with `--` and runs to the end of the line.
-
-For example, this query matches every open ticket with a priority of 3 or higher:
-
-```
--- open tickets, priority 3 or higher
-status = str('open') AND priority >= 3
+```bash
+curl "https://rpc.rabdi.db-chain.testnet.arkiv.network/$ARKIV_ACCESS_KEY" \
+  -H "content-type: application/json" \
+  --data @- <<'EOF'
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "arkiv_query",
+  "params": [
+    "arkiv.schema = str('my-app.posts') AND category = str('news')",
+    { "select": { "key": true, "attributes": true }, "limit": "0xa" }
+  ]
+}
+EOF
 ```
 
-**Operators:**
+The first parameter is the query. See the [query language](/reference/query-language/) for its syntax. Anyone can write entities with any attributes, so filter on your project’s tag or on `$owner`.
 
-| Operator | Description |
-|----------|-------------|
-| `AND` | Logical AND |
-| `OR` | Logical OR |
-| `NOT` | Complement, evaluated against the set of live entities |
-| `=` | Equality |
-| `<`, `>`, `<=`, `>=` | Numeric comparisons (ordered types only: `i32`, `u64`, `u256`, `dec`) |
-| `STARTSWITH` | String prefix match (the language's only pattern operator) |
+The second parameter is optional. Every field in it is optional too:
 
-<Aside type="caution">
-`!=` is reserved in the grammar but not implemented at this version. It fails to parse. Write `NOT (attr = value)` for the complement instead. This also matches entities that never set the attribute, because it is the full complement, not a typed not-equal.
-</Aside>
+| Field | Description |
+| --- | --- |
+| `select` | The fields to return. Defaults to `{ "key": true }` |
+| `limit` | The page size, from 1 to 100. Defaults to 100 |
+| `offset` | How many matches to skip before the page. Defaults to 0 |
 
-**Value literals:**
+### Select fields
 
-Every value carries a type tag. The tag is part of what the predicate asserts. For example, `level >= i32(10)` matches only entities whose `level` is an `i32`.
+Every `select` field is a boolean, and off unless you set it:
 
-Two things are untagged: a bare boolean (`true` / `false`) and a bare number. An untagged number defaults to `i32`. You must give every other value an explicit type tag:
+| Field | Returns |
+| --- | --- |
+| `key` | The entity key. On when you leave out `select` |
+| `owner`, `creator` | The owner and the account that created the entity |
+| `createdAt`, `updatedAt`, `expiresAt` | Block numbers, as hex |
+| `creationFlags` | `{ "readonly", "permissionlessExtension", "raw" }` |
+| `attributes` | Every attribute with its value |
+| `attributeSchema` | Every attribute’s name, type and `indexed`, without values |
+| `count` | How many entities the query matches, as the response’s `count` |
 
-| Type | Literal form |
-|------|--------------|
-| String | `str('open')` |
-| 32-bit integer | `i32(10)` or bare `10` |
-| 64-bit unsigned integer | `u64(1200000)` |
-| 256-bit unsigned integer | `u256(1000000)` |
-| Fixed-point decimal | `dec('3.5')` |
-| Address | `addr(0xAbC...)` |
-| Entity key | `key(0x123...)` |
-| Fixed 32 bytes | `bytes32(0x...)` |
-| Boolean | bare `true` / `false` |
+`attributes` also takes an object of names, to return only those: `{ "attributes": { "title": true } }`.
 
-**Match everything:**
+`count` isn’t a field of each entity. It counts every match at the block, whatever the `limit`, and every page repeats it. With `count` as the only field, `data` is empty:
 
-```
-*
+```json
+[
+  "arkiv.schema = str('my-app.posts') AND category = str('news')",
+  { "select": { "count": true } }
+]
 ```
 
-**Synthetic attributes** (use with `$` prefix):
-
-| Attribute | Type | Filterable |
-|-----------|------|------------|
-| `$key` | key | Yes |
-| `$owner` | addr | Yes |
-| `$creator` | addr | Yes |
-| `$expiresAt` | u64 | Yes |
-| `$createdAt` | u64 | Yes |
-| `$contentType` | str | Yes |
-| `$updatedAt` | n/a | No (returned by projections only) |
-| `$creationFlags` | n/a | No (returned by projections only) |
-| `$payload` | n/a | No (bytes carry no index) |
-
-<Aside type="caution">
-`exists(...)` and `typeof(...)` are reserved in the grammar but not implemented at this version: they fail to parse.
-</Aside>
-
-### Options
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `select` | object | Which fields to return. Defaults to `{ "key": true }` |
-| `limit` | hex string | Page size. Node maximum is 200 |
-| `cursor` | string | Pagination cursor from a previous response |
-| `atBlock` | hex string | Query at a specific block (for example, `"0x1bc"`). Defaults to the head |
-
-**`select` fields** (all default to `false` except `key`, which defaults to `true` when `select` is omitted):
-
-`key`, `owner`, `creator`, `createdAt`, `updatedAt`, `expiresAt`, `creationFlags`, `contentType`, `payload`, `attributeSchema`, `attributes`
-
-`attributes` can also take an object of names, to fetch only those. For example: `{ "attributes": { "status": true } }`.
-
-### Response Structure
+### Response
 
 ```json
 {
@@ -154,166 +81,80 @@ Two things are untagged: a bare boolean (`true` / `false`) and a bare number. An
   "result": {
     "data": [
       {
-        "key": "0x9f2c...",
-        "owner": "0xabc...",
-        "creator": "0xabc...",
-        "createdAt": "0x191",
-        "updatedAt": "0x1bb",
-        "expiresAt": "0x2000",
-        "creationFlags": { "readonly": false, "permissionlessExtension": false, "raw": 0 },
-        "contentType": "application/json",
-        "payload": "0x7b226d657373616765223a2268656c6c6f227d",
+        "key": "0x9f2c…",
         "attributes": [
-          { "name": "status", "type": "str", "value": "active" },
-          { "name": "rarity", "type": "i32", "value": 5 }
+          { "name": "arkiv.schema", "type": "str", "value": "my-app.posts" },
+          { "name": "category", "type": "str", "value": "news" },
+          { "name": "score", "type": "dec", "value": "4.5" }
         ]
       }
     ],
     "blockNumber": "0x1bc",
-    "cursor": "0x2a"
+    "count": "0x2a"
   }
 }
 ```
 
-<Aside>
-If you select a field, it appears in the response. If you do not select a field, it does not appear at all. The response never sends an unselected field as `null`.
+An entity holds only the fields you selected. A field you didn’t select is left out, not set to `null`. `blockNumber` is the block the page was read at, and `count` is there only if you selected it.
 
-`payload` is hex-encoded bytes. Decode it to read the entity content. `createdAt`, `updatedAt` and `expiresAt` are hex block numbers. When no more pages remain, `cursor` is omitted.
+An attribute’s `type` decides how its `value` is written:
 
-The `type` of an attribute decides the JSON encoding of its `value`:
+| Type | JSON value |
+| --- | --- |
+| `bool` | `true` or `false` |
+| `i32` | A number |
+| `u64`, `u256` | A hex quantity, such as `"0x2a"` |
+| `dec` | A decimal string, such as `"4.5"` |
+| `str` | A string |
+| `addr`, `key`, `bytes` | Hex bytes |
 
-- `i32`: a JSON number
-- `u64` and `u256`: a `0x` hex quantity
-- `dec`: a decimal string
-- The byte-shaped types: `0x` bytes
-- `str`: a plain string
-</Aside>
+### Paginate
 
-### Query Examples
+To get the next page, send the same query again with an `offset`. Add `ORDER BY $key ASC` so every page uses one order. This asks for the third page of 10:
 
-**By attribute:**
-
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{
-    "jsonrpc":"2.0","id":1,
-    "method":"arkiv_query",
-    "params":[
-      "type = str('\''nft'\'') AND status = str('\''active'\'')",
-      {"limit":"0xa","select":{"key":true,"attributes":true}}
-    ]
-  }'
+```json
+[
+  "arkiv.schema = str('my-app.posts') ORDER BY $key ASC",
+  { "limit": "0xa", "offset": "0x14" }
+]
 ```
 
-**By owner:**
+Each request reads the latest block. An entity created or deleted between two requests shifts the matches after it, so a row can repeat or be missed. A page with fewer rows than `limit` is the last, and an `offset` past the end returns an empty page. To read every match once, page by key: add `$key > key(0x…)` with the last key of the previous page.
 
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{
-    "jsonrpc":"2.0","id":10,
-    "method":"arkiv_query",
-    "params":[
-      "$owner = addr(0x2222222222222222222222222222222222222222)",
-      null
-    ]
-  }'
-```
+### Errors
 
-**Numeric range:**
+The node rejects a query it can’t run with one of these error codes:
 
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{
-    "jsonrpc":"2.0","id":12,
-    "method":"arkiv_query",
-    "params":["price >= i32(100) AND price <= i32(1000)", null]
-  }'
-```
+| Code | Cause |
+| --- | --- |
+| `-32001` | The query doesn’t parse. `data` holds the position, what was expected and what was found |
+| `-32002` | A condition uses the wrong type for its operator, such as `STARTSWITH` on an `i32`, or `BETWEEN` bounds of two types |
+| `-32003` | A value is invalid, such as an `i32` out of range |
+| `-32004` | The query goes over a node limit, such as its length or nesting depth |
 
-**Prefix match with negation:**
+A `limit` outside 1 to 100 fails with `-32602`, invalid params.
 
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{
-    "jsonrpc":"2.0","id":13,
-    "method":"arkiv_query",
-    "params":["name STARTSWITH str('\''test'\'') AND NOT (status = str('\''deleted'\''))", null]
-  }'
-```
+## arkiv_getEntity
 
-**Metadata only (omit payload):**
-
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{
-    "jsonrpc":"2.0","id":14,
-    "method":"arkiv_query",
-    "params":[
-      "*",
-      {
-        "limit":"0xa",
-        "select":{
-          "key":true,"attributes":true,"payload":false,
-          "contentType":true,"expiresAt":true,
-          "creator":true,"owner":true
-        }
-      }
-    ]
-  }'
-```
-
-### Pagination
-
-Use the returned `cursor` in the next request:
+Reads one entity by key at the latest block, with every field except `attributeSchema`:
 
 ```json
 {
-  "method": "arkiv_query",
-  "params": [
-    "type = str('nft')",
-    { "cursor": "0x2a", "limit": "0x2" }
-  ]
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "arkiv_getEntity",
+  "params": ["0x9f2c…"]
 }
 ```
 
-When `cursor` is absent from the response, there are no more pages.
-
-## arkiv_getEntityCount
-
-This method returns the total number of entities that match an optional query, at the tip or a past block.
-
-### Parameters
-
-| Index | Type        | Required | Description                                          |
-| ----- | ----------- | -------- | ----------------------------------------------------- |
-| 0     | object/null | No       | `{ "query"?: string, "block"?: number }`. Defaults to every entity at the tip |
-
-```bash
-curl https://rpc.tiramisu.db-chain.testnet.arkiv.network \
-  -H "content-type: application/json" \
-  -d '{"jsonrpc":"2.0","id":3,"method":"arkiv_getEntityCount","params":[]}'
-```
-
-Result: a plain JSON number (for example, `18427`).
+The result has the shape of an entity in `arkiv_query`. It’s `null` when no live entity has the key: it never existed, or it was deleted or has expired.
 
 ## arkiv_getBlockTiming
 
-This method returns the timing for the current head block. It takes no parameters.
+Takes no parameters and returns the latest block:
 
 ```json
-{
-  "result": {
-    "current_block": 582143,
-    "current_block_time": 1742721127,
-    "duration": 2
-  }
-}
+{ "current_block": 582143, "current_block_time": 1742721127, "duration": 2 }
 ```
 
-- `current_block_time`: Unix timestamp in seconds
-- `duration`: seconds since the previous block
+`current_block_time` is a Unix time in seconds. `duration` is the number of seconds since the previous block.

@@ -1,0 +1,118 @@
+---
+title: Sort results
+description: Order query results by one attribute with orderBy, asc and desc, sort by entity fields, and sort without a schema.
+---
+
+`orderBy` sorts the entities a query matches by one attribute, and the order holds across every page. You build the sort key with `asc` or `desc` from `@arkiv-network/sdk/query`, and through a schema the key is checked against its columns. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Sort by a column
+
+```ts
+import { desc } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true, score: true })
+  .from(Posts)
+  .ownedBy(account.address)
+  .orderBy(desc("score"))
+  .limit(10)
+  .fetch()
+```
+
+`desc` sorts largest first, and `asc` sorts smallest first. Through a schema, a key takes its type from the column, so `desc("score")` sorts `score` as a `dec`.
+
+A column doesn’t need `.indexed()` to be sorted on: `asc("title")` works, though `title` isn’t indexed. Only `bytes` columns can’t be sorted on.
+
+Values sort in the order they [compare](/querying/filter/#conditions) in conditions. Numbers and decimals sort by value, and `false` comes before `true`. Strings, addresses and keys sort byte by byte, so strings sort by their UTF-8 bytes, not alphabetically.
+
+The node sorts by one attribute, so `orderBy` takes one key. Entities that tie on it come in the node’s own order, and so do all entities without `orderBy`. Calling `orderBy` again replaces the key.
+
+## Sort by entity fields
+
+The four entity fields you can [filter on](/querying/filter/#filter-on-entity-fields) can also be sorted on: `$key`, `$owner`, `$creator` and `$expiresAt`. Each has a fixed type, so its key needs nothing more. To list an account’s entities by when they expire, soonest first:
+
+```ts
+import { asc } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, $expiresAt: true })
+  .ownedBy(account.address)
+  .orderBy(asc("$expiresAt"))
+  .fetch()
+```
+
+`$createdAt` and `$updatedAt` can’t be sorted on. [Select](/querying/select/) them and sort the rows in JavaScript instead.
+
+## Entities without the attribute
+
+An entity that doesn’t have the key’s attribute, or holds it with another type, has no value to sort by. It sorts below every value: first with `asc`, last with `desc`.
+
+This covers an [optional column](/schemas/define/#make-a-column-optional-or-give-it-a-default) an entity leaves unset. Arkiv is public, so it also covers an entity another project wrote with your schema’s tag but without the column.
+
+To leave those entities out, add [`hasType`](/querying/filter/#conditions) with the key’s attribute and type to the condition. It matches only the entities that hold the attribute with that type.
+
+## Mistakes the compiler catches
+
+Through a schema, a key must name a column that isn’t `bytes`, or one of the four entity fields, and use its type. Anything else is a compile error, and throws `InvalidPredicateError` if it runs anyway:
+
+```ts
+const posts = publicClient.select({ $key: true }).from(Posts)
+
+posts.orderBy(asc("body")) // bytes can’t be sorted on
+posts.orderBy(desc("views")) // views isn’t a column
+posts.orderBy(desc("score", "u256")) // score is a dec
+posts.orderBy(desc("$createdAt")) // $createdAt can’t be sorted on
+posts.orderBy(asc("category"), desc("score")) // one key only
+```
+
+The compiler checks the key against the schema the query has when you call `orderBy`. Call it after `from`: a key passed before `from` is only checked when the query runs.
+
+## Sort without a schema
+
+A [query without a schema](/querying/without-schema/) has no column to take a type from. Write the type as the second argument, the same type the attribute was written with:
+
+```ts
+import { desc, eq } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, score: true })
+  .where(eq("category", "news"))
+  .orderBy(desc("score", "dec"))
+  .fetch()
+```
+
+A key without a type is a compile error here. Entities that hold `score` with another type sort as if they didn’t have it, so this `desc` sort puts them last.
+
+[`query()`](/querying/without-schema/#run-one-query-with-query) takes the same key as its `orderBy` option, checked the same way:
+
+```ts
+import { desc, eq } from "@arkiv-network/sdk/query"
+
+const page = await publicClient.query(eq("category", "news"), {
+  select: { $key: true, score: true },
+  orderBy: desc("score", "dec"),
+})
+```
+
+## Sort and paginate
+
+The order covers every match, not each page on its own. With the same `orderBy` on every request, `offset` [pages](/querying/paginate/) through one order. Without `orderBy`, matches come oldest first.
+
+## See the query that’s sent
+
+`toString()` shows the sort as an `ORDER BY` clause at the end of the [query language](/reference/query-language/#sorting) text:
+
+```ts
+const query = publicClient
+  .select({ $key: true })
+  .from(Posts)
+  .orderBy(desc("score"))
+
+console.log(query.toString())
+```
+
+This prints:
+
+```text
+arkiv.schema = str('my-app.posts') ORDER BY score:dec DESC
+```

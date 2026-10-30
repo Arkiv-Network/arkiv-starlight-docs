@@ -1,0 +1,100 @@
+---
+title: Create entities
+description: Write an entity through a schema with createEntity, and set its lifetime, creation flags and key salt.
+---
+
+`createEntity` writes one entity through a schema. It takes the schema, the entity’s values and its options, and resolves once the transaction is in a block. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Write an entity
+
+```ts
+import { ExpirationTime } from "@arkiv-network/sdk"
+import { addr, dec } from "@arkiv-network/sdk/schema"
+import { stringToBytes } from "viem"
+
+const { entityKey, txHash, expiresAt } = await walletClient.createEntity(
+  Posts,
+  {
+    author: addr(account.address),
+    category: "news",
+    score: dec("3.9"),
+    title: "Arkiv ships schemas",
+    body: stringToBytes("Columns, types and indexes."),
+  },
+  { expiration: ExpirationTime.fromDays(30) },
+)
+```
+
+The result holds the new entity’s key, the transaction hash, and the block the entity expires at.
+
+The values are checked against the schema, both when you compile and when the code runs:
+
+- Every required column needs a value
+- An optional column can be left out
+- A column with a default that you leave out is written with its default
+- Each value must have its column’s type. A bare `5` for a `dec` column is a compile error: write `dec(5)`
+
+A value that doesn’t fit throws `SchemaMismatchError` before anything is sent.
+
+## Set the lifetime
+
+`expiration` is required. Build it with `ExpirationTime`:
+
+```ts
+{ expiration: ExpirationTime.fromHours(12) }
+{ expiration: ExpirationTime.atDate(new Date("2027-01-01")) }
+```
+
+See [expiration](/writing/expiration/) for every option.
+
+## Fix properties at creation
+
+`flags` sets properties that can never change afterwards. Both are off by default:
+
+- **`readonly`**: the entity’s attributes can never be changed. You can still extend it, hand it over or delete it
+- **`permissionlessExtension`**: anyone can extend the entity, not only its owner. Use this to let others keep an entity alive without letting them change it
+
+```ts
+await walletClient.createEntity(Posts, values, {
+  expiration: ExpirationTime.fromDays(30),
+  flags: { readonly: true },
+})
+```
+
+Read them back from the entity’s `$creationFlags`.
+
+## Choose how the key is made
+
+Arkiv derives an entity’s key from the owner, a per-owner counter and a salt. By default the salt is 128 random bits, so nobody can guess a key before the entity exists. Pass `salt: NO_SALT` for a key that anyone can work out from the owner’s address and counter:
+
+```ts
+import { NO_SALT } from "@arkiv-network/sdk"
+
+await walletClient.createEntity(Posts, values, {
+  expiration: ExpirationTime.fromDays(30),
+  salt: NO_SALT,
+})
+```
+
+To learn a key before you send the create, see [predict keys](/writing/batches/#refer-to-an-entity-created-in-the-same-batch).
+
+## Set transaction fields
+
+Every write takes an optional last argument with transaction fields: `gas`, `nonce`, and either `gasPrice` or `maxFeePerGas` and `maxPriorityFeePerGas`. Anything you leave out is estimated:
+
+```ts
+await walletClient.createEntity(Posts, values, options, {
+  maxFeePerGas: 2_000_000_000n,
+})
+```
+
+## Handle failures
+
+`createEntity` throws before it sends anything when the input is wrong:
+
+- **`SchemaMismatchError`**: a value is missing or has the wrong type
+- **`InvalidValueError`**: a value doesn’t fit its type, such as an `i32` out of range
+- **`EntityTooLargeError`**: the `bytes` values add up to more than 128 KiB
+- **`InvalidExpiryError`**: the expiration is already in the past, or too far away to store
+
+It throws `EntityMutationError` when the transaction fails or reverts. See [errors](/reference/errors/) for the full list.

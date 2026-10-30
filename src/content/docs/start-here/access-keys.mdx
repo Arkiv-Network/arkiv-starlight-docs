@@ -1,18 +1,18 @@
 ---
 title: Access Keys
-description: Get an Arkiv access key from the Arkiv Hub to raise the rate limits on your RPC calls, and learn how to send it, watch your quota, and lock it down.
+description: Get a free Arkiv access key from the Arkiv Hub, pass it to the rabdi chain, and learn how to send it, watch your quota, and lock it down.
 ---
 
 import { Aside, Steps } from '@astrojs/starlight/components';
 import RpcTerms from '../../../components/RpcTerms.astro';
 
-An access key raises the rate limits on your calls to the Arkiv RPC. You get keys from the [Arkiv Hub](https://hub.arkiv.network/api-keys).
+Arkiv’s public RPC is heavily rate limited to prevent abuse, so get a free access key from the [Arkiv Hub](https://hub.arkiv.network/access-keys). The key raises the rate limits on your calls.
 
 - You get one key per wallet on each network.
 - A key works on one network only. You choose the network when you create the key.
 - Each key has a monthly quota, measured in cost units.
 
-You do not need a key to try Arkiv. The public RPC works without one, at the default rate limit.
+The SDK asks for a key when you connect to Rabdi. To try Arkiv without one, pass `accessKey: ""`: the SDK uses the public RPC and logs a warning.
 
 <RpcTerms />
 
@@ -20,13 +20,13 @@ You do not need a key to try Arkiv. The public RPC works without one, at the def
 
 <Steps>
 
-1. Open [hub.arkiv.network/api-keys](https://hub.arkiv.network/api-keys).
+1. Open [hub.arkiv.network/access-keys](https://hub.arkiv.network/access-keys).
 
 2. Connect your wallet and sign the sign-in message. The signature proves that you own the wallet. It does not send a transaction.
 
 3. Complete your registration if the Hub asks for it.
 
-4. Select the network. For the current public testnet, select **Tiramisu**.
+4. Select the network. For the current public testnet, select **Rabdi**.
 
 5. Give your project a name, solve the captcha, and select **Generate**.
 
@@ -40,7 +40,7 @@ The RPC accepts the key in three forms. Use the one that fits your client.
 
 | Form | How |
 | ---- | --- |
-| In the path | Append the key to the RPC URL: `https://rpc.tiramisu.db-chain.testnet.arkiv.network/<key>` |
+| In the path | Append the key to the RPC URL: `https://rpc.rabdi.db-chain.testnet.arkiv.network/<key>` |
 | `X-API-KEY` header | `X-API-KEY: <key>` |
 | Bearer token | `Authorization: Bearer <key>` |
 
@@ -49,7 +49,7 @@ The RPC accepts the key in three forms. Use the one that fits your client.
 ```bash
 curl --json '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
   -H "X-API-KEY: <key>" \
-  https://rpc.tiramisu.db-chain.testnet.arkiv.network
+  https://rpc.rabdi.db-chain.testnet.arkiv.network
 ```
 
 ### WebSocket
@@ -57,30 +57,32 @@ curl --json '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
 The WebSocket endpoint accepts the key in the path or in the `X-API-KEY` header.
 
 ```bash
-wscat -c wss://rpc.tiramisu.db-chain.testnet.arkiv.network/<key> \
+wscat -c wss://rpc.rabdi.db-chain.testnet.arkiv.network/<key> \
   -x '{"jsonrpc":"2.0","id":1,"method":"eth_blockNumber","params":[]}' \
   -w 1
 ```
 
-### TypeScript SDK
+## Use a key with the SDK
 
-Put the key in the transport URL:
+Pass the key to `rabdi`. Read it from an environment variable rather than writing it in code:
 
 ```ts
 import { createPublicClient } from "@arkiv-network/sdk"
-import { tiramisu } from "@arkiv-network/sdk/chains"
+import { rabdi } from "@arkiv-network/sdk/chains"
 import { http } from "viem"
 
 const publicClient = createPublicClient({
-  chain: tiramisu,
-  transport: http("https://rpc.tiramisu.db-chain.testnet.arkiv.network/<key>"),
+  chain: rabdi({ accessKey: process.env.ARKIV_ACCESS_KEY ?? "" }),
+  transport: http(),
 })
-
-const blockNumber = await publicClient.getBlockNumber()
 ```
 
-<Aside type="caution" title="Keep the key out of the browser">
-Anyone can read a key from the network requests of your website and use it to spend your quota. For production, call the Arkiv RPC from your backend, where the key stays secret. There you can also lock the key to your server IP.
+`rabdi` puts the key at the end of both RPC URLs. So `http()` and `webSocket()` with no URL send it. Don’t add a chain with your key to a user’s wallet: the wallet keeps the URL and uses it for every app. [Add the chain without a key](/start-here/clients/#write-from-a-browser-wallet) instead.
+
+Leaving out `accessKey` is a type error, and throws `MissingAccessKeyError` if it runs anyway. A key the RPC doesn’t know fails every call with HTTP status 401.
+
+<Aside type="caution" title="Handle the key with care">
+A key isn’t a password, but anyone who has it can spend your quota. In a web app, anyone can read it from the network requests, so add your site to the key’s **Origins**. On a server, add your server’s IP to the **IP allowlist**. See [lock the key down](#lock-the-key-down).
 </Aside>
 
 ## Watch your quota

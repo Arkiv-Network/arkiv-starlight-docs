@@ -1,0 +1,176 @@
+---
+title: Store and query your first entity
+description: Write a blog post to the Rabdi testnet with the TypeScript SDK, then find it again with a query.
+---
+
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+import NetworkNote from '../../../components/NetworkNote.astro';
+import RpcTerms from '../../../components/RpcTerms.astro';
+
+<NetworkNote />
+
+In this tutorial you write a blog post to Arkiv and read it back with a query. It takes one TypeScript file and a test account with some test GLM.
+
+Before you start, you need:
+
+- Node.js 22.10 or later, or [Bun](https://bun.sh)
+- The private key of a test account. Fund it with test GLM (`tGLM`) from the [faucet](https://hub.arkiv.network/faucet)
+- An access key. Arkiv’s public RPC is heavily rate limited to prevent abuse, so get a free key from the [Arkiv Hub](https://hub.arkiv.network/access-keys)
+
+## Set up the project
+
+<Steps>
+
+1. Create a folder with a `package.json` that marks it as an ES module:
+
+    ```bash
+    mkdir arkiv-hello && cd arkiv-hello
+    echo '{ "type": "module" }' > package.json
+    ```
+
+2. Install the SDK and [viem](https://www.npmjs.com/package/viem), which the SDK builds on:
+
+    <Tabs syncKey="pkg">
+      <TabItem label="bun">
+        ```bash
+        bun add @arkiv-network/sdk viem
+        ```
+      </TabItem>
+      <TabItem label="pnpm">
+        ```bash
+        pnpm add @arkiv-network/sdk viem
+        ```
+      </TabItem>
+      <TabItem label="yarn">
+        ```bash
+        yarn add @arkiv-network/sdk viem
+        ```
+      </TabItem>
+      <TabItem label="npm">
+        ```bash
+        npm install @arkiv-network/sdk viem
+        ```
+      </TabItem>
+    </Tabs>
+
+3. Put your private key and access key in environment variables:
+
+    ```bash
+    export PRIVATE_KEY=your_private_key_here
+    export ARKIV_ACCESS_KEY=your_access_key_here
+    ```
+
+</Steps>
+
+## Describe a post
+
+Create `hello.ts`. Start with a schema, which lists the attributes a post has and their types. The `indexed()` ones are the ones you can filter on:
+
+```ts title="hello.ts"
+import { addr, bytes, dec, defineSchema, str } from "@arkiv-network/sdk/schema"
+
+const Posts = defineSchema("my-app.posts", {
+  author: addr().indexed(),
+  category: str().indexed(),
+  score: dec().indexed(),
+  title: str(),
+  body: bytes(),
+  summary: str().optional(),
+})
+```
+
+The name tags every post you write, and a query through `Posts` only sees entities with that tag. Arkiv is a public database that other projects write to as well, so replace `my-app` with a name unique to your project. The rest of the docs use this schema.
+
+## Connect to Rabdi
+
+Add two clients. The public client reads, and the wallet client signs and sends writes with your account:
+
+```ts title="hello.ts"
+import { createPublicClient, createWalletClient } from "@arkiv-network/sdk"
+import { rabdi } from "@arkiv-network/sdk/chains"
+import { http, type Hex } from "viem"
+import { privateKeyToAccount } from "viem/accounts"
+
+const chain = rabdi({ accessKey: process.env.ARKIV_ACCESS_KEY ?? "" })
+const account = privateKeyToAccount(process.env.PRIVATE_KEY as Hex)
+const publicClient = createPublicClient({ chain, transport: http() })
+const walletClient = createWalletClient({ chain, transport: http(), account })
+```
+
+`rabdi` puts your [access key](/start-here/access-keys/) in the RPC URL, so `http()` with no URL sends it. Without `ARKIV_ACCESS_KEY`, the chain uses the public RPC and logs a warning.
+
+<RpcTerms />
+
+## Write the post
+
+`createEntity` takes the schema, the post’s values and how long the post should live. It returns the new entity’s key:
+
+```ts title="hello.ts"
+import { ExpirationTime } from "@arkiv-network/sdk"
+import { stringToBytes } from "viem"
+
+const { entityKey } = await walletClient.createEntity(
+  Posts,
+  {
+    author: addr(account.address),
+    category: "intro",
+    score: dec("4.5"),
+    title: "Hello, Arkiv",
+    body: stringToBytes("My first entity."),
+  },
+  { expiration: ExpirationTime.fromDays(1) },
+)
+console.log("Created", entityKey)
+```
+
+Each value has to match its column. `"intro"` and `"Hello, Arkiv"` are strings, so they’re `str` values as they are. A `dec` or an `addr` has no plain JavaScript form, so you wrap those in `dec(...)` and `addr(...)`. `summary` is optional, so you can leave it out.
+
+## Query it back
+
+Select the fields you want, name the schema and keep only the posts your account owns:
+
+```ts title="hello.ts"
+import { hexToString } from "viem"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true, body: true })
+  .from(Posts)
+  .ownedBy(account.address)
+  .fetch()
+
+for (const post of entities) {
+  console.log(post.$key, post.title.value, hexToString(post.body.value))
+}
+```
+
+Anyone can write an entity with your schema’s tag, so `ownedBy` keeps out posts your account doesn’t own. Each row holds the fields you selected. `$key` is the entity’s key, and every name without a `$` is a column. A column comes back as a typed value, so you read it through `.value`.
+
+## Run it
+
+<Tabs syncKey="pkg">
+  <TabItem label="bun">
+    ```bash
+    bun hello.ts
+    ```
+  </TabItem>
+  <TabItem label="node">
+    ```bash
+    node --experimental-strip-types hello.ts
+    ```
+  </TabItem>
+</Tabs>
+
+The script prints the key of the new post, then the post itself:
+
+```text
+Created 0x5f1e…
+0x5f1e… Hello, Arkiv My first entity.
+```
+
+If the create fails because of insufficient funds, the account has no tGLM yet. Get some from the [faucet](https://hub.arkiv.network/faucet) and run the script again.
+
+## Next steps
+
+- [Define your own schema](/schemas/define/)
+- [Write data](/writing/create/): lifetimes, patches and batches
+- [Query data](/querying/select/): selections, filters and pagination

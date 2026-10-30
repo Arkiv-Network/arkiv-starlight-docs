@@ -1,0 +1,82 @@
+---
+title: Query without a schema
+description: Explore entities whose shape you don’t know, run a single query with query(), or send a raw query string.
+---
+
+You can query without `.from(schema)`, for example to explore what a node holds or to read entities another app wrote. The selection and the rows keep their shape, but nothing is checked. Each attribute comes back as whatever the entity holds, and `where` takes any attribute name. The examples on this page use the clients from [your first entity](/start-here/first-entity/).
+
+## Select attributes by name
+
+```ts
+import { and, eq, hasType } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, title: true, rating: true })
+  .where(and(eq("category", "news"), hasType("rating", "i32")))
+  .fetch()
+
+for (const row of entities) {
+  console.log(row.title?.type, row.rating?.value)
+}
+```
+
+Each attribute is an `ArkivValue` or `undefined`, so check its `type` before you use its `value`. Without a schema there’s no tag to filter on, so the results include matching entities from any project.
+
+A filter on a value of the wrong type isn’t an error here. `eq("score", 5)` looks for an `i32`, and an entity whose `score` is a `dec` doesn’t match. When one name holds different types across entities, `hasType` picks one.
+
+## Discover an entity’s shape
+
+`$attributeSchema` returns each attribute’s name, type and whether it’s indexed, without the values. Use it to learn what entities hold before you fetch them. Values can be large: a `bytes` attribute holds up to 128 KiB, and an RPC endpoint may cap how big a response can be. A page of 100 entities with every value can be more than it sends.
+
+Fetch the shape first:
+
+```ts
+const { entities } = await publicClient
+  .select({ $key: true, $attributeSchema: true })
+  .where(eq("category", "news"))
+  .fetch()
+
+for (const row of entities) {
+  for (const [name, { type, indexed }] of Object.entries(
+    row.$attributeSchema,
+  )) {
+    console.log(name, type, indexed)
+  }
+}
+```
+
+Then select only the attributes you need, by name:
+
+```ts
+const titles = await publicClient
+  .select({ $key: true, title: true })
+  .where(eq("category", "news"))
+  .fetch()
+```
+
+Without a schema, `select()` and `select("*")` return every entity field plus `$attributes`, but never `$attributeSchema`. Select it by name.
+
+## Run one query with query()
+
+`query` runs one query and returns one page, without a builder. It takes a condition and the same selection as `select`:
+
+```ts
+const page = await publicClient.query(eq("category", "news"), {
+  select: { $key: true, title: true },
+  limit: 100,
+})
+```
+
+The options also take an `offset` to [paginate](/querying/paginate/), `count`, and `orderBy` to [sort](/querying/sort/) the results. There’s no schema to take a type from, so the key names its type, as in `orderBy: desc("score", "dec")`.
+
+## Send a raw query string
+
+`query` also takes a string in the [query language](/reference/query-language/). The string goes to the node as written, without any checks:
+
+```ts
+await publicClient.query("category = str('news') AND score > dec(4)")
+```
+
+An `orderBy` passed with a string is still checked, and goes after the string as its `ORDER BY` clause, so the string can’t end in one of its own.
+
+Use this for queries built elsewhere, such as in the [Data Explorer](/start-here/data-explorer/). In your own code, prefer the condition functions, which check names, types and operators for you.

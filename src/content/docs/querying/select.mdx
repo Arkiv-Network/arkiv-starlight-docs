@@ -1,0 +1,101 @@
+---
+title: Select fields
+description: Choose which entity fields and columns a query returns, and read them back as typed rows.
+---
+
+A query starts with `select`, which names the fields you want back. Each result is a flat row with those fields, typed from the selection and the schema. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Pick fields and columns
+
+Set each field you want to `true`. Names that start with `$` are entity fields, and every other name is a column:
+
+```ts
+import { eq } from "@arkiv-network/sdk/query"
+
+const { entities } = await publicClient
+  .select({ $key: true, $createdAt: true, title: true, score: true })
+  .from(Posts)
+  .where(eq("category", "news"))
+  .fetch()
+
+const [row] = entities
+row.$key       // Hex
+row.$createdAt // bigint, a block number
+row.title      // StrValue: row.title.value is a string
+row.score      // DecValue: row.score.value is a string like "4.5"
+```
+
+Reading a field you didn’t select is a compile error. Every field is fetched over the network, so select only what you use.
+
+The entity fields are:
+
+| Field | Type |
+| --- | --- |
+| `$key` | `Hex` |
+| `$owner` | `Hex`, a checksummed address |
+| `$creator` | `Hex`, a checksummed address |
+| `$createdAt` | `bigint`, a block number |
+| `$updatedAt` | `bigint`, a block number |
+| `$expiresAt` | `bigint`, a block number |
+| `$creationFlags` | `{ readonly, permissionlessExtension, raw }` |
+
+A column named like an entity field doesn’t clash with it. If a schema has an `owner` column, `owner` selects the column and `$owner` the entity’s owner.
+
+## Select everything
+
+Call `select()` with nothing, or with `"*"`, for every entity field and every column:
+
+```ts
+const { entities } = await publicClient
+  .select()
+  .from(Posts)
+  .where(eq("category", "news"))
+  .fetch()
+```
+
+## Read every attribute as a map
+
+`$attributes: true` returns all of an entity’s attributes in one map. Use it to read entities whose attributes you don’t know by name:
+
+```ts
+const { entities } = await publicClient
+  .select({ $key: true, $attributes: true })
+  .where(eq("category", "news"))
+  .fetch()
+```
+
+`$attributes` only takes `true`. To fetch some attributes, select each by name. To learn what entities hold without fetching their values, select [`$attributeSchema`](/querying/without-schema/#discover-an-entitys-shape).
+
+## Entities that don’t fit the schema
+
+A query through a schema checks every row against the columns you selected. A matching entity that misses a required column, or holds a value of another type, is left out of the page. So is an entity with another schema’s tag. Anyone can write an entity your query matches, so one that doesn’t fit never breaks the read of the others. Each page reports how many it skipped:
+
+```ts
+const page = await publicClient
+  .select()
+  .from(Posts)
+  .where(eq("category", "news"))
+  .fetch()
+
+console.log(`${page.skipped} entities did not fit Posts`)
+```
+
+A page with skipped entities holds fewer rows than its limit, and can be empty while later pages still have rows.
+
+To fail the fetch with `SchemaMismatchError` instead, pass `onMismatch: "throw"`:
+
+```ts
+publicClient.select().from(Posts, { onMismatch: "throw" })
+```
+
+## Selections built at runtime
+
+Write the selection inline. A selection stored in a variable widens `true` to `boolean`. The SDK then can’t tell which fields come back, so every field of the row is optional. Add `as const` to keep it exact:
+
+```ts
+const fields = { $key: true, title: true } as const
+
+const { entities } = await publicClient.select(fields).from(Posts).fetch()
+```
+
+A selection that’s only known at runtime, typed `SelectArg`, gives rows whose fields are all optional.

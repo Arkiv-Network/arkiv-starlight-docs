@@ -1,0 +1,65 @@
+---
+title: Change and delete entities
+description: Patch an entity’s columns, hand it to another account, or delete it before it expires.
+---
+
+After you create an entity, you can patch its columns, hand it to another account, or delete it. Only the owner can do any of these. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Patch columns
+
+`patchEntity` changes the columns you name and leaves the rest as they are. `set` writes new values, and `unset` removes optional columns:
+
+```ts
+import { dec } from "@arkiv-network/sdk/schema"
+
+await walletClient.patchEntity(Posts, entityKey, {
+  set: { score: dec("4.7"), summary: "Updated with new numbers" },
+})
+await walletClient.patchEntity(Posts, entityKey, { unset: ["summary"] })
+```
+
+The patch is typed by the schema. Unsetting a required column, or setting a value of the wrong type, is a compile error.
+
+A patch throws before it sends anything when:
+
+- **`EmptyPatchError`**: it has nothing to set or unset
+- **`ConflictingMutationError`**: the same column is in both `set` and `unset`
+
+An entity created with the [`readonly` flag](/writing/create/#fix-properties-at-creation) can’t be patched.
+
+## Hand an entity to another account
+
+`changeOwnership` makes another account the owner. From then on, only the new owner can change the entity:
+
+```ts
+await walletClient.changeOwnership({
+  entityKey,
+  newOwner: "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+})
+```
+
+The entity’s `$creator` stays the account that created it.
+
+## Delete an entity
+
+`deleteEntity` removes an entity before it expires:
+
+```ts
+await walletClient.deleteEntity({ entityKey })
+```
+
+Once the transaction is in a block, the entity is gone, as if it had expired.
+
+## Handle failures
+
+The node rejects an operation from an account that isn’t the owner, or on an entity that doesn’t exist or has expired. The SDK throws `EntityMutationError` with the reason:
+
+```ts
+import { EntityMutationError } from "@arkiv-network/sdk"
+
+try {
+  await walletClient.deleteEntity({ entityKey })
+} catch (error) {
+  if (error instanceof EntityMutationError) console.error(error.message)
+}
+```

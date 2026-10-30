@@ -1,0 +1,57 @@
+---
+title: Column types
+description: Every attribute type Arkiv stores, the values each one accepts, and the filters each one supports.
+---
+
+Arkiv stores 9 attribute types. Each type constructor does two jobs. Called with no arguments it’s a column, as in `dec()`. Called with a value it’s a typed value, as in `dec("4.5")`. SQL works the same way, with `DECIMAL` as a type and `DECIMAL '4.5'` as a value.
+
+## Types
+
+| Type | Holds | `.value` in JavaScript |
+| --- | --- | --- |
+| `bool` | `true` or `false` | `boolean` |
+| `i32` | A signed 32-bit integer | `number` |
+| `u64` | An unsigned 64-bit integer | `bigint` |
+| `u256` | An unsigned 256-bit integer | `bigint` |
+| `dec` | A signed decimal with 18 decimal places | `string`, like `"4.5"` |
+| `str` | Text, up to 128 bytes of UTF-8 | `string` |
+| `addr` | An Ethereum address | checksummed hex |
+| `key` | The key of another entity | hex |
+| `bytes` | Up to 128 KiB of binary data | hex |
+
+Every indexed column takes `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `between`, `exists` and `hasType`. Only `str` takes `startsWith`. `bytes` can’t be indexed, so it can’t be filtered on. See [filter results](/querying/filter/).
+
+## Write a value
+
+Five types have a plain JavaScript form you can write as is. Through a schema, a plain value only fits a column of its own type:
+
+| JavaScript value | Type |
+| --- | --- |
+| `boolean` | `bool` |
+| `number` | `i32` |
+| `bigint` | `u256` |
+| `string` | `str` |
+| `Uint8Array` | `bytes` |
+
+Wrap every other value in its constructor:
+
+```ts
+import { addr, dec, key, u64 } from "@arkiv-network/sdk/schema"
+
+dec("4.5")
+u64(1_700_000_000n)
+addr("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
+key(entityKey)
+```
+
+A bare `5` is an `i32`, so it doesn’t fit a `dec` column: write `dec(5)`. A bare `5n` is a `u256`, not a `u64`: write `u64(5n)`.
+
+A constructor checks its value and throws `InvalidValueError` when the value doesn’t fit, for example `i32(2 ** 40)`.
+
+## Type details
+
+- **`dec`**: pass fractions as strings, since a JavaScript number can’t hold most decimals exactly. `dec(0.1)` throws, `dec("0.1")` works. More than 18 decimal places throws instead of rounding. `decUnits(value)` gives the exact scaled `bigint` for arithmetic, and `decFromUnits(units)` turns it back
+- **`str`**: the 128-byte limit counts bytes, not characters. Any character is allowed. To filter on a hash or other binary value, store it as lowercase hex, which fits up to 64 bytes
+- **`addr`**: mixed-case input must have a valid EIP-55 checksum, so a mistyped address throws. All-lowercase input is accepted. Addresses come back checksummed
+- **`key`**: a reference to another entity. Arkiv doesn’t check that the entity exists, and a reference to a deleted or expired entity stays as it is
+- **`bytes`**: each value holds up to 128 KiB, and all the `bytes` values of one create or patch share a single 128 KiB budget. Going over throws `EntityTooLargeError`. Pass a `Uint8Array` or hex, and read hex back

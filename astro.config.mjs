@@ -1,6 +1,6 @@
 // @ts-check
 
-import { existsSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import starlight from "@astrojs/starlight";
@@ -19,6 +19,22 @@ if (!sdkAvailable) {
 		"[astro.config] SDK source not found at .sdk-cache/arkiv-sdk-js/ — skipping API reference generation. Run `bun run sync-sdk` to populate.",
 	);
 }
+
+// starlight-page-actions writes its own llms.txt, a bare list of the sidebar's
+// links, over the one in public/ when the build is done. This integration runs
+// after it and puts the hand-written one back.
+const handWrittenLlmsTxt = {
+	name: "hand-written-llms-txt",
+	hooks: {
+		/** @param {{ dir: URL }} options */
+		"astro:build:done": ({ dir }) => {
+			copyFileSync(
+				resolve(configDir, "public/llms.txt"),
+				resolve(fileURLToPath(dir), "llms.txt"),
+			);
+		},
+	},
+};
 
 // typedoc-plugin-markdown emits links like `/foo/bar/index/` when entryFileName
 // is "index" (so each module gets its own root page). Starlight collapses any
@@ -44,10 +60,20 @@ function rewriteIndexLinks() {
 export default defineConfig({
 	site: process.env.SITE_URL || "https://docs.arkiv.network",
 	redirects: {
-		"/start-here/testnet": "/networks/tiramisu/",
+		"/start-here/testnet": "/networks/rabdi/",
 		"/networks/migrate-from-kaolin": "/networks/older-networks/",
-		"/networks/cheesecake": "/networks/tiramisu/",
+		"/networks/cheesecake": "/networks/rabdi/",
+		"/networks/tiramisu": "/networks/rabdi/",
+		"/networks/braga": "/networks/older-networks/#braga",
 		"/start-here/api-keys": "/start-here/access-keys/",
+		"/start-here/fundamentals": "/start-here/introduction/",
+		"/start-here/installation": "/start-here/first-entity/",
+		"/typescript-sdk/querying-data": "/querying/select/",
+		"/typescript-sdk/mutating-data": "/writing/create/",
+		"/typescript-sdk/live-events": "/querying/watch-events/",
+		"/events/watch": "/querying/watch-events/",
+		"/typescript-sdk/react-integration": "/guides/react/",
+		"/typescript-sdk/best-practices": "/start-here/introduction/",
 	},
 	markdown: {
 		remarkPlugins: [rewriteIndexLinks],
@@ -65,93 +91,77 @@ export default defineConfig({
 			],
 			sidebar: [
 				{
-					label: "Start Here",
+					label: "Get Started",
 					items: [
-						{ label: "Fundamentals", slug: "start-here/fundamentals" },
-						{ label: "Installation", slug: "start-here/installation" },
-						{ label: "Agent Skills", slug: "start-here/agent-skill" },
-						{ label: "Data Explorer", slug: "start-here/data-explorer" },
-						{ label: "Access Keys", slug: "start-here/access-keys" },
+						{ label: "What Arkiv Is", slug: "start-here/introduction" },
+						{ label: "Your First Entity", slug: "start-here/first-entity" },
+						{ label: "Connect to Arkiv", slug: "start-here/clients" },
 					],
 				},
 				{
-					label: "Networks",
+					label: "Schemas",
 					items: [
-						{ label: "Tiramisu", slug: "networks/tiramisu" },
-						{ label: "Older networks", slug: "networks/older-networks" },
+						{ label: "Define a Schema", slug: "schemas/define" },
+						{ label: "Column Types", slug: "schemas/column-types" },
 					],
 				},
 				{
-					label: "TypeScript SDK",
+					label: "Write Data",
 					items: [
-						{ label: "Querying Data", slug: "typescript-sdk/querying-data" },
-						{ label: "Mutating Data", slug: "typescript-sdk/mutating-data" },
-						{ label: "Live Events", slug: "typescript-sdk/live-events" },
-						{
-							label: "React Integration",
-							slug: "typescript-sdk/react-integration",
-						},
-						{ label: "Best Practices", slug: "typescript-sdk/best-practices" },
+						{ label: "Create Entities", slug: "writing/create" },
+						{ label: "Expiration", slug: "writing/expiration" },
+						{ label: "Change & Delete", slug: "writing/change" },
+						{ label: "Batches", slug: "writing/batches" },
+					],
+				},
+				{
+					label: "Query Data",
+					items: [
+						{ label: "Select Fields", slug: "querying/select" },
+						{ label: "Filter Results", slug: "querying/filter" },
+						{ label: "Sort Results", slug: "querying/sort" },
+						{ label: "Paginate Results", slug: "querying/paginate" },
+						{ label: "Count Entities", slug: "querying/count" },
+						{ label: "Read One Entity", slug: "querying/get-entity" },
+						{ label: "Query Without a Schema", slug: "querying/without-schema" },
+						{ label: "Watch Entity Events", slug: "querying/watch-events" },
+					],
+				},
+				{
+					label: "Guides",
+					items: [
+						{ label: "Use with React", slug: "guides/react" },
+					],
+				},
+				{
+					label: "Reference",
+					items: [
+						{ label: "Query Language", slug: "reference/query-language" },
+						{ label: "Errors", slug: "reference/errors" },
+						{ label: "Limits", slug: "reference/limits" },
 						...(sdkAvailable ? [typeDocSidebarGroup] : []),
-					],
-				},
-				{
-					label: "Cookbook",
-					items: [
-						{ label: "User Profiles", slug: "cookbook/user-profiles" },
-						{ label: "Leaderboard", slug: "cookbook/leaderboard" },
-					],
-				},
-				{
-					label: "Learn by Doing",
-					items: [
-						{
-							label: "MetaMask Sketch App",
-							items: [
-								{ label: "Overview", slug: "learn/metamask-sketch-app" },
-								{
-									label: "1. Project Setup & Wallet",
-									slug: "learn/metamask-sketch-app/1-setup",
-								},
-								{
-									label: "2. Reading & Writing Data",
-									slug: "learn/metamask-sketch-app/2-data",
-								},
-								{
-									label: "3. Main Application",
-									slug: "learn/metamask-sketch-app/3-app",
-								},
-							],
-						},
-						{
-							label: "Fullstack Dashboard",
-							items: [
-								{ label: "Overview", slug: "learn/fullstack-dashboard" },
-								{
-									label: "1. Project Setup & Wallet",
-									slug: "learn/fullstack-dashboard/01-project-setup",
-								},
-								{
-									label: "2. Storing Data on Arkiv",
-									slug: "learn/fullstack-dashboard/02-storing-data-on-arkiv",
-								},
-								{
-									label: "3. Visualizing on the Frontend",
-									slug: "learn/fullstack-dashboard/03-visualizing-on-the-frontend",
-								},
-								{
-									label: "4. Summary and Next Steps",
-									slug: "learn/fullstack-dashboard/04-summary-and-next-steps",
-								},
-							],
-						},
 					],
 				},
 				{
 					label: "JSON-RPC API",
 					items: [
-						{ label: "Querying Data", slug: "json-rpc/querying-data" },
-						{ label: "Mutating Entities", slug: "json-rpc/mutating-entities" },
+						{ label: "Read Methods", slug: "json-rpc/querying-data" },
+						{ label: "Write Transactions", slug: "json-rpc/mutating-entities" },
+					],
+				},
+				{
+					label: "Networks",
+					items: [
+						{ label: "Rabdi", slug: "networks/rabdi" },
+						{ label: "Older Networks", slug: "networks/older-networks" },
+					],
+				},
+				{
+					label: "Tools",
+					items: [
+						{ label: "Data Explorer", slug: "start-here/data-explorer" },
+						{ label: "Access Keys", slug: "start-here/access-keys" },
+						{ label: "Agent Skills", slug: "start-here/agent-skill" },
 					],
 				},
 			],
@@ -332,6 +342,7 @@ export default defineConfig({
   `
 			}]
 		}),
+		handWrittenLlmsTxt,
 	],
 	vite: {
 		plugins: [tailwindcss()],

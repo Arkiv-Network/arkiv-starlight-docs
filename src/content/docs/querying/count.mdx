@@ -1,0 +1,47 @@
+---
+title: Count entities
+description: Count the entities a query matches with client.count(), or get the total alongside a page of rows with withCount.
+---
+
+You can count how many entities a query matches without fetching them, or get the total with a page of rows. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Count without fetching rows
+
+`count` takes the same filters as [`select`](/querying/select/): `from`, [`where`](/querying/filter/), `ownedBy` and `createdBy`. `fetch` returns the total as a `bigint`:
+
+```ts
+import { eq } from "@arkiv-network/sdk/query"
+
+const total = await publicClient
+  .count()
+  .from(Posts)
+  .ownedBy(account.address)
+  .where(eq("category", "news"))
+  .fetch()
+```
+
+Without `from`, conditions match attributes by name, as in a [query without a schema](/querying/without-schema/).
+
+A count needs at least one condition, or it throws `InvalidPredicateError`. A named schema [counts as one](/querying/filter/#queries-without-a-filter), so `count().from(Posts)` counts every post.
+
+## Count alongside a page
+
+To show the total next to a list, add `withCount` to a `select`. The count comes back in the same request, as the page’s `count`:
+
+```ts
+const page = await publicClient
+  .select({ $key: true, title: true })
+  .from(Posts)
+  .ownedBy(account.address)
+  .withCount()
+  .limit(20)
+  .fetch()
+
+console.log(`${page.entities.length} of ${page.count}`)
+```
+
+Each page reads the latest block, so its `count` is the total at that block. To number the pages, [count once](/querying/paginate/#count-the-pages) before you fetch them.
+
+## Entities that don’t fit the schema
+
+The count includes entities a page [leaves out](/querying/select/#entities-that-dont-fit-the-schema) for not fitting the schema. So a walk through every page can return fewer rows than `count`. Each page’s `skipped` says how many it left out.
