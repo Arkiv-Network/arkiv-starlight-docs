@@ -1,0 +1,70 @@
+---
+title: What Arkiv is
+description: "Arkiv is a Web3 database. Learn the principles behind it and the four ideas the rest of the docs build on: entities, attributes, ownership and expiration."
+---
+
+import { Card } from '@astrojs/starlight/components';
+
+Arkiv is a Web3 database. It stores your data as entities that you can query by indexed attributes, that your wallet owns, and that expire when you say so. You talk to it with the same tools you use for Ethereum: a wallet, a transaction, and a JSON-RPC endpoint.
+
+## Four principles
+
+<div class="principles">
+
+<Card title="Queryable" icon="magnifier">
+  Filter and paginate records through indexed attributes with a Web2-like query language. No external indexer.
+</Card>
+<Card title="Time-scoped" icon="approve-check-circle">
+  Every entity has an expiration block. When it arrives, the entity leaves the query surface. You pay for the lifetime you choose.
+</Card>
+<Card title="Tamper-proof" icon="star">
+  Every write is a signed Ethereum transaction. State is committed with a keccak Merkle-Patricia trie, so any change is evident.
+</Card>
+<Card title="Wallet-owned" icon="pencil">
+  Only the owner wallet can update, extend, transfer, or delete an entity.
+</Card>
+
+</div>
+
+## Entities
+
+An entity is one record. It holds your data as attributes, and Arkiv keeps a few fields of its own on every entity. Those fields start with `$`, which no attribute name can:
+
+| Field | What it holds |
+| --- | --- |
+| `$key` | The entity’s 32-byte key, assigned when it’s created |
+| `$owner` | The account that can change the entity |
+| `$creator` | The account that created it. It never changes |
+| `$createdAt` | The block the entity was created in |
+| `$updatedAt` | The block it last changed in |
+| `$expiresAt` | The block it expires at |
+| `$creationFlags` | Properties fixed when the entity was created |
+
+## Attributes
+
+An attribute is a named, typed value, such as a `str` called `title` or a `dec` called `score`. An entity holds up to 32 of them. Each attribute is either indexed, so queries can filter on it, or stored only, which costs less. See [column types](/schemas/column-types/) for the types.
+
+In the SDK you describe an entity’s attributes once, in a [schema](/schemas/define/), the way you describe a table’s columns in SQL.
+
+## Ownership
+
+The account that creates an entity owns it. Only the owner can change, hand over or delete it. You can also [hand an entity to another account](/writing/change/#hand-an-entity-to-another-account).
+
+## Expiration
+
+Every entity has an expiration block. From that block on, the entity is gone: queries don’t return it and every operation on it fails. You choose a lifetime when you create the entity, and you can [extend it](/writing/expiration/) later.
+
+Arkiv counts time in blocks. A block takes 2 seconds on Rabdi, the public testnet.
+
+## Arkiv is public
+
+Anyone can write entities to Arkiv, with any attribute names and values, and anyone can read them. A query that filters only on common attribute names, such as `category = "news"`, can return entities from other projects. Keep your data apart in two ways:
+
+- **Tag your entities**: give your [schema](/schemas/define/#name-the-schema-after-your-project) a name unique to your project, and every query through it only sees entities with that tag
+- **Filter by owner**: anyone can copy your tag. To trust what you read, keep only entities your account owns or created. See [filter on entity fields](/querying/filter/#filter-on-entity-fields)
+
+## How you reach Arkiv
+
+Arkiv speaks Ethereum’s JSON-RPC. Writes are [transactions](/json-rpc/mutating-entities/), and reads are [`arkiv_query` calls](/json-rpc/querying-data/). You pay for writes in GLM, Arkiv’s gas token. On the testnet, it’s test GLM, `tGLM`. The TypeScript SDK, [`@arkiv-network/sdk`](https://www.npmjs.com/package/@arkiv-network/sdk), wraps both and builds on [viem](https://viem.sh).
+
+Next, [store your first entity](/start-here/first-entity/).

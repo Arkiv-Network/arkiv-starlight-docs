@@ -1,0 +1,94 @@
+---
+title: Paginate results
+description: Read query results a page at a time with limit and offset, count the pages, and page by key to read every match once.
+---
+
+A query returns its results in pages of up to 100 rows. `limit` sets the page size, and `offset` skips that many matches before the page starts. The examples on this page use the `Posts` schema and clients from [your first entity](/start-here/first-entity/).
+
+## Fetch a page
+
+Sort by `$key` so each offset starts at the same place, then fetch the page you need:
+
+```ts
+import { asc, eq } from "@arkiv-network/sdk/query"
+
+const PAGE_SIZE = 20
+
+function newsPage(n: number) {
+  return publicClient
+    .select({ $key: true, title: true })
+    .from(Posts)
+    .ownedBy(account.address)
+    .where(eq("category", "news"))
+    .orderBy(asc("$key"))
+    .limit(PAGE_SIZE)
+    .offset(n * PAGE_SIZE)
+    .fetch()
+}
+
+const page = await newsPage(2)
+```
+
+`newsPage(0)` is the first page, so `newsPage(2)` skips 40 posts. Without `limit`, a page holds up to 100 rows. A page holds:
+
+- **`entities`**: the rows on this page
+- **`blockNumber`**: the block the page was read at
+- **`skipped`**: how many entities were left out because they [don’t fit the schema](/querying/select/#entities-that-dont-fit-the-schema)
+- **`count`**: how many entities the query matches in all, if you [asked for it](/querying/count/#count-alongside-a-page)
+
+An offset past the last match returns an empty page. A `limit` outside 1 to 100, or an `offset` that isn’t a whole number of 0 or more, throws before the request is sent.
+
+## Count the pages
+
+To show page numbers, [count](/querying/count/) the matches with the same filters, then divide by the page size:
+
+```ts
+const total = await publicClient
+  .count()
+  .from(Posts)
+  .ownedBy(account.address)
+  .where(eq("category", "news"))
+  .fetch()
+
+const pageCount = Math.ceil(Number(total) / PAGE_SIZE)
+```
+
+The count includes entities a page leaves out for not fitting the schema, and so do offsets. Page `n` always starts at `n * PAGE_SIZE`, but it can hold fewer rows than `PAGE_SIZE`.
+
+## Writes shift the pages
+
+Each page is its own request, read at the latest block. An entity created or deleted between two requests shifts every match after it. A row can then show up on two pages, or on none. An entity that expires shifts them too.
+
+This is fine for a list a person clicks through. To read every match exactly once, for example to copy them into your own database, page by key instead.
+
+## Page by key
+
+Keep the `asc("$key")` sort, and start each page after the last key of the one before:
+
+```ts
+import { asc, eq, gt } from "@arkiv-network/sdk/query"
+import { key } from "@arkiv-network/sdk/schema"
+import type { Hex } from "viem"
+
+function newsAfter(lastKey: Hex | undefined) {
+  const query = publicClient
+    .select({ $key: true, title: true })
+    .from(Posts, { onMismatch: "throw" })
+    .ownedBy(account.address)
+    .where(eq("category", "news"))
+    .orderBy(asc("$key"))
+    .limit(100)
+  return lastKey ? query.where(gt("$key", key(lastKey))) : query
+}
+
+let lastKey: Hex | undefined
+do {
+  const { entities } = await newsAfter(lastKey).fetch()
+  for (const post of entities) save(post)
+  lastKey = entities.length === 100 ? entities.at(-1)?.$key : undefined
+} while (lastKey)
+```
+
+A page shorter than the limit is the last. Writes can’t shift a key, so no row repeats. A post created during the walk shows up only if its key sorts after the page you’re on.
+
+`onMismatch: "throw"` makes a post that doesn’t fit the schema fail the fetch with a `SchemaMismatchError`. A skipped post returns no row, so a page of them would leave no key to continue from.

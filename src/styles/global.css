@@ -86,4 +86,17 @@
       line-height: 1.5;
     }
   }
+
+  /* Stacked cards on "What Arkiv is": tighter than Starlight's default card padding */
+  .principles {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .principles > * {
+    margin: 0;
+  }
+  .principles .card {
+    padding: 1rem 1.25rem;
+    gap: 0.5rem;
+  }
 }

@@ -1,0 +1,96 @@
+---
+title: Query language
+description: The syntax of the query strings the Arkiv node parses, as sent by the SDK and accepted by query().
+---
+
+A query is a boolean expression over attributes, optionally followed by a sort. The SDK’s condition and sort functions write it for you. You write it by hand when you pass a string to `query()`.
+
+```sql
+category = str('news') AND score > dec(4) AND EXISTS(summary)
+```
+
+## Comparisons
+
+| Syntax | Matches when the attribute |
+| --- | --- |
+| `name = value` | Equals the value |
+| `name < value`, `<=`, `>`, `>=` | Compares as given |
+| `name BETWEEN low AND high` | Is between the two values, both included. Both need one type |
+| `name STARTSWITH str('prefix')` | Is a `str` that starts with the prefix |
+| `EXISTS(name)` | Is set, with any type |
+| `TYPEOF(name) = type` | Is set with the given type, such as `i32` |
+
+A comparison also checks the type: `score = i32(4)` doesn’t match a `score` stored as a `dec`. It only sees indexed attributes, so it never matches an attribute stored without an index.
+
+Every type can be compared and ranged. Numbers compare by value, and `false` comes before `true`. `str`, `addr` and `key` compare byte by byte, with no collation. Only `str` takes `STARTSWITH`.
+
+The `AND` inside `BETWEEN` belongs to it. `a BETWEEN 1 AND 5 AND b = 2` means `(a BETWEEN 1 AND 5) AND b = 2`.
+
+## Values
+
+Write every value with its type, except booleans:
+
+| Type | Example |
+| --- | --- |
+| `bool` | `true`, `false` |
+| `i32` | `i32(-7)` |
+| `u64` | `u64(1700000000)` |
+| `u256` | `u256(1000000000000000000)` |
+| `dec` | `dec(4.5)` |
+| `str` | `str('it''s')`. A quote inside is doubled |
+| `addr` | `addr(0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045)` |
+| `key` | `key(0x9f2c…)`, 32 bytes |
+
+A bare number is an `i32`. `bytes` values can’t be compared, since `bytes` is never indexed.
+
+## Entity fields
+
+Four entity fields can be filtered and sorted on, each with a fixed type:
+
+| Field | Type |
+| --- | --- |
+| `$key` | `key` |
+| `$owner` | `addr` |
+| `$creator` | `addr` |
+| `$expiresAt` | `u64` |
+
+## Combining
+
+`AND` and `OR` combine conditions. `AND` binds tighter than `OR`. Use parentheses to group:
+
+```sql
+(category = str('news') OR category = str('blog')) AND score >= dec(3)
+```
+
+## Sorting
+
+`ORDER BY` at the end of a query sorts the entities it matches by one attribute. It names the attribute, the type to sort it as, and a direction:
+
+```sql
+category = str('news') ORDER BY score:dec DESC
+```
+
+- `ASC` sorts smallest first and `DESC` largest first. Without either, the sort is `ASC`. The SDK always writes one
+- An attribute needs its type after the `:`. An [entity field](#entity-fields) has a fixed type, so `ORDER BY $expiresAt` needs none, and a `:` can repeat it but not change it
+- A sort sees only the attribute stored with its type. An entity without the attribute, or with it stored as another type, sorts below every value: first with `ASC`, last with `DESC`
+- A query sorts by one attribute only. Entities that tie come in the node’s own order
+- Unlike a condition, a sort reads an attribute whether or not it’s indexed. `$createdAt` and `$updatedAt` can’t be sorted on. Values sort in the order they compare
+- `ORDER BY` applies to the whole condition, so `a = i32(1) OR b = i32(2) ORDER BY a:i32 ASC` needs no parentheses
+
+## Other rules
+
+- Keywords are case-insensitive: `and` and `AND` are the same
+- The keywords `AND`, `OR`, `NOT`, `TRUE`, `FALSE`, `BETWEEN`, `STARTSWITH`, `EXISTS`, `TYPEOF`, `ORDER`, `BY`, `ASC` and `DESC`, and the type names, can’t be attribute names
+- `--` starts a comment that runs to the end of the line
+- A named schema’s tag is the `str` attribute `arkiv.schema`. `arkiv.schema = str('my-app.posts')` matches every entity written through a schema named `my-app.posts`
+
+## Errors
+
+The node rejects a query it can’t run with a `QueryError`. Its `kind` says why:
+
+| `kind` | Cause |
+| --- | --- |
+| `parse` | The query doesn’t parse |
+| `type` | A condition uses the wrong type for its operator, such as `STARTSWITH` on an `i32`, or `BETWEEN` bounds of two types |
+| `literal` | A value is invalid, such as an `i32` out of range |
+| `limits` | The query goes over a node limit, such as its length or nesting depth |
