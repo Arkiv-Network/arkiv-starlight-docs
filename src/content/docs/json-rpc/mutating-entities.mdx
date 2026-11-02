@@ -89,7 +89,7 @@ expiry = max(expiresAt, currentBlock + minLifetime)
 | A deadline | The block | `0` |
 | A deadline, but at least a lifetime | The block | The lifetime in blocks |
 
-`currentBlock` is the block that includes the transaction, and a block takes 2 seconds. An expiry that isn’t after `currentBlock` reverts.
+`currentBlock` is the block that includes the transaction, and a block takes 2 seconds. The expiry must be after `currentBlock` and at most 7,884,000 blocks past it, about 182.5 days. Anything else reverts.
 
 ## Creation flags
 
@@ -226,6 +226,7 @@ A failed operation reverts with an ABI-encoded custom error, which `eth_call` an
 | `ReadOnlyEntity(bytes32 entityKey)` | A patch of a read-only entity |
 | `ReservedCreationFlags(uint8 creationFlags)` | A reserved flag bit is set |
 | `ExpiryDeadOnArrival(uint64 target, uint64 currentBlock)` | The expiry isn’t after the current block |
+| `ExpiryBeyondMaxLifetime(uint64 target, uint64 currentBlock, uint64 maxLifetime)` | The expiry is more than `maxLifetime` blocks past the current block |
 | `ExpiryNotExtended(bytes32 entityKey, uint64 newExpiresAt, uint64 currentExpiresAt)` | The new expiry is earlier than the current one |
 | `TransferToZeroAddress(bytes32 entityKey)` | A transfer to the zero address |
 | `TransferToSelf(bytes32 entityKey)` | A transfer to the current owner |

@@ -19,7 +19,7 @@ Every error below is exported from `@arkiv-network/sdk`, except the three query 
 | `EntityTooLargeError` | The `bytes` values of one create or patch add up to more than 128 KiB |
 | `EmptyPatchError` | A patch has nothing to set or unset |
 | `ConflictingMutationError` | A patch sets and unsets the same column |
-| `InvalidExpiryError` | An expiration is in the past, too far away to store, or not a whole number of blocks |
+| `InvalidExpiryError` | An expiration is in the past, longer than the [maximum lifetime](/writing/expiration/#the-longest-lifetime) of about 182 days, or not a whole number of blocks |
 | `InvalidCreationFlagsError` | A creation flag isn’t a boolean |
 | `InvalidSaltError` | A salt is negative or wider than 128 bits |
 | `NoRandomSourceError` | The runtime has no `crypto.getRandomValues` to make a random salt |
