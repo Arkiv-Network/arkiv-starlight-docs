@@ -14,7 +14,7 @@ Arkiv enforces these limits on every entity and query. The SDK checks them befor
 | `str` value length | 128 bytes of UTF-8 | `MAX_STRING_BYTES` |
 | `bytes` value length | 128 KiB | `MAX_BYTES_LENGTH` |
 | All `bytes` values of one create or patch | 128 KiB | `MAX_ENTITY_BYTES` |
-| Latest expiration block | 2^64 − 1 | `MAX_EXPIRES_AT` |
+| Lifetime, from the block the create or extension lands in | 7,884,000 blocks, about 182.5 days | `MAX_LIFETIME` |
 | Key salt | 128 bits | `MAX_SALT` |
 
 ## Values
