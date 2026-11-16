@@ -74,7 +74,7 @@ The sidebar follows the reader's path: Get Started (what Arkiv is, the first-ent
 
 Push-triggered, via rsync to a host running docker compose:
 
-- `develop` → `stage.docs.arkiv.network`, built with `SDK_DOCS_REF: develop`
+- `develop` → `stage-docs.arkiv.network`, built with `SDK_DOCS_REF: develop`
 - `main` → `docs.arkiv.network`, built with `SDK_DOCS_REF` pinned to a release tag
 
 Bumping the documented SDK version means editing that pin in `.github/workflows/deploy-prod.yml`.

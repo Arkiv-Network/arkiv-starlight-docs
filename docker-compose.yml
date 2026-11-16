@@ -1,6 +1,6 @@
 services:
   docs-feedback:
-    image: oven/bun:1.4.4-alpine
+    image: oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a
     restart: unless-stopped
     working_dir: /app
     command: ["bun", "run", "/app/server.ts"]
@@ -9,7 +9,7 @@ services:
     environment:
       PORT: 3000
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL is required}
-      ALLOWED_ORIGINS: ${FEEDBACK_ALLOWED_ORIGINS:-https://docs.arkiv.network,https://stage.docs.arkiv.network,http://localhost:4321,http://127.0.0.1:4321}
+      ALLOWED_ORIGINS: ${FEEDBACK_ALLOWED_ORIGINS:-https://docs.arkiv.network,https://stage-docs.arkiv.network,http://localhost:4321,http://127.0.0.1:4321}
       FEEDBACK_MAX_BODY_BYTES: ${FEEDBACK_MAX_BODY_BYTES:-16384}
       FEEDBACK_MAX_COMMENT_LENGTH: ${FEEDBACK_MAX_COMMENT_LENGTH:-4000}
     networks:
@@ -24,10 +24,21 @@ services:
       - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.average=10"
       - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.period=1m"
       - "traefik.http.middlewares.docs-feedback-ratelimit.ratelimit.burst=20"
+      # Cloudflare tunnel (plain HTTP; TLS ends at Cloudflare's edge). Rate-limit by
+      # Cf-Connecting-Ip: behind the tunnel every request comes from cloudflared.
+      - "traefik.http.routers.docs-feedback-tunnel.rule=Host(`docs.arkiv.network`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.docs-feedback-tunnel.priority=100"
+      - "traefik.http.routers.docs-feedback-tunnel.entrypoints=tunnel"
+      - "traefik.http.routers.docs-feedback-tunnel.middlewares=docs-feedback-ratelimit-cf"
+      - "traefik.http.routers.docs-feedback-tunnel.service=docs-feedback"
+      - "traefik.http.middlewares.docs-feedback-ratelimit-cf.ratelimit.average=10"
+      - "traefik.http.middlewares.docs-feedback-ratelimit-cf.ratelimit.period=1m"
+      - "traefik.http.middlewares.docs-feedback-ratelimit-cf.ratelimit.burst=20"
+      - "traefik.http.middlewares.docs-feedback-ratelimit-cf.ratelimit.sourcecriterion.requestheadername=Cf-Connecting-Ip"
       - "traefik.http.services.docs-feedback.loadbalancer.server.port=3000"
 
   docs-stage:
-    image: nginx:alpine
+    image: nginx:1.31.8-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
     restart: unless-stopped
     volumes:
       - ./stage:/usr/share/nginx/html:ro
@@ -36,13 +47,15 @@ services:
       - arkiv_network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.docs-stage.rule=Host(`stage.docs.arkiv.network`)"
-      - "traefik.http.routers.docs-stage.entrypoints=websecure"
-      - "traefik.http.routers.docs-stage.tls.certresolver=letsencrypt"
+      # Cloudflare tunnel (plain HTTP; TLS ends at Cloudflare's edge). One-level name:
+      # Cloudflare's Universal SSL does not cover stage.docs.arkiv.network.
+      - "traefik.http.routers.docs-stage-tunnel.rule=Host(`stage-docs.arkiv.network`)"
+      - "traefik.http.routers.docs-stage-tunnel.entrypoints=tunnel"
+      - "traefik.http.routers.docs-stage-tunnel.service=docs-stage"
       - "traefik.http.services.docs-stage.loadbalancer.server.port=80"
 
   docs-prod:
-    image: nginx:alpine
+    image: nginx:1.31.8-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
     restart: unless-stopped
     volumes:
       - ./prod:/usr/share/nginx/html:ro
@@ -55,6 +68,11 @@ services:
       - "traefik.http.routers.docs-prod.priority=1"
       - "traefik.http.routers.docs-prod.entrypoints=websecure"
       - "traefik.http.routers.docs-prod.tls.certresolver=letsencrypt"
+      # Cloudflare tunnel (plain HTTP; TLS ends at Cloudflare's edge)
+      - "traefik.http.routers.docs-prod-tunnel.rule=Host(`docs.arkiv.network`)"
+      - "traefik.http.routers.docs-prod-tunnel.priority=1"
+      - "traefik.http.routers.docs-prod-tunnel.entrypoints=tunnel"
+      - "traefik.http.routers.docs-prod-tunnel.service=docs-prod"
       - "traefik.http.services.docs-prod.loadbalancer.server.port=80"
 
 networks:
