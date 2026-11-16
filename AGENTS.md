@@ -72,12 +72,13 @@ The sidebar follows the reader's path: Get Started (what Arkiv is, the first-ent
 
 ### Deployment
 
-Push-triggered, via rsync to a host running docker compose:
+The repo produces two images: the site (`Dockerfile`, nginx + `dist/`) and the
+feedback API (`Dockerfile.feedback`). Deploys are manual, from [dev-surfaces-infra](https://github.com/Arkiv-Network/dev-surfaces-infra) (`docs/`):
 
-- `develop` → `stage-docs.arkiv.network`, built with `SDK_DOCS_REF: develop`
-- `main` → `docs.arkiv.network`, built with `SDK_DOCS_REF` pinned to a release tag
+- `develop` → `stage-docs.arkiv.network`, built with `SITE_URL=https://stage-docs.arkiv.network` and `SDK_DOCS_REF=develop`
+- `main` → `docs.arkiv.network`, built with the defaults (`SDK_DOCS_REF` pinned to a release tag)
 
-Bumping the documented SDK version means editing that pin in `.github/workflows/deploy-prod.yml`.
+Bumping the documented SDK version means changing the `SDK_DOCS_REF` default in `Dockerfile`.
 
 ### CI
 
