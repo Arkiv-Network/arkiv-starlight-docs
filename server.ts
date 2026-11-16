@@ -28,7 +28,7 @@ type SlackBlock =
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://docs.arkiv.network",
-  "https://stage.docs.arkiv.network",
+  "https://stage-docs.arkiv.network",
   "http://localhost:4321",
   "http://127.0.0.1:4321",
 ];
