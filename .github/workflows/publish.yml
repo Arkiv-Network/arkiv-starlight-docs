@@ -1,5 +1,7 @@
-# Builds the image and pushes it to GHCR. Uses only the run's GITHUB_TOKEN,
-# no repo secrets. Deploying is manual, from dev-surfaces-infra.
+# Builds the image, signs it and pushes it to GHCR. Uses only the run's
+# GITHUB_TOKEN and its OIDC identity, no repo secrets. arkiv-metal deploys an
+# image only if this workflow signed it on the expected branch (autodeploy in
+# dev-surfaces-infra).
 name: Publish image
 
 on:
@@ -9,10 +11,13 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write # keyless cosign signature
 
+# Queue instead of cancel: a run stopped halfway could leave a pushed, unsigned
+# commit tag behind.
 concurrency:
   group: publish-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -22,21 +27,38 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+        with:
+          cosign-release: v3.1.4
+
       - name: Log in to GHCR
         run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build, sign and push
         run: |
+          # publish IMAGE TAG [docker build args…]: push the commit tag, sign its
+          # digest, and only then move TAG to it, so TAG never points at an
+          # unsigned image.
+          publish() {
+            local img=$1 tag=$2; shift 2
+            local commit_tag=$img:sha-${GITHUB_SHA::7} ref
+            docker build "$@" \
+              --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              -t "$commit_tag" .
+            docker push -q "$commit_tag"
+            ref=$(docker image inspect -f '{{range .RepoDigests}}{{println .}}{{end}}' "$commit_tag" | grep -m1 "^$img@")
+            cosign sign --yes "$ref"
+            docker tag "$commit_tag" "$img:$tag"
+            docker push -q "$img:$tag"
+          }
+
           if [ "$GITHUB_REF_NAME" = main ]; then
             tag=prod args=()
           else
             tag=stage args=(--build-arg SITE_URL=https://stage-docs.arkiv.network --build-arg SDK_DOCS_REF=develop)
           fi
-          site=ghcr.io/arkiv-network/arkiv-docs
-          feedback=ghcr.io/arkiv-network/arkiv-docs-feedback
-          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" "${args[@]}" -t $site:$tag -t $site:sha-${GITHUB_SHA::7} .
-          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -f Dockerfile.feedback -t $feedback:$tag -t $feedback:sha-${GITHUB_SHA::7} .
-          docker push --all-tags $site
-          docker push --all-tags $feedback
+          publish ghcr.io/arkiv-network/arkiv-docs "$tag" "${args[@]}"
+          publish ghcr.io/arkiv-network/arkiv-docs-feedback "$tag" -f Dockerfile.feedback
