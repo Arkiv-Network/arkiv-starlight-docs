@@ -1,0 +1,8 @@
+.git
+node_modules
+dist
+.astro
+.sdk-cache
+.env
+.env.production
+src/content/docs/typescript-sdk/api-reference
