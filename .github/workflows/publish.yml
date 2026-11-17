@@ -1,0 +1,42 @@
+# Builds the image and pushes it to GHCR. Uses only the run's GITHUB_TOKEN,
+# no repo secrets. Deploying is manual, from dev-surfaces-infra.
+name: Publish image
+
+on:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Log in to GHCR
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        run: |
+          if [ "$GITHUB_REF_NAME" = main ]; then
+            tag=prod args=()
+          else
+            tag=stage args=(--build-arg SITE_URL=https://stage-docs.arkiv.network --build-arg SDK_DOCS_REF=develop)
+          fi
+          site=ghcr.io/arkiv-network/arkiv-docs
+          feedback=ghcr.io/arkiv-network/arkiv-docs-feedback
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" "${args[@]}" -t $site:$tag -t $site:sha-${GITHUB_SHA::7} .
+          docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" -f Dockerfile.feedback -t $feedback:$tag -t $feedback:sha-${GITHUB_SHA::7} .
+          docker push --all-tags $site
+          docker push --all-tags $feedback

@@ -38,7 +38,7 @@ A new page under `src/content/docs/` gets a route immediately but stays invisibl
 
 `src/content/docs/typescript-sdk/api-reference/` is not in git. It is produced at build time:
 
-1. `scripts/sync-sdk-source.ts` clones `Arkiv-Network/arkiv-sdk-js` into `.sdk-cache/` and installs its dependencies. The git ref comes from `SDK_DOCS_REF` and defaults to `develop`.
+1. `scripts/sync-sdk-source.ts` clones `Arkiv-Network/arkiv-sdk-js` into `.sdk-cache/` and installs its dependencies. The git ref comes from `SDK_DOCS_REF` and defaults to `develop`; `latest` resolves to the newest release tag.
 2. `starlight-typedoc` in `astro.config.mjs` runs TypeDoc over that clone's entry points and emits the pages.
 
 The config guards this behind an `sdkAvailable` check, so a build without the clone still succeeds, just without the API Reference. `SDK_DOCS_REFRESH=1 bun run sync-sdk` forces a fresh clone.
@@ -72,12 +72,15 @@ The sidebar follows the reader's path: Get Started (what Arkiv is, the first-ent
 
 ### Deployment
 
-Push-triggered, via rsync to a host running docker compose:
+The repo produces two images: the site (`Dockerfile`, nginx + `dist/`) and the
+feedback API (`Dockerfile.feedback`). Deploys are manual, from [dev-surfaces-infra](https://github.com/Arkiv-Network/dev-surfaces-infra) (`docs/`):
 
-- `develop` → `stage-docs.arkiv.network`, built with `SDK_DOCS_REF: develop`
-- `main` → `docs.arkiv.network`, built with `SDK_DOCS_REF` pinned to a release tag
+- `develop` → `stage-docs.arkiv.network`, built with `SITE_URL=https://stage-docs.arkiv.network` and `SDK_DOCS_REF=develop`
+- `main` → `docs.arkiv.network`, built with the defaults (`SDK_DOCS_REF=latest`, the newest SDK release tag)
 
-Bumping the documented SDK version means editing that pin in `.github/workflows/deploy-prod.yml`.
+Build both with `--no-cache`, so each build picks up the current SDK. To document a specific SDK version, pass `--build-arg SDK_DOCS_REF=vX.Y.Z`.
+
+Pushes to `main` and `develop` publish both images to GHCR as `:prod` and `:stage` (`.github/workflows/publish.yml`).
 
 ### CI
 
