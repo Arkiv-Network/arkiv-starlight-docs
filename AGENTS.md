@@ -80,6 +80,8 @@ feedback API (`Dockerfile.feedback`). Deploys are manual, from [dev-surfaces-inf
 
 Build both with `--no-cache`, so each build picks up the current SDK. To document a specific SDK version, pass `--build-arg SDK_DOCS_REF=vX.Y.Z`.
 
+Pushes to `main` and `develop` publish both images to GHCR as `:prod` and `:stage` (`.github/workflows/publish.yml`).
+
 ### CI
 
 `.github/workflows/spellcheck.yml` runs codespell on pull requests to `main` and `develop`. New proper nouns that codespell flags go in that workflow's `ignore_words_list`.
