@@ -18,7 +18,7 @@ ARG SITE_BANNER=
 ARG SITE_BANNER_URL=
 RUN SITE_URL=$SITE_URL SDK_DOCS_REF=$SDK_DOCS_REF SITE_BANNER=$SITE_BANNER SITE_BANNER_URL=$SITE_BANNER_URL bun run build
 
-FROM nginx:1.31.8-alpine@sha256:713fc2ebfd92e8217db451477182ee91944b123d2b1ee9fd5a8c6e91ca6c3a11
+FROM nginx:1.31.9-alpine@sha256:90b6bd2aec278b16b98221d64deb1d6d35d164567f507ab0716e6053878315aa
 RUN rm -rf /usr/share/nginx/html/*
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist /usr/share/nginx/html
